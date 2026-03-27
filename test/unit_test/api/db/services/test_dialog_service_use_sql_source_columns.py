@@ -33,6 +33,7 @@ warnings.filterwarnings(
 def _install_cv2_stub_if_unavailable():
     try:
         import cv2  # noqa: F401
+
         return
     except Exception:
         pass
@@ -114,8 +115,6 @@ class _StubAsyncRetriever:
     def retrieval_by_children(self, chunks, tenant_ids):
         return chunks
 
-<<<<<<< HEAD
-=======
     def insert_citations(self, answer, *_args, **_kwargs):
         return answer, [0]
 
@@ -319,6 +318,8 @@ def test_async_chat_uses_all_docs_when_no_doc_ids_selected(monkeypatch):
     assert retriever.calls[0]["kwargs"]["doc_ids"] is None
     assert "Chunk text from dataset." in chat_model.calls[0]["system_prompt"]
     assert result[0]["answer"] == "stub answer"
+
+
 @pytest.mark.p2
 def test_async_ask_uses_all_docs_when_search_config_has_no_doc_ids(monkeypatch):
     retriever = _StubAsyncRetriever(

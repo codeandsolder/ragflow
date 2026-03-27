@@ -228,17 +228,13 @@ def delete_chat_assistants(auth, payload=None):
     return res.json()
 
 
-<<<<<<< HEAD
 def delete_all_chat_assistants(auth, *, page_size=1000):
     return delete_chat_assistants(auth, {"ids": None, "delete_all": True})
 
 
-def batch_create_chat_assistants(auth, num):
-=======
 def batch_create_chat_assistants(auth, num, dataset_ids=None):
     if not dataset_ids:
         dataset_ids = []
->>>>>>> refs/pull/13161/head
     chat_assistant_ids = []
     for i in range(num):
         res = create_chat_assistant(auth, {"name": f"test_chat_assistant_{i}", "dataset_ids": dataset_ids})

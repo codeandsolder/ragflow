@@ -36,6 +36,8 @@ from rag.llm import FACTORY_DEFAULT_BASE_URL, LITELLM_PROVIDER_PREFIX, Supported
 from rag.nlp import is_chinese, is_english
 
 from common.misc_utils import thread_pool_exec
+
+
 class LLMErrorCode(StrEnum):
     ERROR_RATE_LIMIT = "RATE_LIMIT_EXCEEDED"
     ERROR_AUTHENTICATION = "AUTH_ERROR"
@@ -61,7 +63,6 @@ LENGTH_NOTIFICATION_CN = "······\n由于大模型的上下文窗口大小�
 LENGTH_NOTIFICATION_EN = "...\nThe answer is truncated by your chosen LLM due to its limitation on context length."
 
 
-<<<<<<< HEAD
 def _apply_model_family_policies(
     model_name: str,
     *,
@@ -74,12 +75,10 @@ def _apply_model_family_policies(
     sanitized_gen_conf = deepcopy(gen_conf) if gen_conf else {}
     sanitized_kwargs = dict(request_kwargs) if request_kwargs else {}
 
-    # Qwen3 family disables thinking by extra_body on non-stream chat requests.
     if "qwen3" in model_name_lower:
         sanitized_kwargs["extra_body"] = {"enable_thinking": False}
 
     if backend == "base":
-        # GPT-5 and GPT-5.1 endpoints in this path have inconsistent generation-param support.
         if "gpt-5" in model_name_lower:
             sanitized_gen_conf = {}
         return sanitized_gen_conf, sanitized_kwargs
@@ -112,20 +111,10 @@ def _apply_model_family_policies(
         return sanitized_gen_conf, sanitized_kwargs
 
     return sanitized_gen_conf, sanitized_kwargs
-=======
+
+
 def _apply_vision_images(history, images):
-    """Convert the last user message to multimodal format with vision images.
-
-    Modifies *history* in-place so that the most recent ``user`` message
-    carries the supplied *images* using the OpenAI Vision ``image_url``
-    content-block format.  Providers that need a different wire format
-    (Anthropic, Gemini, Ollama …) are expected to translate from this
-    canonical representation in their own transport layer (e.g. LiteLLM
-    does this automatically when ``drop_params=True``).
-
-    Accepts images as raw ``bytes``, data-URI strings, or plain base-64
-    strings.
-    """
+    """Convert the last user message to multimodal format with vision images."""
     if not images:
         return
 
@@ -151,10 +140,7 @@ def _apply_vision_images(history, images):
                 if not url.startswith(("data:", "http://", "https://")):
                     url = f"data:image/png;base64,{url}"
             elif isinstance(img, dict):
-                url = (
-                    img.get("image_url", {}).get("url", "")
-                    or img.get("url", "")
-                )
+                url = img.get("image_url", {}).get("url", "") or img.get("url", "")
                 if not url:
                     continue
             else:
@@ -163,7 +149,6 @@ def _apply_vision_images(history, images):
 
         history[idx]["content"] = blocks
         return
->>>>>>> refs/pull/13350/head
 
 
 class Base(ABC):
@@ -387,18 +372,20 @@ class Base(ABC):
         one assistant message containing all tool_calls, followed by one tool message per call.
         results: list of (tool_call, name, args, result, error)
         """
-        hist.append({
-            "role": "assistant",
-            "tool_calls": [
-                {
-                    "index": tc.index,
-                    "id": tc.id,
-                    "function": {"name": tc.function.name, "arguments": tc.function.arguments},
-                    "type": "function",
-                }
-                for tc, _, _, _, _ in results
-            ],
-        })
+        hist.append(
+            {
+                "role": "assistant",
+                "tool_calls": [
+                    {
+                        "index": tc.index,
+                        "id": tc.id,
+                        "function": {"name": tc.function.name, "arguments": tc.function.arguments},
+                        "type": "function",
+                    }
+                    for tc, _, _, _, _ in results
+                ],
+            }
+        )
         for tc, _, _, result, err in results:
             if err:
                 content = str(err)
@@ -1563,18 +1550,20 @@ class LiteLLMBase(ABC):
         one assistant message containing all tool_calls, followed by one tool message per call.
         results: list of (tool_call, name, args, result, error)
         """
-        hist.append({
-            "role": "assistant",
-            "tool_calls": [
-                {
-                    "index": tc.index,
-                    "id": tc.id,
-                    "function": {"name": tc.function.name, "arguments": tc.function.arguments},
-                    "type": "function",
-                }
-                for tc, _, _, _, _ in results
-            ],
-        })
+        hist.append(
+            {
+                "role": "assistant",
+                "tool_calls": [
+                    {
+                        "index": tc.index,
+                        "id": tc.id,
+                        "function": {"name": tc.function.name, "arguments": tc.function.arguments},
+                        "type": "function",
+                    }
+                    for tc, _, _, _, _ in results
+                ],
+            }
+        )
         for tc, _, _, result, err in results:
             if err:
                 content = str(err)
@@ -1897,17 +1886,19 @@ class LiteLLMBase(ABC):
             completion_args["extra_headers"] = extra_headers
         return completion_args
 
+
 class RAGconChat(Base):
     """
     RAGcon Chat Provider - routes through LiteLLM proxy
-    
+
     All model types are handled through a unified LiteLLM endpoint.
     Default Base URL: https://connect.ragcon.com/v1
     """
+
     _FACTORY_NAME = "RAGcon"
-    
+
     def __init__(self, key, model_name, base_url=None, **kwargs):
         if not base_url:
             base_url = "https://connect.ragcon.com/v1"
-        
+
         super().__init__(key, model_name, base_url, **kwargs)

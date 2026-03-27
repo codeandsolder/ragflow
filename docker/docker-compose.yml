@@ -8,7 +8,10 @@ services:
         condition: service_healthy
     profiles:
       - cpu
-    image: ${RAGFLOW_IMAGE}
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      image: ragflow:local
     # Example configuration to set up an MCP server:
     # command:
     #   - --enable-mcpserver
@@ -58,7 +61,10 @@ services:
         condition: service_healthy
     profiles:
       - gpu
-    image: ${RAGFLOW_IMAGE}
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      image: ragflow:local
     # Example configuration to set up an MCP server:
     # command:
     #   - --enable-mcpserver

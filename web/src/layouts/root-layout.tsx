@@ -13,10 +13,7 @@ export function RootLayoutContainer({ children }: React.PropsWithChildren) {
   );
 }
 
-<<<<<<< HEAD:web/src/layouts/root-layout.tsx
 export default function RootLayout() {
-=======
-export default function NextLayout() {
   const { isLogin } = useAuth();
 
   if (isLogin === false) {
@@ -25,7 +22,6 @@ export default function NextLayout() {
   }
   if (isLogin === null) return null;
 
->>>>>>> refs/pull/13446/head:web/src/layouts/next.tsx
   return (
     <RootLayoutContainer>
       <Outlet />

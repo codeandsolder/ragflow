@@ -21,25 +21,26 @@ from common.token_utils import num_tokens_from_string
 
 _BACKTICK_PAT = re.compile(r"`([^`]+)`", re.I)
 
+
 class RAGFlowTxtParser:
-    def __call__(self, fnm:str, binary:bytes|None=None, chunk_token_num:int=128, delimiter:str="\n!?;。；！？"):
+    def __call__(self, fnm: str, binary: bytes | None = None, chunk_token_num: int = 128, delimiter: str = "\n!?;。；！？"):
         txt = get_text(fnm, binary)
         return self.parser_txt(txt, chunk_token_num, delimiter)
 
     @classmethod
-    def parser_txt(cls, txt:str, chunk_token_num:int=128, delimiter:str="\n!?;。；！？"):
+    def parser_txt(cls, txt: str, chunk_token_num: int = 128, delimiter: str = "\n!?;。；！？"):
         if not isinstance(txt, str):
             raise TypeError("txt type should be str!")
         cks: list[str] = [""]
         tk_nums: list[int] = [0]
-        delimiter = delimiter.encode('utf-8').decode('unicode_escape').encode('latin1').decode('utf-8')
+        delimiter = delimiter.encode("utf-8").decode("unicode_escape").encode("latin1").decode("utf-8")
 
         dels_list: list[str] = []
         pos = 0
         for m in _BACKTICK_PAT.finditer(delimiter):
             start, end = m.span()
             dels_list.append(m.group(1))
-            dels_list.extend(delimiter[pos: start])
+            dels_list.extend(delimiter[pos:start])
             pos = end
         if pos < len(delimiter):
             dels_list.extend(delimiter[pos:])
@@ -57,14 +58,7 @@ class RAGFlowTxtParser:
                 cks.append(sec)
                 tk_nums.append(tnum)
             else:
-<<<<<<< HEAD
-                if cks[-1]:
-                    cks[-1] += "\n" + t
-                else:
-                    cks[-1] += t
-=======
                 cks[-1] += sec
->>>>>>> refs/pull/12809/head
                 tk_nums[-1] += tnum
 
         return [[c, ""] for c in cks]
