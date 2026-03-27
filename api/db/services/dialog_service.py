@@ -206,17 +206,21 @@ class DialogService(CommonService):
 async def async_chat_solo(dialog, messages, stream=True):
     llm_type = TenantLLMService.llm_id2llm_type(dialog.llm_id)
     attachments = ""
-    image_attachments = []
     image_files = []
     if "files" in messages[-1]:
-        if llm_type == "chat":
-            text_attachments, image_attachments = split_file_attachments(messages[-1]["files"])
-        else:
-            text_attachments, image_files = split_file_attachments(messages[-1]["files"], raw=True)
+        text_attachments, image_files = split_file_attachments(messages[-1]["files"], raw=True)
         attachments = "\n\n".join(text_attachments)
+<<<<<<< HEAD
     model_config = get_model_config_by_id(dialog.tenant_llm_id)
     chat_mdl = LLMBundle(dialog.tenant_id, model_config)
     factory = model_config.get("llm_factory", "") if model_config else ""
+=======
+
+    if llm_type == "image2text":
+        chat_mdl = LLMBundle(dialog.tenant_id, LLMType.IMAGE2TEXT, dialog.llm_id)
+    else:
+        chat_mdl = LLMBundle(dialog.tenant_id, LLMType.CHAT, dialog.llm_id)
+>>>>>>> refs/pull/13350/head
 
     prompt_config = dialog.prompt_config
     tts_mdl = None
@@ -226,13 +230,8 @@ async def async_chat_solo(dialog, messages, stream=True):
     msg = [{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])} for m in messages if m["role"] != "system"]
     if attachments and msg:
         msg[-1]["content"] += attachments
-    if llm_type == "chat" and image_attachments:
-        convert_last_user_msg_to_multimodal(msg, image_attachments, factory)
     if stream:
-        if llm_type == "chat":
-            stream_iter = chat_mdl.async_chat_streamly_delta(prompt_config.get("system", ""), msg, dialog.llm_setting)
-        else:
-            stream_iter = chat_mdl.async_chat_streamly_delta(prompt_config.get("system", ""), msg, dialog.llm_setting, images=image_files)
+        stream_iter = chat_mdl.async_chat_streamly_delta(prompt_config.get("system", ""), msg, dialog.llm_setting, images=image_files)
         async for kind, value, state in _stream_with_think_delta(stream_iter):
             if kind == "marker":
                 flags = {"start_to_think": True} if value == "<think>" else {"end_to_think": True}
@@ -240,10 +239,7 @@ async def async_chat_solo(dialog, messages, stream=True):
                 continue
             yield {"answer": value, "reference": {}, "audio_binary": tts(tts_mdl, value), "prompt": "", "created_at": time.time(), "final": False}
     else:
-        if llm_type == "chat":
-            answer = await chat_mdl.async_chat(prompt_config.get("system", ""), msg, dialog.llm_setting)
-        else:
-            answer = await chat_mdl.async_chat(prompt_config.get("system", ""), msg, dialog.llm_setting, images=image_files)
+        answer = await chat_mdl.async_chat(prompt_config.get("system", ""), msg, dialog.llm_setting, images=image_files)
         user_content = msg[-1].get("content", "[content not available]")
         logging.debug("User: {}|Assistant: {}".format(user_content, answer))
         yield {"answer": answer, "reference": {}, "audio_binary": tts(tts_mdl, answer), "prompt": "", "created_at": time.time()}
@@ -467,7 +463,6 @@ async def async_chat(dialog, messages, stream=True, **kwargs):
     else:
         llm_model_config = TenantLLMService.get_model_config(dialog.tenant_id, LLMType.CHAT, dialog.llm_id)
 
-    factory = llm_model_config.get("llm_factory", "") if llm_model_config else ""
     max_tokens = llm_model_config.get("max_tokens", 8192)
 
     check_llm_ts = timer()
@@ -499,15 +494,11 @@ async def async_chat(dialog, messages, stream=True, **kwargs):
     if "doc_ids" in kwargs:
         attachments = [doc_id for doc_id in kwargs["doc_ids"].split(",") if doc_id]
     attachments_= ""
-    image_attachments = []
     image_files = []
     if "doc_ids" in messages[-1]:
         attachments = [doc_id for doc_id in messages[-1]["doc_ids"] if doc_id]
     if "files" in messages[-1]:
-        if llm_type == "chat":
-            text_attachments, image_attachments = split_file_attachments(messages[-1]["files"])
-        else:
-            text_attachments, image_files = split_file_attachments(messages[-1]["files"], raw=True)
+        text_attachments, image_files = split_file_attachments(messages[-1]["files"], raw=True)
         attachments_ = "\n\n".join(text_attachments)
 
     prompt_config = dialog.prompt_config
@@ -654,8 +645,6 @@ async def async_chat(dialog, messages, stream=True, **kwargs):
         prompt4citation = citation_prompt()
     msg.extend([{"role": m["role"], "content": re.sub(r"##\d+\$\$", "", m["content"])} for m in messages if m["role"] != "system"])
     used_token_count, msg = message_fit_in(msg, int(max_tokens * 0.95))
-    if llm_type == "chat" and image_attachments:
-        convert_last_user_msg_to_multimodal(msg, image_attachments, factory)
     assert len(msg) >= 2, f"message_fit_in has bug: {msg}"
     prompt = msg[0]["content"]
 
@@ -755,10 +744,7 @@ async def async_chat(dialog, messages, stream=True, **kwargs):
         )
 
     if stream:
-        if llm_type == "chat":
-            stream_iter = chat_mdl.async_chat_streamly_delta(prompt + prompt4citation, msg[1:], gen_conf)
-        else:
-            stream_iter = chat_mdl.async_chat_streamly_delta(prompt + prompt4citation, msg[1:], gen_conf, images=image_files)
+        stream_iter = chat_mdl.async_chat_streamly_delta(prompt + prompt4citation, msg[1:], gen_conf, images=image_files)
         last_state = None
         async for kind, value, state in _stream_with_think_delta(stream_iter):
             last_state = state
@@ -775,10 +761,7 @@ async def async_chat(dialog, messages, stream=True, **kwargs):
             final["answer"] = ""
             yield final
     else:
-        if llm_type == "chat":
-            answer = await chat_mdl.async_chat(prompt + prompt4citation, msg[1:], gen_conf)
-        else:
-            answer = await chat_mdl.async_chat(prompt + prompt4citation, msg[1:], gen_conf, images=image_files)
+        answer = await chat_mdl.async_chat(prompt + prompt4citation, msg[1:], gen_conf, images=image_files)
         user_content = msg[-1].get("content", "[content not available]")
         logging.debug("User: {}|Assistant: {}".format(user_content, answer))
         res = decorate_answer(answer)
