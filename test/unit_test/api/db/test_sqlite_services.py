@@ -76,7 +76,13 @@ _install_cv2_stub_if_unavailable()
 
 
 class _SqliteDocument(peewee.Model):
-    """SQLite version of Document model for testing."""
+    """SQLite version of Document model for testing.
+
+    Note: BaseModel fields (create_time, create_date, update_time, update_date)
+    are BigIntegerField/DateTimeField in production. Here we use IntegerField/DateTimeField
+    for SQLite compatibility. parser_config uses TextField with JSON string parsing
+    to simulate JSONField behavior.
+    """
 
     id = peewee.CharField(max_length=32, primary_key=True)
     thumbnail = peewee.TextField(null=True)
@@ -87,6 +93,7 @@ class _SqliteDocument(peewee.Model):
     source_type = peewee.CharField(max_length=128, null=False, default="local", index=True)
     type = peewee.CharField(max_length=32, null=False, index=True)
     created_by = peewee.CharField(max_length=32, null=False, default="system", index=True)
+    user_id = peewee.CharField(max_length=255, null=True, index=True)
     name = peewee.CharField(max_length=255, null=True, index=True)
     location = peewee.CharField(max_length=255, null=True, index=True)
     size = peewee.IntegerField(default=0, index=True)
@@ -100,14 +107,26 @@ class _SqliteDocument(peewee.Model):
     content_hash = peewee.CharField(max_length=32, null=True, default="", index=True)
     run = peewee.CharField(max_length=1, null=True, default="0", index=True)
     status = peewee.CharField(max_length=1, null=True, default="1", index=True)
-    create_time = peewee.DateTimeField(null=True)
-    create_date = peewee.DateField(null=True, index=True)
-    update_time = peewee.DateTimeField(null=True)
-    update_date = peewee.DateField(null=True, index=True)
+    create_time = peewee.BigIntegerField(null=True, index=True)
+    create_date = peewee.DateTimeField(null=True, index=True)
+    update_time = peewee.BigIntegerField(null=True, index=True)
+    update_date = peewee.DateTimeField(null=True, index=True)
 
     class Meta:
         table_name = "document"
         database = None
+
+    def get_parser_config(self):
+        """Parse parser_config JSON string (simulates JSONField)."""
+        import json
+
+        return json.loads(self.parser_config)
+
+    def set_parser_config(self, config: dict):
+        """Serialize parser_config to JSON string (simulates JSONField)."""
+        import json
+
+        self.parser_config = json.dumps(config)
 
 
 class _SqliteUserCanvas(peewee.Model):

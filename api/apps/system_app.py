@@ -14,7 +14,6 @@
 #  limitations under the License
 #
 import logging
-import os
 from datetime import datetime
 import json
 
@@ -183,6 +182,51 @@ def healthz():
 @manager.route("/ping", methods=["GET"])  # noqa: F821
 async def ping():
     return "pong", 200
+
+
+@manager.route("/litellm/status", methods=["GET"])  # noqa: F821
+@login_required
+async def litellm_status():
+    """
+    Get LiteLLM proxy status and performance metrics.
+    ---
+    tags:
+      - System
+    security:
+      - ApiKeyAuth: []
+    responses:
+      200:
+        description: LiteLLM status retrieved successfully.
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              description: Status (alive/timeout).
+            message:
+              type: object
+              description: Detailed status information including health and performance metrics.
+    """
+    try:
+        async with httpx.AsyncClient() as client:
+            try:
+                resp = await client.get("http://litellm:4000/health/liveliness", timeout=5)
+                if resp.status_code == 200:
+                    return get_json_result(data={"status": "alive", "message": "LiteLLM proxy is running"})
+            except Exception:
+                pass
+
+            # Fallback to admin endpoint
+            try:
+                resp = await client.get("http://litellm:4000/ui", timeout=3)
+                if resp.status_code == 200:
+                    return get_json_result(data={"status": "alive", "message": "LiteLLM proxy is running (UI available)"})
+            except Exception:
+                pass
+
+            return get_json_result(data={"status": "error", "message": "LiteLLM proxy is not responding"})
+    except Exception as e:
+        return get_json_result(data={"status": "error", "message": f"Failed to get LiteLLM status: {str(e)}"}, code=500)
 
 
 @manager.route("/oceanbase/status", methods=["GET"])  # noqa: F821

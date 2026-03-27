@@ -519,7 +519,7 @@ class TestEdgeCaseConfiguration:
 
     def test_base_delay_zero_immediate_retry(self):
         """Test that base_delay=0 allows immediate retries."""
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import MagicMock
 
         model = ConcreteRemoteModel(max_retries=2, base_delay=0.0)
 

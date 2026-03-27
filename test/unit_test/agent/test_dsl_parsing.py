@@ -517,3 +517,310 @@ class TestDSLMemoryParsing:
         }
         canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
         assert canvas.memory == []
+
+
+class TestDSLBranchingFlow:
+    """Tests for branching flow (Categorize/Switch) parsing."""
+
+    def _create_categorize_dsl(self) -> dict:
+        return {
+            "components": {
+                "begin": {
+                    "obj": {"component_name": "Begin", "params": {}},
+                    "downstream": ["categorize_0"],
+                    "upstream": [],
+                },
+                "categorize_0": {
+                    "obj": {
+                        "component_name": "Categorize",
+                        "params": {
+                            "category_description": {
+                                "technical": {"to": ["retrieval_0"], "description": "Tech questions"},
+                                "general": {"to": ["generate_0"], "description": "General questions"},
+                            },
+                            "query": "sys.query",
+                            "llm_id": "llm1",
+                        },
+                    },
+                    "downstream": ["retrieval_0", "generate_0"],
+                    "upstream": ["begin"],
+                },
+                "retrieval_0": {
+                    "obj": {"component_name": "Retrieval", "params": {"kb_ids": ["kb1"]}},
+                    "downstream": [],
+                    "upstream": ["categorize_0"],
+                },
+                "generate_0": {
+                    "obj": {"component_name": "Generate", "params": {"llm_id": "llm1"}},
+                    "downstream": [],
+                    "upstream": ["categorize_0"],
+                },
+            },
+            "history": [],
+            "path": ["begin"],
+            "retrieval": {"chunks": [], "doc_aggs": []},
+        }
+
+    def test_categorize_parsing(self):
+        dsl = self._create_categorize_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        assert "categorize_0" in canvas.components
+        categorize = canvas.components["categorize_0"]["obj"]
+        assert categorize.component_name == "Categorize"
+        assert "technical" in categorize._param.category_description
+        assert "general" in categorize._param.category_description
+
+    def test_categorize_routing_parsing(self):
+        dsl = self._create_categorize_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        categorize = canvas.components["categorize_0"]["obj"]
+        assert categorize._param.category_description["technical"]["to"] == ["retrieval_0"]
+        assert categorize._param.category_description["general"]["to"] == ["generate_0"]
+
+    def test_categorize_downstream_routes(self):
+        dsl = self._create_categorize_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        assert set(canvas.components["categorize_0"]["downstream"]) == {"retrieval_0", "generate_0"}
+
+    def _create_switch_dsl(self) -> dict:
+        return {
+            "components": {
+                "begin": {
+                    "obj": {"component_name": "Begin", "params": {}},
+                    "downstream": ["switch_0"],
+                    "upstream": [],
+                },
+                "switch_0": {
+                    "obj": {
+                        "component_name": "Switch",
+                        "params": {
+                            "conditions": [
+                                {
+                                    "logical_operator": "and",
+                                    "items": [
+                                        {"cpn_id": "categorize_0@category_name", "operator": "contains", "value": "technical"},
+                                    ],
+                                    "to": ["retrieval_0"],
+                                },
+                            ],
+                            "end_cpn_ids": ["generate_0"],
+                        },
+                    },
+                    "downstream": ["retrieval_0", "generate_0"],
+                    "upstream": ["begin"],
+                },
+                "retrieval_0": {
+                    "obj": {"component_name": "Retrieval", "params": {}},
+                    "downstream": [],
+                    "upstream": ["switch_0"],
+                },
+                "generate_0": {
+                    "obj": {"component_name": "Generate", "params": {}},
+                    "downstream": [],
+                    "upstream": ["switch_0"],
+                },
+            },
+            "history": [],
+            "path": ["begin"],
+            "retrieval": {"chunks": [], "doc_aggs": []},
+        }
+
+    def test_switch_parsing(self):
+        dsl = self._create_switch_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        assert "switch_0" in canvas.components
+        switch = canvas.components["switch_0"]["obj"]
+        assert switch.component_name == "Switch"
+        assert len(switch._param.conditions) == 1
+        assert switch._param.conditions[0]["logical_operator"] == "and"
+
+    def test_switch_condition_parsing(self):
+        dsl = self._create_switch_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        switch = canvas.components["switch_0"]["obj"]
+        condition = switch._param.conditions[0]
+        assert condition["items"][0]["cpn_id"] == "categorize_0@category_name"
+        assert condition["items"][0]["operator"] == "contains"
+        assert condition["items"][0]["value"] == "technical"
+        assert condition["to"] == ["retrieval_0"]
+
+    def test_switch_else_route_parsing(self):
+        dsl = self._create_switch_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        switch = canvas.components["switch_0"]["obj"]
+        assert switch._param.end_cpn_ids == ["generate_0"]
+
+
+class TestDSLParallelExecution:
+    """Tests for parallel execution configuration in DSL."""
+
+    def test_thread_pool_executor_initialized(self):
+        dsl = {
+            "components": {
+                "begin": {
+                    "obj": {"component_name": "Begin", "params": {}},
+                    "downstream": [],
+                    "upstream": [],
+                }
+            },
+            "history": [],
+            "path": ["begin"],
+            "retrieval": {"chunks": [], "doc_aggs": []},
+        }
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        assert canvas._thread_pool is not None
+
+    def test_multiple_components_parallel_ready(self):
+        dsl = {
+            "components": {
+                "begin": {
+                    "obj": {"component_name": "Begin", "params": {}},
+                    "downstream": ["gen1", "gen2", "gen3"],
+                    "upstream": [],
+                },
+                "gen1": {
+                    "obj": {"component_name": "Generate", "params": {"llm_id": "llm1"}},
+                    "downstream": [],
+                    "upstream": ["begin"],
+                },
+                "gen2": {
+                    "obj": {"component_name": "Generate", "params": {"llm_id": "llm2"}},
+                    "downstream": [],
+                    "upstream": ["begin"],
+                },
+                "gen3": {
+                    "obj": {"component_name": "Generate", "params": {"llm_id": "llm3"}},
+                    "downstream": [],
+                    "upstream": ["begin"],
+                },
+            },
+            "history": [],
+            "path": ["begin"],
+            "retrieval": {"chunks": [], "doc_aggs": []},
+        }
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        assert len(canvas.components) == 4
+        begin_downstream = canvas.components["begin"]["downstream"]
+        assert len(begin_downstream) == 3
+
+
+class TestDSLLoopIteration:
+    """Tests for loop/iteration component parsing."""
+
+    def _create_loop_dsl(self) -> dict:
+        return {
+            "components": {
+                "begin": {
+                    "obj": {"component_name": "Begin", "params": {}},
+                    "downstream": ["loop_0"],
+                    "upstream": [],
+                },
+                "loop_0": {
+                    "obj": {
+                        "component_name": "Loop",
+                        "params": {
+                            "loop_variables": [
+                                {
+                                    "variable": "item",
+                                    "input_mode": "variable",
+                                    "value": "items",
+                                    "type": "string",
+                                }
+                            ],
+                            "loop_termination_condition": [],
+                            "maximum_loop_count": 10,
+                        },
+                    },
+                    "downstream": ["loopitem_0"],
+                    "upstream": ["begin"],
+                },
+                "loopitem_0": {
+                    "obj": {"component_name": "LoopItem", "params": {}},
+                    "downstream": ["generate_0"],
+                    "upstream": ["loop_0"],
+                    "parent_id": "loop_0",
+                },
+                "generate_0": {
+                    "obj": {"component_name": "Generate", "params": {}},
+                    "downstream": [],
+                    "upstream": ["loopitem_0"],
+                },
+            },
+            "history": [],
+            "path": ["begin"],
+            "retrieval": {"chunks": [], "doc_aggs": []},
+        }
+
+    def test_loop_parsing(self):
+        dsl = self._create_loop_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        assert "loop_0" in canvas.components
+        loop = canvas.components["loop_0"]["obj"]
+        assert loop.component_name == "Loop"
+        assert loop._param.maximum_loop_count == 10
+
+    def test_loop_variables_parsing(self):
+        dsl = self._create_loop_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        loop = canvas.components["loop_0"]["obj"]
+        assert len(loop._param.loop_variables) == 1
+        assert loop._param.loop_variables[0]["variable"] == "item"
+        assert loop._param.loop_variables[0]["input_mode"] == "variable"
+
+    def test_loopitem_parsing(self):
+        dsl = self._create_loop_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        assert "loopitem_0" in canvas.components
+        loopitem = canvas.components["loopitem_0"]["obj"]
+        assert loopitem.component_name == "LoopItem"
+
+    def test_loopitem_parent_relationship(self):
+        dsl = self._create_loop_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        loopitem = canvas.components["loopitem_0"]
+        assert loopitem.get("parent_id") == "loop_0"
+
+    def test_loop_get_start_finds_child(self):
+        dsl = self._create_loop_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        loop = canvas.components["loop_0"]["obj"]
+        start_cid = loop.get_start()
+        assert start_cid == "loopitem_0"
+
+    def _create_iterate_dsl(self) -> dict:
+        return {
+            "components": {
+                "begin": {
+                    "obj": {"component_name": "Begin", "params": {}},
+                    "downstream": ["iterate_0"],
+                    "upstream": [],
+                },
+                "iterate_0": {
+                    "obj": {
+                        "component_name": "Iterate",
+                        "params": {
+                            "max_loop_count": 5,
+                            "terminate_condition": [{"variable": "done", "operator": "is", "value": "true", "input_mode": "constant"}],
+                        },
+                    },
+                    "downstream": ["generate_0"],
+                    "upstream": ["begin"],
+                },
+                "generate_0": {
+                    "obj": {"component_name": "Generate", "params": {}},
+                    "downstream": [],
+                    "upstream": ["iterate_0"],
+                },
+            },
+            "history": [],
+            "path": ["begin"],
+            "retrieval": {"chunks": [], "doc_aggs": []},
+        }
+
+    def test_iterate_parsing(self):
+        dsl = self._create_iterate_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        assert "iterate_0" in canvas.components
+        iterate = canvas.components["iterate_0"]["obj"]
+        assert iterate.component_name == "Iterate"
+        assert iterate._param.max_loop_count == 5

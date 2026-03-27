@@ -113,12 +113,14 @@ class TestE2ERAGPipeline:
         return kb_ids
 
     @pytest.mark.p3
-    def test_full_rag_pipeline_kb_to_chat(self, WebApiAuth, tmp_path):
+    def test_full_rag_pipeline_kb_to_chat(self, WebApiAuth, tmp_path, cleanup):
         kb_res = create_dataset(WebApiAuth, {"name": "test_kb_e2e"})
         assert kb_res["code"] == 0, f"KB creation failed: {kb_res}"
         kb_id = kb_res["data"]["id"]
+        cleanup.append(kb_id)
 
-        test_file = create_txt_file(tmp_path / "test_document.txt", "This is a test document about Ragflow. Ragflow is an open-source RAG engine.")
+        test_file = tmp_path / "test_document.txt"
+        test_file.write_text("This is a test document about Ragflow. Ragflow is an open-source RAG engine.")
 
         upload_res = upload_documents(WebApiAuth, {"kb_id": kb_id}, [str(test_file)])
         assert upload_res["code"] == 0, f"Upload failed: {upload_res}"
@@ -166,10 +168,11 @@ class TestE2ERAGPipeline:
         assert "Ragflow" in answer or "RAG" in answer, "Response should mention Ragflow or RAG"
 
     @pytest.mark.p3
-    def test_full_rag_pipeline_with_multiple_documents(self, WebApiAuth, tmp_path):
+    def test_full_rag_pipeline_with_multiple_documents(self, WebApiAuth, tmp_path, cleanup):
         kb_res = create_dataset(WebApiAuth, {"name": "test_kb_multi_e2e"})
         assert kb_res["code"] == 0, f"KB creation failed: {kb_res}"
         kb_id = kb_res["data"]["id"]
+        cleanup.append(kb_id)
 
         document_contents = [
             "This is document one about Ragflow. Ragflow is an open-source RAG engine.",
@@ -177,7 +180,11 @@ class TestE2ERAGPipeline:
             "Third document covers deep document understanding and knowledge graphs.",
         ]
 
-        test_files = [create_txt_file(tmp_path / f"test_document_{i}.txt", content) for i, content in enumerate(document_contents)]
+        test_files = []
+        for i, content in enumerate(document_contents):
+            f = tmp_path / f"test_document_{i}.txt"
+            f.write_text(content)
+            test_files.append(f)
 
         upload_res = upload_documents(WebApiAuth, {"kb_id": kb_id}, [str(f) for f in test_files])
         assert upload_res["code"] == 0, f"Upload failed: {upload_res}"

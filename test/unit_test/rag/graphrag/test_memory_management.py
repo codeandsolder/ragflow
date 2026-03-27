@@ -22,9 +22,6 @@ import networkx as nx
 import pytest
 
 from rag.graphrag.memory import (
-    GraphMemoryMonitor,
-    check_memory_limits,
-    truncate_graph,
     iter_graph_chunks,
 )
 
@@ -203,26 +200,26 @@ class TestGraphMemoryManagement:
             assert chunk_nodes.isdisjoint(other_chunks_nodes)
 
     def test_memory_cleanup_after_processing(self):
-        initial_objects = len(gc.get_objects())
+        gc.collect()
+        tracked_types = (nx.Graph, nx.DiGraph)
+        initial_count = sum(1 for obj in gc.get_objects() if isinstance(obj, tracked_types))
         graphs = []
         for _ in range(10):
             graph = create_large_graph(100, avg_edges_per_node=3)
             graphs.append(graph)
         del graphs
         gc.collect()
-        final_objects = len(gc.get_objects())
-        object_diff = abs(final_objects - initial_objects)
-        assert object_diff < 10000, f"Memory leak detected: {object_diff} objects not cleaned up"
+        final_count = sum(1 for obj in gc.get_objects() if isinstance(obj, tracked_types))
+        object_diff = abs(final_count - initial_count)
+        assert object_diff < 5, f"Memory leak detected: {object_diff} graph objects not cleaned up"
 
     def test_oom_handling_and_recovery(self):
         profiler = MockMemoryProfiler(initial_memory_mb=50.0, max_memory_mb=80.0)
         graphs_created = []
-        oom_triggered = False
         for i in range(10):
             graph = create_large_graph(50, avg_edges_per_node=2)
             graph_size_mb = estimate_graph_memory_size(graph)
             if not profiler.allocate(graph_size_mb):
-                oom_triggered = True
                 for _ in range(len(graphs_created) // 2):
                     freed_graph = graphs_created.pop(0)
                     freed_size = estimate_graph_memory_size(freed_graph)

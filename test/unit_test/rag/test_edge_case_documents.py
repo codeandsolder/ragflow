@@ -38,20 +38,18 @@ class TestEdgeCaseDocuments:
         """Test processing of empty document."""
         canvas = MockCanvas()
         param = FileParam()
-        file_processor = File(canvas, "File", param)
+        file_processor = File(canvas, "file_1", param)
 
-        # Test empty document
-        with pytest.raises(Exception):
+        with pytest.raises((TypeError, IndexError)):
             asyncio.run(file_processor.invoke())
 
     def test_whitespace_only_document(self):
         """Test processing of whitespace-only document."""
         canvas = MockCanvas()
         param = FileParam()
-        file_processor = File(canvas, "File", param)
+        file_processor = File(canvas, "file_1", param)
 
-        # Test whitespace-only document
-        with pytest.raises(Exception):
+        with pytest.raises((TypeError, IndexError)):
             asyncio.run(file_processor.invoke(file=[{"name": "test.txt", "content": "   \t\n  "}]))
 
     def test_extreme_utf8_characters(self):

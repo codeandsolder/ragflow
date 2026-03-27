@@ -196,9 +196,7 @@ class TestE2EMultimodalFlow:
         image_path = create_image_file(ragflow_tmp_dir / "mixed_image.png")
         excel_path = create_excel_file(ragflow_tmp_dir / "mixed_table.xlsx")
 
-        from utils.file_utils import create_txt_file
-
-        txt_path = create_txt_file(ragflow_tmp_dir / "mixed_text.txt")
+    txt_path = create_txt_file(ragflow_tmp_dir / "mixed_text.txt")
 
         res = upload_documents(
             WebApiAuth,

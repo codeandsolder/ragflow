@@ -24,7 +24,7 @@ These tests verify that:
 
 import os
 import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import patch
 import asyncio
 
 
@@ -117,7 +117,6 @@ class TestStatePersistence:
         from agent.sandbox.executor_manager.core.container import (
             _CONTAINER_QUEUES,
             release_container,
-            get_container,
         )
         from agent.sandbox.executor_manager.services.execution import execute_code
         from agent.sandbox.executor_manager.models.schemas import CodeExecutionRequest
@@ -135,11 +134,7 @@ class TestStatePersistence:
                 code1 = base64.b64encode(b"def main(): import os; open('/workspace/test.txt', 'w').write('hello'); return {'result': 'created'}").decode()
                 req1 = CodeExecutionRequest(code_b64=code1, language="python")
 
-                loop = asyncio.new_event_loop()
-                try:
-                    result1 = loop.run_until_complete(execute_code(req1))
-                finally:
-                    loop.close()
+                loop.run_until_complete(execute_code(req1))
 
                 loop = asyncio.new_event_loop()
                 try:
@@ -179,7 +174,6 @@ class TestStatePersistence:
         from agent.sandbox.executor_manager.core.container import (
             _CONTAINER_QUEUES,
             release_container,
-            get_container,
         )
         from agent.sandbox.executor_manager.services.execution import execute_code
         from agent.sandbox.executor_manager.models.schemas import CodeExecutionRequest
@@ -197,11 +191,7 @@ class TestStatePersistence:
                 code1 = base64.b64encode(b"def main(): import os; open('/workspace/test.txt', 'w').write('hello'); return {'result': 'created'}").decode()
                 req1 = CodeExecutionRequest(code_b64=code1, language="python")
 
-                loop = asyncio.new_event_loop()
-                try:
-                    result1 = loop.run_until_complete(execute_code(req1))
-                finally:
-                    loop.close()
+                loop.run_until_complete(execute_code(req1))
 
                 loop = asyncio.new_event_loop()
                 try:
@@ -239,7 +229,6 @@ class TestStatePersistence:
         from agent.sandbox.executor_manager.core.container import (
             _CONTAINER_QUEUES,
             release_container,
-            get_container,
         )
         from agent.sandbox.executor_manager.services.execution import execute_code
         from agent.sandbox.executor_manager.models.schemas import CodeExecutionRequest
@@ -257,11 +246,7 @@ class TestStatePersistence:
                 code1 = base64.b64encode(b"def main(): import os; os.environ['TEST_VAR'] = 'hello'; return {'result': 'set'}").decode()
                 req1 = CodeExecutionRequest(code_b64=code1, language="python")
 
-                loop = asyncio.new_event_loop()
-                try:
-                    result1 = loop.run_until_complete(execute_code(req1))
-                finally:
-                    loop.close()
+                loop.run_until_complete(execute_code(req1))
 
                 loop = asyncio.new_event_loop()
                 try:
@@ -299,7 +284,6 @@ class TestStatePersistence:
         from agent.sandbox.executor_manager.core.container import (
             _CONTAINER_QUEUES,
             release_container,
-            get_container,
         )
         from agent.sandbox.executor_manager.services.execution import execute_code
         from agent.sandbox.executor_manager.models.schemas import CodeExecutionRequest
@@ -317,11 +301,7 @@ class TestStatePersistence:
                 code1 = base64.b64encode(b"def main(): import os; os.environ['TEST_VAR'] = 'hello'; return {'result': 'set'}").decode()
                 req1 = CodeExecutionRequest(code_b64=code1, language="python")
 
-                loop = asyncio.new_event_loop()
-                try:
-                    result1 = loop.run_until_complete(execute_code(req1))
-                finally:
-                    loop.close()
+                loop.run_until_complete(execute_code(req1))
 
                 loop = asyncio.new_event_loop()
                 try:
