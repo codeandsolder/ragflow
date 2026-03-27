@@ -39,4 +39,4 @@ for mod_name in _modules_to_mock:
         sys.modules[mod_name] = MagicMock()
 
 # Ensure `from common.connection_utils import timeout` returns a no-op decorator
-sys.modules["common.connection_utils"].timeout = lambda *a, **kw: (lambda fn: fn)
+sys.modules["common.connection_utils"].timeout = lambda *a, **kw: lambda fn: fn

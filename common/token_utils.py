@@ -34,6 +34,7 @@ def num_tokens_from_string(string: str) -> int:
     except Exception:
         return 0
 
+
 def total_token_count_from_response(resp):
     """
     Extract token count from LLM response in various formats.
@@ -62,19 +63,19 @@ def total_token_count_from_response(resp):
     except Exception:
         pass
 
-    if isinstance(resp, dict) and 'usage' in resp and 'total_tokens' in resp['usage']:
+    if isinstance(resp, dict) and "usage" in resp and "total_tokens" in resp["usage"]:
         try:
             return resp["usage"]["total_tokens"]
         except Exception:
             pass
 
-    if isinstance(resp, dict) and 'usage' in resp and 'input_tokens' in resp['usage'] and 'output_tokens' in resp['usage']:
+    if isinstance(resp, dict) and "usage" in resp and "input_tokens" in resp["usage"] and "output_tokens" in resp["usage"]:
         try:
             return resp["usage"]["input_tokens"] + resp["usage"]["output_tokens"]
         except Exception:
             pass
 
-    if isinstance(resp, dict) and 'meta' in resp and 'tokens' in resp['meta'] and 'input_tokens' in resp['meta']['tokens'] and 'output_tokens' in resp['meta']['tokens']:
+    if isinstance(resp, dict) and "meta" in resp and "tokens" in resp["meta"] and "input_tokens" in resp["meta"]["tokens"] and "output_tokens" in resp["meta"]["tokens"]:
         try:
             return resp["meta"]["tokens"]["input_tokens"] + resp["meta"]["tokens"]["output_tokens"]
         except Exception:

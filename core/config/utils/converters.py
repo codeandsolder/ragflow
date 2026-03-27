@@ -14,6 +14,7 @@
 #  limitations under the License.
 #
 
+
 def str_to_bool(env_val: str, default: bool = False) -> bool:
     """
     Convert an environment variable string to a boolean.

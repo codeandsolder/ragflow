@@ -77,14 +77,8 @@ class InfinityConfig(BaseModel):
 
 class DocumentEngineConfig(BaseModel):
     active: DocumentEngineType = Field(default=DocumentEngineType.ELASTICSEARCH)
-    elasticsearch: ElasticSearchConfig = Field(
-        default_factory=ElasticSearchConfig,
-        validation_alias=AliasChoices("es", "elasticsearch")
-    )
-    opensearch: OpenSearchConfig = Field(
-        default_factory=OpenSearchConfig,
-        validation_alias=AliasChoices("os", "opensearch")
-    )
+    elasticsearch: ElasticSearchConfig = Field(default_factory=ElasticSearchConfig, validation_alias=AliasChoices("es", "elasticsearch"))
+    opensearch: OpenSearchConfig = Field(default_factory=OpenSearchConfig, validation_alias=AliasChoices("os", "opensearch"))
     infinity: InfinityConfig = Field(default_factory=InfinityConfig)
 
     @property

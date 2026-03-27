@@ -25,6 +25,7 @@ from core.config.types import CacheType
 # Default values
 # ------------------------
 
+
 def test_cache_defaults(monkeypatch):
     """Test that default cache type is Redis when no env var is set."""
     monkeypatch.delenv("CACHE_TYPE", raising=False)
@@ -53,11 +54,10 @@ def test_cache_current_valid_and_is_redis():
 # YAML override
 # ------------------------
 
+
 def test_cache_yaml_override():
     """Test that YAML values override default Redis configuration."""
-    yaml_cfg = {
-        "cache": {"redis": {"host": "1.2.3.4", "port": 6380, "db": 2, "password": "secret"}}
-    }
+    yaml_cfg = {"cache": {"redis": {"host": "1.2.3.4", "port": 6380, "db": 2, "password": "secret"}}}
     with patch("core.config.app.load_yaml", return_value=yaml_cfg):
         cfg = AppConfig()
 
@@ -89,6 +89,7 @@ def test_yaml_priority_over_env(monkeypatch):
 # Redis host parsing
 # ------------------------
 
+
 def test_redis_handle_host_colon(monkeypatch):
     """Test RedisConfig parses 'host:port' format correctly."""
     cfg = RedisConfig(host="1.2.3.4:6380")
@@ -106,6 +107,7 @@ def test_redis_handle_host_only():
 # ------------------------
 # Redis helper properties
 # ------------------------
+
 
 def test_redis_endpoint_property():
     """Test RedisConfig.endpoint returns 'host:port' string."""
@@ -129,17 +131,11 @@ def test_redis_build_dsn_without_password():
 # Redis connection parameters
 # ------------------------
 
+
 def test_redis_connection_params_full():
     """Test RedisConfig.connection_params includes all fields when username/password are set."""
     cfg = RedisConfig(host="1.2.3.4", port=6379, db=1, username="u", password="p")
-    expected = {
-        "host": "1.2.3.4",
-        "port": 6379,
-        "db": 1,
-        "username": "u",
-        "password": "p",
-        "decode_responses": True
-    }
+    expected = {"host": "1.2.3.4", "port": 6379, "db": 1, "username": "u", "password": "p", "decode_responses": True}
     assert cfg.connection_params == expected
 
 
@@ -154,11 +150,10 @@ def test_redis_connection_params_minimal():
 # Optional: test connection_params reflects YAML overrides
 # ------------------------
 
+
 def test_redis_connection_params_yaml_override():
     """Test that YAML overrides for Redis username/password appear in connection_params."""
-    yaml_cfg = {
-        "cache": {"redis": {"username": "yamluser", "password": "yamlpass"}}
-    }
+    yaml_cfg = {"cache": {"redis": {"username": "yamluser", "password": "yamlpass"}}}
     with patch("core.config.app.load_yaml", return_value=yaml_cfg):
         cfg = AppConfig()
     redis_cfg = cfg.cache.redis

@@ -406,9 +406,7 @@ def _load_dataset_module(monkeypatch):
     def _parse_args(*_args, **_kwargs):
         return {"name": "", "page": 1, "page_size": 30, "orderby": "create_time", "desc": True}, None
 
-    validation_spec = importlib.util.spec_from_file_location(
-        "api.utils.validation_utils", repo_root / "api" / "utils" / "validation_utils.py"
-    )
+    validation_spec = importlib.util.spec_from_file_location("api.utils.validation_utils", repo_root / "api" / "utils" / "validation_utils.py")
     validation_mod = importlib.util.module_from_spec(validation_spec)
     monkeypatch.setitem(sys.modules, "api.utils.validation_utils", validation_mod)
     validation_spec.loader.exec_module(validation_mod)
@@ -669,7 +667,7 @@ def test_run_trace_graphrag_matrix_unit(monkeypatch):
     monkeypatch.setattr(module.logging, "warning", lambda msg, *_args, **_kwargs: warnings.append(msg))
 
     res = _run(inspect.unwrap(module.run_graphrag)("tenant-1", ""))
-    assert 'Dataset ID' in res["message"], res
+    assert "Dataset ID" in res["message"], res
 
     monkeypatch.setattr(module.KnowledgebaseService, "accessible", lambda *_args, **_kwargs: False)
     res = _run(inspect.unwrap(module.run_graphrag)("tenant-1", "kb-1"))
@@ -714,7 +712,7 @@ def test_run_trace_graphrag_matrix_unit(monkeypatch):
     assert any("Cannot save graphrag_task_id" in msg for msg in warnings), warnings
 
     res = inspect.unwrap(module.trace_graphrag)("tenant-1", "")
-    assert 'Dataset ID' in res["message"], res
+    assert "Dataset ID" in res["message"], res
 
     monkeypatch.setattr(module.KnowledgebaseService, "accessible", lambda *_args, **_kwargs: False)
     res = inspect.unwrap(module.trace_graphrag)("tenant-1", "kb-1")
@@ -745,7 +743,7 @@ def test_run_trace_raptor_matrix_unit(monkeypatch):
     monkeypatch.setattr(module.logging, "warning", lambda msg, *_args, **_kwargs: warnings.append(msg))
 
     res = _run(inspect.unwrap(module.run_raptor)("tenant-1", ""))
-    assert 'Dataset ID' in res["message"], res
+    assert "Dataset ID" in res["message"], res
 
     monkeypatch.setattr(module.KnowledgebaseService, "accessible", lambda *_args, **_kwargs: False)
     res = _run(inspect.unwrap(module.run_raptor)("tenant-1", "kb-1"))
@@ -782,7 +780,7 @@ def test_run_trace_raptor_matrix_unit(monkeypatch):
     assert any("Cannot save raptor_task_id" in msg for msg in warnings), warnings
 
     res = inspect.unwrap(module.trace_raptor)("tenant-1", "")
-    assert 'Dataset ID' in res["message"], res
+    assert "Dataset ID" in res["message"], res
 
     monkeypatch.setattr(module.KnowledgebaseService, "accessible", lambda *_args, **_kwargs: False)
     res = inspect.unwrap(module.trace_raptor)("tenant-1", "kb-1")

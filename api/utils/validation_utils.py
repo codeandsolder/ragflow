@@ -19,16 +19,7 @@ from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from quart import Request
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    StringConstraints,
-    ValidationError,
-    field_validator,
-    model_validator,
-    ValidationInfo
-)
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, field_validator, model_validator, ValidationInfo
 from pydantic_core import PydanticCustomError
 from werkzeug.exceptions import BadRequest, UnsupportedMediaType
 
@@ -165,10 +156,11 @@ def validate_and_parse_request_args(request: Request, validator: type[BaseModel]
     args = request.args.to_dict(flat=True)
 
     # Handle ext parameter: parse JSON string to dict if it's a string
-    if 'ext' in args and isinstance(args['ext'], str):
+    if "ext" in args and isinstance(args["ext"], str):
         import json
+
         try:
-            args['ext'] = json.loads(args['ext'])
+            args["ext"] = json.loads(args["ext"])
         except json.JSONDecodeError:
             pass  # Keep the string and let validation handle the error
 
@@ -643,8 +635,7 @@ class CreateDatasetReq(Base):
     @classmethod
     def validate_chunk_method(cls, v: Any, handler, info: ValidationInfo) -> Any:
         """Wrap validation to unify error messages, including type errors (e.g. list)."""
-        allowed = {"naive", "book", "email", "laws", "manual", "one", "paper", "picture", "presentation", "qa", "table",
-                   "tag", "resume"}
+        allowed = {"naive", "book", "email", "laws", "manual", "one", "paper", "picture", "presentation", "qa", "table", "tag", "resume"}
         error_msg = "Input should be 'naive', 'book', 'email', 'laws', 'manual', 'one', 'paper', 'picture', 'presentation', 'qa', 'table', 'tag' or 'resume'"
         try:
             # Run inner validation (type checking)
@@ -777,6 +768,7 @@ class ListDatasetReq(BaseListReq):
 
 # ---- File Management Request Models ----
 
+
 class CreateFolderReq(Base):
     name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255), Field(...)]
     parent_id: Annotated[str | None, Field(default=None)]
@@ -792,7 +784,7 @@ class MoveFileReq(Base):
     dest_file_id: Annotated[str | None, Field(default=None)]
     new_name: Annotated[str | None, StringConstraints(strip_whitespace=True, min_length=1, max_length=255), Field(default=None)]
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def check_operation(self):
         if not self.dest_file_id and not self.new_name:
             raise ValueError("At least one of dest_file_id or new_name must be provided")

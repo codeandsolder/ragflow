@@ -11,7 +11,7 @@ def test_oauth_legacy_yaml_compatibility():
             "oauth2": {"client_id": "old_oauth2_id", "client_secret": "old_oauth2_secret"},
             "oidc": {"client_id": "old_oidc_id", "client_secret": "old_oidc_secret"},
             "github": {"client_id": "old_github_id", "client_secret": "old_github_secret"},
-            "feishu": {"app_id": "old_feishu_app", "app_secret": "old_feishu_secret"}
+            "feishu": {"app_id": "old_feishu_app", "app_secret": "old_feishu_secret"},
         }
     }
 
@@ -40,7 +40,7 @@ def test_oauth_new_yaml_no_change():
                 "oauth2": {"client_id": "new_oauth2_id", "client_secret": "new_oauth2_secret"},
                 "oidc": {"client_id": "new_oidc_id", "client_secret": "new_oidc_secret"},
                 "github": {"client_id": "new_github_id", "client_secret": "new_github_secret"},
-                "feishu": {"app_id": "new_feishu_app", "app_secret": "new_feishu_secret"}
+                "feishu": {"app_id": "new_feishu_app", "app_secret": "new_feishu_secret"},
             }
         }
     }

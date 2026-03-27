@@ -307,10 +307,7 @@ class TestDatasetUpdate:
         payload = {"embedding_model": new_embedding}
         res = update_dataset(HttpApiAuth, dataset_id, payload)
         assert res["code"] == 102, res
-        expected_message = (
-            f"When chunk_num ({dataset['chunk_count']}) > 0, "
-            f"embedding_model must remain {current_embedding}"
-        )
+        expected_message = f"When chunk_num ({dataset['chunk_count']}) > 0, embedding_model must remain {current_embedding}"
         assert res["message"] == expected_message, res
 
     @pytest.mark.p2

@@ -453,10 +453,7 @@ class SandboxMgr:
         """List all available sandbox providers."""
         result = []
         for provider_id, metadata in SandboxMgr.PROVIDER_REGISTRY.items():
-            result.append({
-                "id": provider_id,
-                **metadata
-            })
+            result.append({"id": provider_id, **metadata})
         return result
 
     @staticmethod
@@ -672,12 +669,12 @@ print("TEST_PASSED")
                 instance_id=instance.instance_id,
                 code=test_code,
                 language="python",
-                timeout=10  # 10 seconds timeout
+                timeout=10,  # 10 seconds timeout
             )
 
             # Clean up the test instance (if provider supports it)
             try:
-                if hasattr(provider, 'terminate_instance'):
+                if hasattr(provider, "terminate_instance"):
                     provider.terminate_instance(instance.instance_id)
                     logging.info(f"Cleaned up test instance {instance.instance_id}")
                 else:
@@ -688,11 +685,7 @@ print("TEST_PASSED")
             # Build detailed result message
             success = execution_result.exit_code == 0 and "TEST_PASSED" in execution_result.stdout
 
-            message_parts = [
-                f"Test {success and 'PASSED' or 'FAILED'}",
-                f"Exit code: {execution_result.exit_code}",
-                f"Execution time: {execution_result.execution_time:.2f}s"
-            ]
+            message_parts = [f"Test {success and 'PASSED' or 'FAILED'}", f"Exit code: {execution_result.exit_code}", f"Execution time: {execution_result.execution_time:.2f}s"]
 
             if execution_result.stdout.strip():
                 stdout_preview = execution_result.stdout.strip()[:200]
@@ -712,12 +705,13 @@ print("TEST_PASSED")
                     "execution_time": execution_result.execution_time,
                     "stdout": execution_result.stdout,
                     "stderr": execution_result.stderr,
-                }
+                },
             }
 
         except AdminException:
             raise
         except Exception as e:
             import traceback
+
             error_details = traceback.format_exc()
             raise AdminException(f"Connection test failed: {str(e)}\\n\\nStack trace:\\n{error_details}")

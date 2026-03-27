@@ -182,15 +182,15 @@ async def update():
         return server_error_response(e)
 """
 
-@manager.route('/update_metadata_setting', methods=['post'])  # noqa: F821
+
+@manager.route("/update_metadata_setting", methods=["post"])  # noqa: F821
 @login_required
 @validate_request("kb_id", "metadata")
 async def update_metadata_setting():
     req = await get_request_json()
     e, kb = KnowledgebaseService.get_by_id(req["kb_id"])
     if not e:
-        return get_data_error_result(
-            message="Database error (Knowledgebase rename)!")
+        return get_data_error_result(message="Database error (Knowledgebase rename)!")
     kb = kb.to_dict()
     kb["parser_config"]["metadata"] = req["metadata"]
     kb["parser_config"]["enable_metadata"] = req.get("enable_metadata", True)
@@ -198,25 +198,21 @@ async def update_metadata_setting():
     return get_json_result(data=kb)
 
 
-@manager.route('/detail', methods=['GET'])  # noqa: F821
+@manager.route("/detail", methods=["GET"])  # noqa: F821
 @login_required
 def detail():
     kb_id = request.args["kb_id"]
     try:
         tenants = UserTenantService.query(user_id=current_user.id)
         for tenant in tenants:
-            if KnowledgebaseService.query(
-                    tenant_id=tenant.tenant_id, id=kb_id):
+            if KnowledgebaseService.query(tenant_id=tenant.tenant_id, id=kb_id):
                 break
         else:
-            return get_json_result(
-                data=False, message='Only owner of dataset authorized for this operation.',
-                code=RetCode.OPERATING_ERROR)
+            return get_json_result(data=False, message="Only owner of dataset authorized for this operation.", code=RetCode.OPERATING_ERROR)
         kb = KnowledgebaseService.get_detail(kb_id)
         if not kb:
-            return get_data_error_result(
-                message="Can't find this dataset!")
-        kb["size"] = DocumentService.get_total_size_by_kb_id(kb_id=kb["id"],keywords="", run_status=[], types=[])
+            return get_data_error_result(message="Can't find this dataset!")
+        kb["size"] = DocumentService.get_total_size_by_kb_id(kb_id=kb["id"], keywords="", run_status=[], types=[])
         kb["connectors"] = Connector2KbService.list_connectors(kb_id)
         if kb["parser_config"].get("metadata"):
             kb["parser_config"]["metadata"] = turn2jsonschema(kb["parser_config"]["metadata"])
@@ -227,6 +223,7 @@ def detail():
         return get_json_result(data=kb)
     except Exception as e:
         return server_error_response(e)
+
 
 """
 Deprecated, todo delete
@@ -326,15 +323,12 @@ async def rm():
         return server_error_response(e)
 """
 
-@manager.route('/<kb_id>/tags', methods=['GET'])  # noqa: F821
+
+@manager.route("/<kb_id>/tags", methods=["GET"])  # noqa: F821
 @login_required
 def list_tags(kb_id):
     if not KnowledgebaseService.accessible(kb_id, current_user.id):
-        return get_json_result(
-            data=False,
-            message='No authorization.',
-            code=RetCode.AUTHENTICATION_ERROR
-        )
+        return get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
 
     tenants = UserTenantService.get_tenants_by_user_id(current_user.id)
     tags = []
@@ -343,17 +337,13 @@ def list_tags(kb_id):
     return get_json_result(data=tags)
 
 
-@manager.route('/tags', methods=['GET'])  # noqa: F821
+@manager.route("/tags", methods=["GET"])  # noqa: F821
 @login_required
 def list_tags_from_kbs():
     kb_ids = request.args.get("kb_ids", "").split(",")
     for kb_id in kb_ids:
         if not KnowledgebaseService.accessible(kb_id, current_user.id):
-            return get_json_result(
-                data=False,
-                message='No authorization.',
-                code=RetCode.AUTHENTICATION_ERROR
-            )
+            return get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
 
     tenants = UserTenantService.get_tenants_by_user_id(current_user.id)
     tags = []
@@ -362,43 +352,32 @@ def list_tags_from_kbs():
     return get_json_result(data=tags)
 
 
-@manager.route('/<kb_id>/rm_tags', methods=['POST'])  # noqa: F821
+@manager.route("/<kb_id>/rm_tags", methods=["POST"])  # noqa: F821
 @login_required
 async def rm_tags(kb_id):
     req = await get_request_json()
     if not KnowledgebaseService.accessible(kb_id, current_user.id):
-        return get_json_result(
-            data=False,
-            message='No authorization.',
-            code=RetCode.AUTHENTICATION_ERROR
-        )
+        return get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
     e, kb = KnowledgebaseService.get_by_id(kb_id)
 
     for t in req["tags"]:
-        settings.docStoreConn.update({"tag_kwd": t, "kb_id": [kb_id]},
-                                     {"remove": {"tag_kwd": t}},
-                                     search.index_name(kb.tenant_id),
-                                     kb_id)
+        settings.docStoreConn.update({"tag_kwd": t, "kb_id": [kb_id]}, {"remove": {"tag_kwd": t}}, search.index_name(kb.tenant_id), kb_id)
     return get_json_result(data=True)
 
 
-@manager.route('/<kb_id>/rename_tag', methods=['POST'])  # noqa: F821
+@manager.route("/<kb_id>/rename_tag", methods=["POST"])  # noqa: F821
 @login_required
 async def rename_tags(kb_id):
     req = await get_request_json()
     if not KnowledgebaseService.accessible(kb_id, current_user.id):
-        return get_json_result(
-            data=False,
-            message='No authorization.',
-            code=RetCode.AUTHENTICATION_ERROR
-        )
+        return get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
     e, kb = KnowledgebaseService.get_by_id(kb_id)
 
-    settings.docStoreConn.update({"tag_kwd": req["from_tag"], "kb_id": [kb_id]},
-                                     {"remove": {"tag_kwd": req["from_tag"].strip()}, "add": {"tag_kwd": req["to_tag"]}},
-                                     search.index_name(kb.tenant_id),
-                                     kb_id)
+    settings.docStoreConn.update(
+        {"tag_kwd": req["from_tag"], "kb_id": [kb_id]}, {"remove": {"tag_kwd": req["from_tag"].strip()}, "add": {"tag_kwd": req["to_tag"]}}, search.index_name(kb.tenant_id), kb_id
+    )
     return get_json_result(data=True)
+
 
 """
 Deprecated, todo delete
@@ -457,17 +436,14 @@ def delete_knowledge_graph(kb_id):
     return get_json_result(data=True)
 """
 
+
 @manager.route("/get_meta", methods=["GET"])  # noqa: F821
 @login_required
 def get_meta():
     kb_ids = request.args.get("kb_ids", "").split(",")
     for kb_id in kb_ids:
         if not KnowledgebaseService.accessible(kb_id, current_user.id):
-            return get_json_result(
-                data=False,
-                message='No authorization.',
-                code=RetCode.AUTHENTICATION_ERROR
-            )
+            return get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
     return get_json_result(data=DocMetadataService.get_flatted_meta_by_kbs(kb_ids))
 
 
@@ -476,11 +452,7 @@ def get_meta():
 def get_basic_info():
     kb_id = request.args.get("kb_id", "")
     if not KnowledgebaseService.accessible(kb_id, current_user.id):
-        return get_json_result(
-            data=False,
-            message='No authorization.',
-            code=RetCode.AUTHENTICATION_ERROR
-        )
+        return get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
 
     basic_info = DocumentService.knowledgebase_basic_info(kb_id)
 
@@ -734,6 +706,7 @@ def trace_raptor():
     return get_json_result(data=task.to_dict())
 """
 
+
 @manager.route("/run_mindmap", methods=["POST"])  # noqa: F821
 @login_required
 async def run_mindmap():
@@ -843,12 +816,12 @@ def delete_kb_task():
         case _:
             return get_error_data_result(message="Internal Error: Invalid task type")
 
-
     ok = KnowledgebaseService.update_by_id(kb_id, {kb_task_id_field: "", kb_task_finish_at: None})
     if not ok:
         return server_error_response(f"Internal error: cannot delete task {pipeline_task_type}")
 
     return get_json_result(data=True)
+
 
 @manager.route("/check_embedding", methods=["post"])  # noqa: F821
 @login_required
@@ -887,23 +860,27 @@ async def check_embedding():
         tenant_id: str,
         kb_id: str,
         n: int = 5,
-        base_fields=("docnm_kwd","doc_id","content_with_weight","page_num_int","position_int","top_int"),
+        base_fields=("docnm_kwd", "doc_id", "content_with_weight", "page_num_int", "position_int", "top_int"),
     ):
         index_nm = search.index_name(tenant_id)
 
         res0 = docStoreConn.search(
-            select_fields=[], highlight_fields=[],
+            select_fields=[],
+            highlight_fields=[],
             condition={"kb_id": kb_id, "available_int": 1},
-            match_expressions=[], order_by=OrderByExpr(),
-            offset=0, limit=1,
-            index_names=index_nm, knowledgebase_ids=[kb_id]
+            match_expressions=[],
+            order_by=OrderByExpr(),
+            offset=0,
+            limit=1,
+            index_names=index_nm,
+            knowledgebase_ids=[kb_id],
         )
         total = docStoreConn.get_total(res0)
         if total <= 0:
             return []
 
         n = min(n, total)
-        offsets = sorted(random.sample(range(min(total,1000)), n))
+        offsets = sorted(random.sample(range(min(total, 1000)), n))
         out = []
 
         for off in offsets:
@@ -911,9 +888,12 @@ async def check_embedding():
                 select_fields=list(base_fields),
                 highlight_fields=[],
                 condition={"kb_id": kb_id, "available_int": 1},
-                match_expressions=[], order_by=OrderByExpr(),
-                offset=off, limit=1,
-                index_names=index_nm, knowledgebase_ids=[kb_id]
+                match_expressions=[],
+                order_by=OrderByExpr(),
+                offset=off,
+                limit=1,
+                index_names=index_nm,
+                knowledgebase_ids=[kb_id],
             )
             ids = docStoreConn.get_doc_ids(res1)
             if not ids:
@@ -924,25 +904,28 @@ async def check_embedding():
             vec_field = _guess_vec_field(full_doc)
             vec = _as_float_vec(full_doc.get(vec_field))
 
-            out.append({
-                "chunk_id": cid,
-                "kb_id": kb_id,
-                "doc_id": full_doc.get("doc_id"),
-                "doc_name": full_doc.get("docnm_kwd"),
-                "vector_field": vec_field,
-                "vector_dim": len(vec),
-                "vector": vec,
-                "page_num_int": full_doc.get("page_num_int"),
-                "position_int": full_doc.get("position_int"),
-                "top_int": full_doc.get("top_int"),
-                "content_with_weight": full_doc.get("content_with_weight") or "",
-                "question_kwd": full_doc.get("question_kwd") or []
-            })
+            out.append(
+                {
+                    "chunk_id": cid,
+                    "kb_id": kb_id,
+                    "doc_id": full_doc.get("doc_id"),
+                    "doc_name": full_doc.get("docnm_kwd"),
+                    "vector_field": vec_field,
+                    "vector_dim": len(vec),
+                    "vector": vec,
+                    "page_num_int": full_doc.get("page_num_int"),
+                    "position_int": full_doc.get("position_int"),
+                    "top_int": full_doc.get("top_int"),
+                    "content_with_weight": full_doc.get("content_with_weight") or "",
+                    "question_kwd": full_doc.get("question_kwd") or [],
+                }
+            )
         return out
 
     def _clean(s: str) -> str:
         s = re.sub(r"</?(table|td|caption|tr|th)( [^<>]{0,12})?>", " ", s or "")
         return s if s else "None"
+
     req = await get_request_json()
     kb_id = req.get("kb_id", "")
     tenant_embd_id = req.get("tenant_embd_id")
@@ -988,14 +971,16 @@ async def check_embedding():
             return get_error_data_result(message=f"Embedding failure. {e}")
 
         eff_sims.append(sim)
-        results.append({
-            "chunk_id": ck["chunk_id"],
-            "doc_id": ck["doc_id"],
-            "doc_name": ck["doc_name"],
-            "vector_field": ck["vector_field"],
-            "vector_dim": ck["vector_dim"],
-            "cos_sim": round(sim, 6),
-        })
+        results.append(
+            {
+                "chunk_id": ck["chunk_id"],
+                "doc_id": ck["doc_id"],
+                "doc_name": ck["doc_name"],
+                "vector_field": ck["vector_field"],
+                "vector_dim": ck["vector_dim"],
+                "cos_sim": round(sim, 6),
+            }
+        )
 
     summary = {
         "kb_id": kb_id,
@@ -1009,4 +994,8 @@ async def check_embedding():
     }
     if summary["avg_cos_sim"] > 0.9:
         return get_json_result(data={"summary": summary, "results": results})
-    return get_json_result(code=RetCode.NOT_EFFECTIVE, message="Embedding model switch failed: the average similarity between old and new vectors is below 0.9, indicating incompatible vector spaces.", data={"summary": summary, "results": results})
+    return get_json_result(
+        code=RetCode.NOT_EFFECTIVE,
+        message="Embedding model switch failed: the average similarity between old and new vectors is below 0.9, indicating incompatible vector spaces.",
+        data={"summary": summary, "results": results},
+    )

@@ -153,7 +153,7 @@ def chunk(filename, binary=None, from_page=0, to_page=100000, lang="Chinese", ca
             logging.warning(f"python-pptx parsing failed for {filename}: {e}, trying tika as fallback")
             if callback:
                 callback(0.1, "python-pptx failed, trying tika as fallback")
-            
+
             try:
                 from tika import parser as tika_parser
             except Exception as tika_error:
@@ -162,18 +162,18 @@ def chunk(filename, binary=None, from_page=0, to_page=100000, lang="Chinese", ca
                     callback(0.8, error_msg)
                 logging.warning(f"{error_msg} for {filename}.")
                 raise NotImplementedError(error_msg)
-            
+
             if binary:
                 binary_data = binary
             else:
-                with open(filename, 'rb') as f:
+                with open(filename, "rb") as f:
                     binary_data = f.read()
             doc_parsed = tika_parser.from_buffer(BytesIO(binary_data))
-            
+
             if doc_parsed.get("content", None) is not None:
                 sections = doc_parsed["content"].split("\n")
                 sections = [s for s in sections if s.strip()]
-                
+
                 for pn, txt in enumerate(sections):
                     d = copy.deepcopy(doc)
                     pn += from_page
@@ -183,7 +183,7 @@ def chunk(filename, binary=None, from_page=0, to_page=100000, lang="Chinese", ca
                     d["position_int"] = [(pn + 1, 0, 0, 0, 0)]
                     tokenize(d, txt, eng)
                     res.append(d)
-                
+
                 if callback:
                     callback(0.8, "Finish parsing with tika.")
                 return res

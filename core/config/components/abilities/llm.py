@@ -61,19 +61,9 @@ class ModelConfig(BaseModel):
 
 
 class UserDefaultLLMConfig(BaseModel):
-    factory: str = Field(
-        default="",
-        description="The LLM supplier. Options: OpenAI, DeepSeek, Moonshot, Tongyi-Qianwen, VolcEngine, ZHIPU-AI."
-    )
-    api_key: Optional[str] = Field(
-        default="",
-        description="The API key for the specified LLM. Required if factory is set."
-    )
-    allowed_factories: Optional[List[str]] = Field(
-        default=None,
-        description="If set, users are only allowed to add factories in this list. "
-                    "Options include: OpenAI, DeepSeek, Moonshot."
-    )
+    factory: str = Field(default="", description="The LLM supplier. Options: OpenAI, DeepSeek, Moonshot, Tongyi-Qianwen, VolcEngine, ZHIPU-AI.")
+    api_key: Optional[str] = Field(default="", description="The API key for the specified LLM. Required if factory is set.")
+    allowed_factories: Optional[List[str]] = Field(default=None, description="If set, users are only allowed to add factories in this list. Options include: OpenAI, DeepSeek, Moonshot.")
     parsers: str = Field(default=PARSERS, description="Comma-separated parser id:name list")
     default_models: Dict[str, ModelConfig] = Field(
         default_factory=lambda: {

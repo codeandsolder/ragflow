@@ -11,7 +11,7 @@ yaml.default_flow_style = False  # Block-style YAML output
 yaml.indent(mapping=2, sequence=4, offset=2)
 
 # Regex to match shell-style variables: ${VAR} or ${VAR:-default}
-ENV_PATTERN = re.compile(r'\${([^}:]+)(:-([^}]*))?}')
+ENV_PATTERN = re.compile(r"\${([^}:]+)(:-([^}]*))?}")
 
 
 def replace_env(value: Any) -> Any:
@@ -31,10 +31,10 @@ def replace_env(value: Any) -> Any:
 
     def repl(match):
         var_name = match.group(1)
-        default_value = match.group(3) or ''
-        default_value = default_value.strip('\'"')  # Remove surrounding quotes from default
+        default_value = match.group(3) or ""
+        default_value = default_value.strip("'\"")  # Remove surrounding quotes from default
         env_val = os.environ.get(var_name)
-        return env_val if env_val not in (None, '') else default_value
+        return env_val if env_val not in (None, "") else default_value
 
     return ENV_PATTERN.sub(repl, value)
 
@@ -68,7 +68,7 @@ def render_file(template_path: Path, output_path: Path):
         output_path: Path to write rendered YAML
     """
     try:
-        with open(template_path, 'r', encoding='utf-8') as f:
+        with open(template_path, "r", encoding="utf-8") as f:
             data = yaml.load(f)
     except FileNotFoundError:
         raise RuntimeError(f"Template file {template_path} not found")
@@ -77,7 +77,7 @@ def render_file(template_path: Path, output_path: Path):
 
     rendered_data = render_node(data)
 
-    with open(output_path, 'w', encoding='utf-8') as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         yaml.dump(rendered_data, f)
 
 

@@ -24,6 +24,7 @@ Test compatibility between old and new YAML formats for doc_engine configuration
 3. Ensure that when both old and new formats exist, the new format takes precedence.
 4. Check that key properties like host/uri and port are correctly parsed from YAML.
 """
+
 from unittest.mock import patch
 
 from core.config import AppConfig

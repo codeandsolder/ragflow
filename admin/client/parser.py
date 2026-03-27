@@ -607,15 +607,13 @@ class RAGFlowCLITransformer(Transformer):
         dataset_name = items[2].children[0].strip("'\"")
         embedding = items[5].children[0].strip("'\"")
         parser_type = items[7].children[0].strip("'\"")
-        return {"type": "create_user_dataset", "dataset_name": dataset_name, "embedding": embedding,
-                "parser_type": parser_type}
+        return {"type": "create_user_dataset", "dataset_name": dataset_name, "embedding": embedding, "parser_type": parser_type}
 
     def create_user_dataset_with_pipeline(self, items):
         dataset_name = items[2].children[0].strip("'\"")
         embedding = items[5].children[0].strip("'\"")
         pipeline = items[7].children[0].strip("'\"")
-        return {"type": "create_user_dataset", "dataset_name": dataset_name, "embedding": embedding,
-                "pipeline": pipeline}
+        return {"type": "create_user_dataset", "dataset_name": dataset_name, "embedding": embedding, "pipeline": pipeline}
 
     def drop_user_dataset(self, items):
         dataset_name = items[2].children[0].strip("'\"")
@@ -633,7 +631,7 @@ class RAGFlowCLITransformer(Transformer):
         dataset_names = []
         dataset_names.append(items[4].children[0].strip("'\""))
         for i in range(5, len(items)):
-            if items[i] and hasattr(items[i], 'children') and items[i].children:
+            if items[i] and hasattr(items[i], "children") and items[i].children:
                 dataset_names.append(items[i].children[0].strip("'\""))
         return {"type": "list_user_datasets_metadata", "dataset_names": dataset_names}
 
@@ -642,7 +640,7 @@ class RAGFlowCLITransformer(Transformer):
         doc_ids = []
         if len(items) > 6 and items[6] == "DOCUMENTS":
             for i in range(7, len(items)):
-                if items[i] and hasattr(items[i], 'children') and items[i].children:
+                if items[i] and hasattr(items[i], "children") and items[i].children:
                     doc_id = items[i].children[0].strip("'\"")
                     doc_ids.append(doc_id)
         return {"type": "list_user_documents_metadata_summary", "dataset_name": dataset_name, "document_ids": doc_ids}
@@ -666,17 +664,17 @@ class RAGFlowCLITransformer(Transformer):
         dataset_name = None
         vector_size = None
         for i, item in enumerate(items):
-            if hasattr(item, 'data') and item.data == 'quoted_string':
+            if hasattr(item, "data") and item.data == "quoted_string":
                 dataset_name = item.children[0].strip("'\"")
-            if hasattr(item, 'type') and item.type == 'NUMBER':
-                if i > 0 and items[i-1].type == 'VECTOR_SIZE':
+            if hasattr(item, "type") and item.type == "NUMBER":
+                if i > 0 and items[i - 1].type == "VECTOR_SIZE":
                     vector_size = int(item)
         return {"type": "create_index", "dataset_name": dataset_name, "vector_size": vector_size}
 
     def drop_index(self, items):
         dataset_name = None
         for item in items:
-            if hasattr(item, 'data') and item.data == 'quoted_string':
+            if hasattr(item, "data") and item.data == "quoted_string":
                 dataset_name = item.children[0].strip("'\"")
         return {"type": "drop_index", "dataset_name": dataset_name}
 

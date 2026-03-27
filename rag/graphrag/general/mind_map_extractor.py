@@ -32,9 +32,11 @@ from common.token_utils import num_tokens_from_string
 
 from common.misc_utils import thread_pool_exec
 
+
 @dataclass
 class MindMapResult:
     """Unipartite Mind Graph result class definition."""
+
     output: dict
 
 
@@ -44,11 +46,11 @@ class MindMapExtractor(Extractor):
     _on_error: ErrorHandlerFn
 
     def __init__(
-            self,
-            llm_invoker: GraphRAGCompletionLLM,
-            prompt: str | None = None,
-            input_text_key: str | None = None,
-            on_error: ErrorHandlerFn | None = None,
+        self,
+        llm_invoker: GraphRAGCompletionLLM,
+        prompt: str | None = None,
+        input_text_key: str | None = None,
+        on_error: ErrorHandlerFn | None = None,
     ):
         """Init method definition."""
         # TODO: streamline construction
@@ -72,17 +74,10 @@ class MindMapExtractor(Extractor):
             k = self._key(k)
             if k and k not in keyset:
                 keyset.add(k)
-                arr.append(
-                    {
-                        "id": k,
-                        "children": self._be_children(v, keyset)
-                    }
-                )
+                arr.append({"id": k, "children": self._be_children(v, keyset)})
         return arr
 
-    async def __call__(
-            self, sections: list[str], prompt_variables: dict[str, Any] | None = None
-    ) -> MindMapResult:
+    async def __call__(self, sections: list[str], prompt_variables: dict[str, Any] | None = None) -> MindMapResult:
         """Call method definition."""
         if prompt_variables is None:
             prompt_variables = {}
@@ -95,18 +90,14 @@ class MindMapExtractor(Extractor):
         for i in range(len(sections)):
             section_cnt = num_tokens_from_string(sections[i])
             if cnt + section_cnt >= token_count and texts:
-                tasks.append(asyncio.create_task(
-                    self._process_document("".join(texts), prompt_variables, res)
-                ))
+                tasks.append(asyncio.create_task(self._process_document("".join(texts), prompt_variables, res)))
                 texts = []
                 cnt = 0
 
             texts.append(sections[i])
             cnt += section_cnt
         if texts:
-            tasks.append(asyncio.create_task(
-                self._process_document("".join(texts), prompt_variables, res)
-            ))
+            tasks.append(asyncio.create_task(self._process_document("".join(texts), prompt_variables, res)))
         try:
             await asyncio.gather(*tasks, return_exceptions=False)
         except Exception as e:
@@ -121,16 +112,7 @@ class MindMapExtractor(Extractor):
         if len(merge_json) > 1:
             keys = [re.sub(r"\*+", "", k) for k, v in merge_json.items() if isinstance(v, dict)]
             keyset = set(i for i in keys if i)
-            merge_json = {
-                "id": "root",
-                "children": [
-                    {
-                        "id": self._key(k),
-                        "children": self._be_children(v, keyset)
-                    }
-                    for k, v in merge_json.items() if isinstance(v, dict) and self._key(k)
-                ]
-            }
+            merge_json = {"id": "root", "children": [{"id": self._key(k), "children": self._be_children(v, keyset)} for k, v in merge_json.items() if isinstance(v, dict) and self._key(k)]}
         else:
             k = self._key(list(merge_json.keys())[0])
             merge_json = {"id": k, "children": self._be_children(list(merge_json.items())[0][1], {k})}
@@ -177,16 +159,14 @@ class MindMapExtractor(Extractor):
             return [self._todict(value) for value in layer]
         return layer
 
-    async def _process_document(
-            self, text: str, prompt_variables: dict[str, str], out_res: list[dict[str, Any] | list[Any] | str]
-    ) -> None:
+    async def _process_document(self, text: str, prompt_variables: dict[str, str], out_res: list[dict[str, Any] | list[Any] | str]) -> None:
         variables = {
             **prompt_variables,
             self._input_text_key: text,
         }
         text = perform_variable_replacements(self._mind_map_prompt, variables=variables)
         async with chat_limiter:
-            response = await thread_pool_exec(self._chat,text,[{"role": "user", "content": "Output:"}],{})
+            response = await thread_pool_exec(self._chat, text, [{"role": "user", "content": "Output:"}], {})
         response = re.sub(r"```[^\n]*", "", response)
         logging.debug(response)
         logging.debug(self._todict(markdown_to_json.dictify(response)))

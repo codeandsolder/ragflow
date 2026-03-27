@@ -23,9 +23,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict, PydanticBaseSett
 
 from core.config.components.abilities import UserDefaultLLMConfig, RAGConfig, SecurityConfig
 from core.config.components.base import CacheConfig, DatabaseConfig, DocumentEngineConfig, StorageConfig
-from core.config.components.abilities.services import (
-    AdminConfig, RAGFlowConfig, SandboxConfig, TaskExecutorConfig, SMTPConfig
-)
+from core.config.components.abilities.services import AdminConfig, RAGFlowConfig, SandboxConfig, TaskExecutorConfig, SMTPConfig
 from core.config.components.third_party import ThirdPartyConfig
 from core.config.env_overrides import ENV_OVERRIDES
 from core.config.legacy import normalize_legacy_yaml
@@ -66,6 +64,7 @@ class EnvOverrideSource(EnvSettingsSource):
 
     Define mappings of environment variables and config fields at env_overrides.py.
     """
+
     def __init__(self, settings_cls, yaml_source: YAMLSource):
         super().__init__(settings_cls)
         self.yaml_source = yaml_source
@@ -95,6 +94,7 @@ class AppConfig(BaseSettings):
     """
     # Top-level AppConfig
     """
+
     ragflow: RAGFlowConfig = Field(default_factory=RAGFlowConfig)
     rag: RAGConfig = Field(default_factory=RAGConfig)
     task_executor: TaskExecutorConfig = Field(default_factory=TaskExecutorConfig)
@@ -107,8 +107,7 @@ class AppConfig(BaseSettings):
     # ----------------------
     # Integrated Configurations
     # ----------------------
-    database: DatabaseConfig = Field(
-        default_factory=DatabaseConfig, validation_alias=AliasChoices("db", "database"))
+    database: DatabaseConfig = Field(default_factory=DatabaseConfig, validation_alias=AliasChoices("db", "database"))
     storage: StorageConfig = Field(default_factory=StorageConfig)
     doc_engine: DocumentEngineConfig = Field(default_factory=DocumentEngineConfig)
     cache: CacheConfig = Field(default_factory=CacheConfig)
@@ -122,17 +121,14 @@ class AppConfig(BaseSettings):
 
     @classmethod
     def settings_customise_sources(
-            cls,
-            settings_cls,
-            init_settings,
-            env_settings,
-            dotenv_settings,
-            file_secret_settings,
+        cls,
+        settings_cls,
+        init_settings,
+        env_settings,
+        dotenv_settings,
+        file_secret_settings,
     ):
-        service_conf: Dict[str, Any] = merge_dicts(
-            load_yaml(SERVICE_CONF_PATH),
-            load_yaml(LOCAL_SERVICE_CONF_PATH, allow_missing=True)
-        )
+        service_conf: Dict[str, Any] = merge_dicts(load_yaml(SERVICE_CONF_PATH), load_yaml(LOCAL_SERVICE_CONF_PATH, allow_missing=True))
         # Compatible with old yaml format
         service_conf = normalize_legacy_yaml(service_conf)
 

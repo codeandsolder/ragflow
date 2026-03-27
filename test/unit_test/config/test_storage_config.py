@@ -7,6 +7,7 @@ from core.config.types import ObjectStorageType
 # Defaults & Active Override
 # ------------------------
 
+
 def test_storage_defaults(monkeypatch):
     monkeypatch.delenv("STORAGE_IMPL", raising=False)
     with patch("core.config.app.load_yaml") as mock_load:
@@ -26,6 +27,7 @@ def test_storage_active_override(monkeypatch):
 # ------------------------
 # MinIO
 # ------------------------
+
 
 def test_minio_defaults(monkeypatch):
     monkeypatch.setenv("STORAGE_IMPL", "minio")
@@ -63,6 +65,7 @@ def test_minio_override(monkeypatch):
 # OSS
 # ------------------------
 
+
 def test_oss_defaults(monkeypatch):
     monkeypatch.setenv("STORAGE_IMPL", "oss")
     with patch("core.config.app.load_yaml", return_value={}):
@@ -98,6 +101,7 @@ def test_oss_override(monkeypatch):
 # Generic current / active type test
 # ------------------------
 
+
 @pytest.mark.parametrize(
     "impl, enum_val",
     [
@@ -107,7 +111,7 @@ def test_oss_override(monkeypatch):
         ("azure_sas", ObjectStorageType.AZURE_SAS),
         ("azure_spn", ObjectStorageType.AZURE_SPN),
         ("opendal", ObjectStorageType.OPENDAL),
-    ]
+    ],
 )
 def test_storage_active_types(impl, enum_val, monkeypatch):
     monkeypatch.setenv("STORAGE_IMPL", impl)
@@ -122,10 +126,9 @@ def test_storage_active_types(impl, enum_val, monkeypatch):
         ("s3", {"access_key": "ak", "secret_key": "sk", "bucket": "b"}),
         ("oss", {"access_key": "ak", "secret_key": "sk", "bucket": "b"}),
         ("azure_sas", {"container_url": "url", "sas_token": "token"}),
-        ("azure_spn", {"account_url": "url", "client_id": "id", "secret": "sec",
-                       "tenant_id": "tid", "container_name": "c"}),
+        ("azure_spn", {"account_url": "url", "client_id": "id", "secret": "sec", "tenant_id": "tid", "container_name": "c"}),
         ("opendal", {"scheme": "mysql", "config": {"oss_table": "table"}}),
-    ]
+    ],
 )
 def test_storage_yaml_override(key, override, monkeypatch):
     monkeypatch.delenv("STORAGE_IMPL", raising=False)
@@ -137,10 +140,7 @@ def test_storage_yaml_override(key, override, monkeypatch):
         assert getattr(storage_cfg, k) == v
 
 
-@pytest.mark.parametrize(
-    "impl",
-    ["minio", "s3", "oss", "azure_sas", "azure_spn", "opendal"]
-)
+@pytest.mark.parametrize("impl", ["minio", "s3", "oss", "azure_sas", "azure_spn", "opendal"])
 def test_storage_current(impl, monkeypatch):
     monkeypatch.setenv("STORAGE_IMPL", impl)
     with patch("core.config.app.load_yaml", return_value={}):
@@ -152,6 +152,7 @@ def test_storage_current(impl, monkeypatch):
 # ------------------------
 # YAML vs Env priority
 # ------------------------
+
 
 def test_storage_yaml_overrides_env(monkeypatch):
     """Test that YAML values take priority over environment variable STORAGE_IMPL."""

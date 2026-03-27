@@ -5,6 +5,7 @@ from docker.scripts.render_yaml import replace_env, render_node
 # Tests for replace_env
 # -----------------------
 
+
 def test_replace_env_basic(monkeypatch):
     # Environment variable is set
     monkeypatch.setenv("FOO", "bar")
@@ -47,6 +48,7 @@ def test_replace_env_non_string():
 # Tests for render_node
 # -----------------------
 
+
 def test_render_node_scalar(monkeypatch):
     monkeypatch.setenv("FOO", "bar")
     node = "${FOO}"
@@ -72,18 +74,8 @@ def test_render_node_dict(monkeypatch):
 def test_render_node_nested(monkeypatch):
     monkeypatch.setenv("X", "1")
     monkeypatch.delenv("Y", raising=False)
-    node = {
-        "level1": {
-            "list": ["${X}", "${Y:-y}", {"nested": "${X}"}],
-            "value": "${Y:-z}"
-        }
-    }
-    expected = {
-        "level1": {
-            "list": ["1", "y", {"nested": "1"}],
-            "value": "z"
-        }
-    }
+    node = {"level1": {"list": ["${X}", "${Y:-y}", {"nested": "${X}"}], "value": "${Y:-z}"}}
+    expected = {"level1": {"list": ["1", "y", {"nested": "1"}], "value": "z"}}
     assert render_node(node) == expected
 
 

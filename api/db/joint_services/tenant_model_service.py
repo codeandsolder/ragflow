@@ -41,12 +41,7 @@ def get_model_config_by_type_and_name(tenant_id: str, model_type: str, model_nam
         # model_name in format 'name@factory', split model_name and try again
         pure_model_name, fid = TenantLLMService.split_model_name_and_factory(model_name)
         compose_profiles = os.getenv("COMPOSE_PROFILES", "")
-        is_tei_builtin_embedding = (
-            model_type_val == LLMType.EMBEDDING.value
-            and "tei-" in compose_profiles
-            and pure_model_name == os.getenv("TEI_MODEL", "")
-            and (fid == "Builtin" or fid is None)
-        )
+        is_tei_builtin_embedding = model_type_val == LLMType.EMBEDDING.value and "tei-" in compose_profiles and pure_model_name == os.getenv("TEI_MODEL", "") and (fid == "Builtin" or fid is None)
         if is_tei_builtin_embedding:
             # configured local embedding model
             embedding_cfg = settings.EMBEDDING_CFG
@@ -68,16 +63,14 @@ def get_model_config_by_type_and_name(tenant_id: str, model_type: str, model_nam
     config_model_type = config_dict.get("model_type")
     config_model_type = config_model_type.value if hasattr(config_model_type, "value") else config_model_type
     if config_model_type != model_type_val:
-        raise LookupError(
-            f"Tenant Model with name {model_name} has type {config_model_type}, expected {model_type_val}"
-        )
+        raise LookupError(f"Tenant Model with name {model_name} has type {config_model_type}, expected {model_type_val}")
     llm = LLMService.query(llm_name=config_dict["llm_name"])
     if llm:
         config_dict["is_tools"] = llm[0].is_tools
     return config_dict
 
 
-def get_tenant_default_model_by_type(tenant_id: str, model_type: str|enum.Enum):
+def get_tenant_default_model_by_type(tenant_id: str, model_type: str | enum.Enum):
     exist, tenant = TenantService.get_by_id(tenant_id)
     if not exist:
         raise LookupError("Tenant not found")
@@ -87,7 +80,7 @@ def get_tenant_default_model_by_type(tenant_id: str, model_type: str|enum.Enum):
         case LLMType.EMBEDDING.value:
             model_name = tenant.embd_id
         case LLMType.SPEECH2TEXT.value:
-            model_name =  tenant.asr_id
+            model_name = tenant.asr_id
         case LLMType.IMAGE2TEXT.value:
             model_name = tenant.img2txt_id
         case LLMType.CHAT.value:

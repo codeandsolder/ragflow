@@ -41,7 +41,6 @@ class CanvasReplicaService:
     LOCK_RETRY_ATTEMPTS = 3
     LOCK_RETRY_SLEEP_SECS = 0.2
 
-
     @classmethod
     def normalize_dsl(cls, dsl):
         """Normalize DSL to a JSON-serializable dict. Raise ValueError on invalid input."""
@@ -60,16 +59,13 @@ class CanvasReplicaService:
         except Exception as e:
             raise ValueError("DSL is not JSON-serializable.") from e
 
-
     @classmethod
     def _replica_key(cls, canvas_id: str, tenant_id: str, runtime_user_id: str) -> str:
         return f"{cls.REPLICA_KEY_PREFIX}:{canvas_id}:{tenant_id}:{runtime_user_id}"
 
-
     @classmethod
     def _lock_key(cls, canvas_id: str, tenant_id: str, runtime_user_id: str) -> str:
         return f"{cls.LOCK_KEY_PREFIX}:{canvas_id}:{tenant_id}:{runtime_user_id}"
-
 
     @classmethod
     def _read_payload(cls, replica_key: str):
@@ -87,13 +83,11 @@ class CanvasReplicaService:
             logging.warning("Failed to parse canvas replica %s: %s", replica_key, e)
             return None
 
-
     @classmethod
     def _write_payload(cls, replica_key: str, payload: dict):
         """Write payload and refresh TTL."""
         payload["updated_at"] = int(time.time())
         REDIS_CONN.set_obj(replica_key, payload, cls.TTL_SECS)
-
 
     @classmethod
     def _build_payload(
@@ -115,7 +109,6 @@ class CanvasReplicaService:
             "updated_at": int(time.time()),
         }
 
-
     @classmethod
     def create_if_absent(
         cls,
@@ -134,7 +127,6 @@ class CanvasReplicaService:
         payload = cls._build_payload(canvas_id, str(tenant_id), str(runtime_user_id), dsl, canvas_category, title)
         cls._write_payload(replica_key, payload)
         return payload
-
 
     @classmethod
     def bootstrap(
@@ -156,13 +148,11 @@ class CanvasReplicaService:
             title=title,
         )
 
-
     @classmethod
     def load_for_run(cls, canvas_id: str, tenant_id: str, runtime_user_id: str):
         """Load current runtime replica used by /completion."""
         replica_key = cls._replica_key(canvas_id, str(tenant_id), str(runtime_user_id))
         return cls._read_payload(replica_key)
-
 
     @classmethod
     def replace_for_set(
@@ -202,7 +192,6 @@ class CanvasReplicaService:
             except Exception:
                 logging.exception("Failed to release canvas replica lock: %s", lock_key)
 
-
     @classmethod
     def _acquire_lock_with_retry(cls, lock_key: str):
         """Acquire distributed lock with bounded retries; return lock object or None."""
@@ -217,7 +206,6 @@ class CanvasReplicaService:
             if idx < cls.LOCK_RETRY_ATTEMPTS - 1:
                 time.sleep(cls.LOCK_RETRY_SLEEP_SECS + random.uniform(0, 0.1))
         return None
-
 
     @classmethod
     def commit_after_run(

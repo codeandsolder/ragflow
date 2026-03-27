@@ -97,10 +97,7 @@ class Splitter(ProcessBase):
                         for j in range(0, len(split_sec), 2):
                             if not split_sec[j].strip():
                                 continue
-                            docs.append({
-                                "text": split_sec[j],
-                                "mom": c
-                            })
+                            docs.append({"text": split_sec[j], "mom": c})
                     else:
                         docs.append({"text": c})
                 self.set_output("chunks", docs)
@@ -134,12 +131,9 @@ class Splitter(ProcessBase):
             overlapped_percent,
         )
         cks = [
-            {
-                "text": RAGFlowPdfParser.remove_tag(c),
-                "image": img,
-                "positions": [[pos[0][-1], *pos[1:]] for pos in RAGFlowPdfParser.extract_positions(c)]
-            }
-            for c, img in zip(chunks, images) if c.strip()
+            {"text": RAGFlowPdfParser.remove_tag(c), "image": img, "positions": [[pos[0][-1], *pos[1:]] for pos in RAGFlowPdfParser.extract_positions(c)]}
+            for c, img in zip(chunks, images)
+            if c.strip()
         ]
         tasks = []
         for d in cks:
@@ -169,5 +163,5 @@ class Splitter(ProcessBase):
                     docs.append(c)
             self.set_output("chunks", docs)
         else:
-            self.set_output("chunks",  cks)
+            self.set_output("chunks", cks)
         self.callback(1, "Done.")

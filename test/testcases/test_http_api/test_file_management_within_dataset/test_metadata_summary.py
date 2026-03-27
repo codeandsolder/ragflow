@@ -17,7 +17,7 @@
 # Document.meta_fields via document_service#get_metadata_summary and the test
 # uses update_document, so it belongs with file/document management tests.
 # import pytest
-#from common import metadata_summary, update_document
+# from common import metadata_summary, update_document
 
 
 def _summary_to_counts(summary):
@@ -34,8 +34,8 @@ class TestMetadataSummary:
 
     # Alteration of API
     # TODO
-    #@pytest.mark.p2
-    #def test_metadata_summary_counts(self, HttpApiAuth, add_documents_func):
+    # @pytest.mark.p2
+    # def test_metadata_summary_counts(self, HttpApiAuth, add_documents_func):
     #    dataset_id, document_ids = add_documents_func
     #    payloads = [
     #        {"tags": ["foo", "bar"], "author": "alice"},

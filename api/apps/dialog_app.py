@@ -29,7 +29,7 @@ from api.apps import login_required, current_user
 import logging
 
 
-@manager.route('/set', methods=['POST'])  # noqa: F821
+@manager.route("/set", methods=["POST"])  # noqa: F821
 @validate_request("prompt_config")
 @login_required
 async def set_dialog():
@@ -48,12 +48,9 @@ async def set_dialog():
     name = name.strip()
     if is_create:
         # only for chat creating
-        existing_names = {
-            d.name.casefold()
-            for d in DialogService.query(tenant_id=current_user.id, status=StatusEnum.VALID.value)
-            if d.name
-        }
+        existing_names = {d.name.casefold() for d in DialogService.query(tenant_id=current_user.id, status=StatusEnum.VALID.value) if d.name}
         if name.casefold() in existing_names:
+
             def _name_exists(name: str, **_kwargs) -> bool:
                 return name.casefold() in existing_names
 
@@ -94,8 +91,7 @@ async def set_dialog():
         if p["optional"]:
             continue
         if prompt_config.get("system", "").find("{%s}" % p["key"]) < 0:
-            return get_data_error_result(
-                message="Parameter '{}' is not used".format(p["key"]))
+            return get_data_error_result(message="Parameter '{}' is not used".format(p["key"]))
 
     try:
         e, tenant = TenantService.get_by_id(current_user.id)
@@ -127,7 +123,7 @@ async def set_dialog():
                 "tenant_rerank_id": dialog_info.get("tenant_rerank_id", 0),
                 "similarity_threshold": similarity_threshold,
                 "vector_similarity_weight": vector_similarity_weight,
-                "icon": icon
+                "icon": icon,
             }
             if not DialogService.save(**dia):
                 return get_data_error_result(message="Fail to new a dialog!")
@@ -149,7 +145,7 @@ async def set_dialog():
         return server_error_response(e)
 
 
-@manager.route('/get', methods=['GET'])  # noqa: F821
+@manager.route("/get", methods=["GET"])  # noqa: F821
 @login_required
 def get():
     dialog_id = request.args["dialog_id"]
@@ -175,15 +171,11 @@ def get_kb_names(kb_ids):
     return ids, nms
 
 
-@manager.route('/list', methods=['GET'])  # noqa: F821
+@manager.route("/list", methods=["GET"])  # noqa: F821
 @login_required
 def list_dialogs():
     try:
-        conversations = DialogService.query(
-            tenant_id=current_user.id,
-            status=StatusEnum.VALID.value,
-            reverse=True,
-            order_by=DialogService.model.create_time)
+        conversations = DialogService.query(tenant_id=current_user.id, status=StatusEnum.VALID.value, reverse=True, order_by=DialogService.model.create_time)
         conversations = [d.to_dict() for d in conversations]
         for conversation in conversations:
             conversation["kb_ids"], conversation["kb_names"] = get_kb_names(conversation["kb_ids"])
@@ -192,7 +184,7 @@ def list_dialogs():
         return server_error_response(e)
 
 
-@manager.route('/next', methods=['POST'])  # noqa: F821
+@manager.route("/next", methods=["POST"])  # noqa: F821
 @login_required
 async def list_dialogs_next():
     args = request.args
@@ -212,30 +204,26 @@ async def list_dialogs_next():
         if not owner_ids:
             # tenants = TenantService.get_joined_tenants_by_user_id(current_user.id)
             # tenants = [tenant["tenant_id"] for tenant in tenants]
-            tenants = [] # keep it here
-            dialogs, total = DialogService.get_by_tenant_ids(
-                tenants, current_user.id, page_number,
-                items_per_page, orderby, desc, keywords, parser_id)
+            tenants = []  # keep it here
+            dialogs, total = DialogService.get_by_tenant_ids(tenants, current_user.id, page_number, items_per_page, orderby, desc, keywords, parser_id)
         else:
             tenants = owner_ids
-            dialogs, total = DialogService.get_by_tenant_ids(
-                tenants, current_user.id, 0,
-                0, orderby, desc, keywords, parser_id)
+            dialogs, total = DialogService.get_by_tenant_ids(tenants, current_user.id, 0, 0, orderby, desc, keywords, parser_id)
             dialogs = [dialog for dialog in dialogs if dialog["tenant_id"] in tenants]
             total = len(dialogs)
             if page_number and items_per_page:
-                dialogs = dialogs[(page_number-1)*items_per_page:page_number*items_per_page]
+                dialogs = dialogs[(page_number - 1) * items_per_page : page_number * items_per_page]
         return get_json_result(data={"dialogs": dialogs, "total": total})
     except Exception as e:
         return server_error_response(e)
 
 
-@manager.route('/rm', methods=['POST'])  # noqa: F821
+@manager.route("/rm", methods=["POST"])  # noqa: F821
 @login_required
 @validate_request("dialog_ids")
 async def rm():
     req = await get_request_json()
-    dialog_list=[]
+    dialog_list = []
     tenants = UserTenantService.query(user_id=current_user.id)
     try:
         for id in req["dialog_ids"]:
@@ -243,10 +231,8 @@ async def rm():
                 if DialogService.query(tenant_id=tenant.tenant_id, id=id):
                     break
             else:
-                return get_json_result(
-                    data=False, message='Only owner of dialog authorized for this operation.',
-                    code=RetCode.OPERATING_ERROR)
-            dialog_list.append({"id": id,"status":StatusEnum.INVALID.value})
+                return get_json_result(data=False, message="Only owner of dialog authorized for this operation.", code=RetCode.OPERATING_ERROR)
+            dialog_list.append({"id": id, "status": StatusEnum.INVALID.value})
         DialogService.update_many_by_id(dialog_list)
         return get_json_result(data=True)
     except Exception as e:

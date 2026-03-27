@@ -25,6 +25,7 @@ from yarl import URL
 from common.log_utils import log_exception
 from common.token_utils import num_tokens_from_string, truncate, total_token_count_from_response
 
+
 class Base(ABC):
     def __init__(self, key, model_name, **kwargs):
         """
@@ -507,26 +508,27 @@ class JiekouAIRerank(JinaRerank):
             base_url = "https://api.jiekou.ai/openai/v1/rerank"
         super().__init__(key, model_name, base_url)
 
+
 class RAGconRerank(Base):
     """
     RAGcon Rerank Provider - routes through LiteLLM proxy
-    
+
     Assumes LiteLLM proxy supports /rerank endpoint.
     Default Base URL: https://connect.ragcon.ai/v1
     """
+
     _FACTORY_NAME = "RAGcon"
-    
+
     def __init__(self, key, model_name, base_url=None, **kwargs):
         if not base_url:
             base_url = "https://connect.ragcon.com/v1"
-        
+
         self._api_key = key
         self._base_url = base_url
-        
+
         self.headers = {"Content-Type": "application/json", "Authorization": f"Bearer {key}"}
         self.model_name = model_name
-        
-    
+
     def similarity(self, query: str, texts: list):
         # noway to config Ragflow , use fix setting
         texts = [truncate(t, 500) for t in texts]

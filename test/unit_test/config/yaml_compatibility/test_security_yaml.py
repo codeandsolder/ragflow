@@ -17,15 +17,13 @@ def test_security_old_yaml_compatibility():
                 "http_app_key": "appkey",
                 "http_secret_key": "secretkey",
             },
-            "site": {
-                "switch": True
-            },
+            "site": {"switch": True},
         },
         "permission": {
             "switch": True,
             "component": True,
             "dataset": False,
-        }
+        },
     }
 
     with patch("core.config.app.load_yaml", return_value=return_value):
@@ -68,13 +66,13 @@ def test_security_new_yaml():
                     "http_app_key": "appkey2",
                     "http_secret_key": "secretkey2",
                 },
-                "site": {"switch": False}
+                "site": {"switch": False},
             },
             "permission": {
                 "switch": False,
                 "component": False,
                 "dataset": True,
-            }
+            },
         }
     }
 

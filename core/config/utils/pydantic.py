@@ -21,7 +21,7 @@ def get_field_value(model: BaseModel, name_or_alias: str):
     """
     Retrieve the value of a field from a Pydantic BaseModel.
 
-    This function first attempts to find a field by its alias. 
+    This function first attempts to find a field by its alias.
     If no field matches the alias, it then tries to match the internal attribute name.
     Returns the value of the first matching field.
 

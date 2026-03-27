@@ -22,5 +22,6 @@ def get_svr_queue_name(priority: int) -> str:
         return SVR_QUEUE_NAME
     return f"{SVR_QUEUE_NAME}_{priority}"
 
+
 def get_svr_queue_names():
     return [get_svr_queue_name(priority) for priority in [1, 0]]

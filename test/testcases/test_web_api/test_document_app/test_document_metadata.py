@@ -147,7 +147,7 @@ class TestDocumentMetadata:
     @pytest.mark.p2
     def test_set_meta(self, WebApiAuth, add_document_func):
         _, doc_id = add_document_func
-        res = document_set_meta(WebApiAuth, {"doc_id": doc_id, "meta": "{\"author\": \"alice\"}"})
+        res = document_set_meta(WebApiAuth, {"doc_id": doc_id, "meta": '{"author": "alice"}'})
         assert res["code"] == 0, res
         assert res["data"] is True, res
         info_res = document_infos(WebApiAuth, {"doc_ids": [doc_id]})

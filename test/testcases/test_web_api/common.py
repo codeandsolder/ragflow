@@ -490,11 +490,7 @@ def create_dialog(auth, payload=None, *, headers=HEADERS, data=None):
     if _http_debug_enabled():
         if not res.ok or (resp_json is not None and resp_json.get("code") != 0):
             payload_summary = _redact_payload(payload)
-            raise AssertionError(
-                "HTTP helper failure: "
-                f"req_id={req_id} url={url} status={res.status_code} "
-                f"payload={payload_summary} response={res.text}"
-            )
+            raise AssertionError(f"HTTP helper failure: req_id={req_id} url={url} status={res.status_code} payload={payload_summary} response={res.text}")
     if json_error:
         raise json_error
     return resp_json
@@ -550,10 +546,7 @@ def batch_create_dialogs(auth, num, kb_ids=None):
         res = create_dialog(auth, payload)
         if res is None or res.get("code") != 0:
             uses_knowledge = "{knowledge}" in payload["prompt_config"]["system"]
-            raise AssertionError(
-                "batch_create_dialogs failed: "
-                f"res={res} kb_ids_len={len(kb_ids)} uses_knowledge={uses_knowledge}"
-            )
+            raise AssertionError(f"batch_create_dialogs failed: res={res} kb_ids_len={len(kb_ids)} uses_knowledge={uses_knowledge}")
         if res["code"] == 0:
             dialog_ids.append(res["data"]["id"])
     return dialog_ids
@@ -566,6 +559,7 @@ def delete_dialogs(auth):
         if dialog_ids:
             delete_dialog(auth, {"dialog_ids": dialog_ids})
 
+
 # MEMORY APP
 def create_memory(auth, payload=None):
     url = f"{HOST_ADDRESS}{MEMORY_API_URL}"
@@ -573,13 +567,13 @@ def create_memory(auth, payload=None):
     return res.json()
 
 
-def update_memory(auth, memory_id:str, payload=None):
+def update_memory(auth, memory_id: str, payload=None):
     url = f"{HOST_ADDRESS}{MEMORY_API_URL}/{memory_id}"
     res = requests.put(url=url, headers=HEADERS, auth=auth, json=payload)
     return res.json()
 
 
-def delete_memory(auth, memory_id:str):
+def delete_memory(auth, memory_id: str):
     url = f"{HOST_ADDRESS}{MEMORY_API_URL}/{memory_id}"
     res = requests.delete(url=url, headers=HEADERS, auth=auth)
     return res.json()
@@ -601,7 +595,7 @@ def list_memory(auth, params=None):
     return res.json()
 
 
-def get_memory_config(auth, memory_id:str):
+def get_memory_config(auth, memory_id: str):
     url = f"{HOST_ADDRESS}{MEMORY_API_URL}/{memory_id}/config"
     res = requests.get(url=url, headers=HEADERS, auth=auth)
     return res.json()

@@ -17,6 +17,7 @@
 import logging
 from core.config import app_config
 
+
 def print_rag_settings():
     logging.info(f"MAX_CONTENT_LENGTH: {app_config.rag.doc_maximum_size}")
     logging.info(f"MAX_FILE_COUNT_PER_USER: {app_config.rag.max_file_num_per_user}")

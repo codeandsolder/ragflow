@@ -33,7 +33,7 @@ from common.doc_store.doc_store_base import DocStoreConnection, MatchExpr, Order
 
 
 class InfinityConnectionBase(DocStoreConnection):
-    def __init__(self, mapping_file_name: str = "infinity_mapping.json", logger_name: str = "ragflow.infinity_conn", table_name_prefix: str="ragflow_"):
+    def __init__(self, mapping_file_name: str = "infinity_mapping.json", logger_name: str = "ragflow.infinity_conn", table_name_prefix: str = "ragflow_"):
         from common.doc_store.infinity_conn_pool import INFINITY_CONN
 
         self.dbName = settings.INFINITY.get("db_name", "default_db")

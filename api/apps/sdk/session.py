@@ -42,11 +42,9 @@ from api.db.services.llm_service import LLMBundle
 from common.metadata_utils import apply_meta_data_filter, convert_conditions, meta_filter
 from api.db.services.search_service import SearchService
 from api.db.services.user_service import UserTenantService
-from api.db.joint_services.tenant_model_service import get_tenant_default_model_by_type, get_model_config_by_id, \
-    get_model_config_by_type_and_name
+from api.db.joint_services.tenant_model_service import get_tenant_default_model_by_type, get_model_config_by_id, get_model_config_by_type_and_name
 from common.misc_utils import get_uuid
-from api.utils.api_utils import check_duplicate_ids, get_data_openai, get_error_data_result, get_json_result, \
-    get_result, get_request_json, server_error_response, token_required, validate_request
+from api.utils.api_utils import check_duplicate_ids, get_data_openai, get_error_data_result, get_json_result, get_result, get_request_json, server_error_response, token_required, validate_request
 from rag.app.tag import label_question
 from rag.prompts.template import load_prompt
 from rag.prompts.generator import cross_languages, keyword_extraction, chunks_format
@@ -114,7 +112,7 @@ async def create_agent_session(tenant_id, agent_id):
         "message": [{"role": "assistant", "content": canvas.get_prologue()}],
         "source": "agent",
         "dsl": cvs.dsl,
-        "version_title": version_title
+        "version_title": version_title,
     }
     API4ConversationService.save(**conv)
     conv["agent_id"] = conv.pop("dialog_id")
@@ -540,13 +538,13 @@ async def agents_completion_openai_compatibility(tenant_id, agent_id):
     else:
         # For non-streaming, just return the response directly
         async for response in completion_openai(
-                tenant_id,
-                agent_id,
-                question,
-                session_id=req.pop("session_id", req.get("id", "")) or req.get("metadata", {}).get("id", ""),
-                stream=False,
-                **req,
-            ):
+            tenant_id,
+            agent_id,
+            question,
+            session_id=req.pop("session_id", req.get("id", "")) or req.get("metadata", {}).get("id", ""),
+            stream=False,
+            **req,
+        ):
             return jsonify(response)
 
         return None
@@ -708,8 +706,7 @@ async def list_agent_session(tenant_id, agent_id):
         desc = True
     # dsl defaults to True in all cases except for False and false
     include_dsl = request.args.get("dsl") != "False" and request.args.get("dsl") != "false"
-    total, convs = API4ConversationService.get_list(agent_id, tenant_id, page_number, items_per_page, orderby, desc, id,
-                                                    user_id, include_dsl)
+    total, convs = API4ConversationService.get_list(agent_id, tenant_id, page_number, items_per_page, orderby, desc, id, user_id, include_dsl)
     if not convs:
         return get_result(data=[])
     for conv in convs:
@@ -735,8 +732,7 @@ async def list_agent_session(tenant_id, agent_id):
                 if message_num != 0 and messages[message_num]["role"] != "user":
                     chunk_list = []
                     # Add boundary and type checks to prevent KeyError
-                    if chunk_num < len(conv["reference"]) and conv["reference"][chunk_num] is not None and isinstance(
-                            conv["reference"][chunk_num], dict) and "chunks" in conv["reference"][chunk_num]:
+                    if chunk_num < len(conv["reference"]) and conv["reference"][chunk_num] is not None and isinstance(conv["reference"][chunk_num], dict) and "chunks" in conv["reference"][chunk_num]:
                         chunks = conv["reference"][chunk_num]["chunks"]
                         for chunk in chunks:
                             # Ensure chunk is a dictionary before calling get method
@@ -795,16 +791,13 @@ async def delete(tenant_id, chat_id):
 
     if errors:
         if success_count > 0:
-            return get_result(data={"success_count": success_count, "errors": errors},
-                              message=f"Partially deleted {success_count} sessions with {len(errors)} errors")
+            return get_result(data={"success_count": success_count, "errors": errors}, message=f"Partially deleted {success_count} sessions with {len(errors)} errors")
         else:
             return get_error_data_result(message="; ".join(errors))
 
     if duplicate_messages:
         if success_count > 0:
-            return get_result(
-                message=f"Partially deleted {success_count} sessions with {len(duplicate_messages)} errors",
-                data={"success_count": success_count, "errors": duplicate_messages})
+            return get_result(message=f"Partially deleted {success_count} sessions with {len(duplicate_messages)} errors", data={"success_count": success_count, "errors": duplicate_messages})
         else:
             return get_error_data_result(message=";".join(duplicate_messages))
 
@@ -848,16 +841,13 @@ async def delete_agent_session(tenant_id, agent_id):
 
     if errors:
         if success_count > 0:
-            return get_result(data={"success_count": success_count, "errors": errors},
-                              message=f"Partially deleted {success_count} sessions with {len(errors)} errors")
+            return get_result(data={"success_count": success_count, "errors": errors}, message=f"Partially deleted {success_count} sessions with {len(errors)} errors")
         else:
             return get_error_data_result(message="; ".join(errors))
 
     if duplicate_messages:
         if success_count > 0:
-            return get_result(
-                message=f"Partially deleted {success_count} sessions with {len(duplicate_messages)} errors",
-                data={"success_count": success_count, "errors": duplicate_messages})
+            return get_result(message=f"Partially deleted {success_count} sessions with {len(duplicate_messages)} errors", data={"success_count": success_count, "errors": duplicate_messages})
         else:
             return get_error_data_result(message=";".join(duplicate_messages))
 
@@ -890,9 +880,7 @@ async def ask_about(tenant_id):
             async for ans in async_ask(req["question"], req["kb_ids"], uid):
                 yield "data:" + json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
         except Exception as e:
-            yield "data:" + json.dumps(
-                {"code": 500, "message": str(e), "data": {"answer": "**ERROR**: " + str(e), "reference": []}},
-                ensure_ascii=False) + "\n\n"
+            yield "data:" + json.dumps({"code": 500, "message": str(e), "data": {"answer": "**ERROR**: " + str(e), "reference": []}}, ensure_ascii=False) + "\n\n"
         yield "data:" + json.dumps({"code": 0, "message": "", "data": True}, ensure_ascii=False) + "\n\n"
 
     resp = Response(stream(), mimetype="text/event-stream")
@@ -962,7 +950,7 @@ async def chatbot_completions(dialog_id):
 
     token = request.headers.get("Authorization").split()
     if len(token) != 2:
-        return get_error_data_result(message='Authorization is not valid!')
+        return get_error_data_result(message="Authorization is not valid!")
     token = token[1]
     objs = APIToken.query(beta=token)
     if not objs:
@@ -984,11 +972,12 @@ async def chatbot_completions(dialog_id):
 
     return None
 
+
 @manager.route("/chatbots/<dialog_id>/info", methods=["GET"])  # noqa: F821
 async def chatbots_inputs(dialog_id):
     token = request.headers.get("Authorization").split()
     if len(token) != 2:
-        return get_error_data_result(message='Authorization is not valid!')
+        return get_error_data_result(message="Authorization is not valid!")
     token = token[1]
     objs = APIToken.query(beta=token)
     if not objs:
@@ -1014,13 +1003,14 @@ async def agent_bot_completions(agent_id):
 
     token = request.headers.get("Authorization").split()
     if len(token) != 2:
-        return get_error_data_result(message='Authorization is not valid!')
+        return get_error_data_result(message="Authorization is not valid!")
     token = token[1]
     objs = APIToken.query(beta=token)
     if not objs:
         return get_error_data_result(message='Authentication error: API key is invalid!"')
 
     if req.get("stream", True):
+
         async def stream():
             try:
                 async for answer in agent_completion(objs[0].tenant_id, agent_id, **req):
@@ -1028,14 +1018,18 @@ async def agent_bot_completions(agent_id):
             except Exception as e:
                 logging.exception(e)
                 error_result = get_error_data_result(message=str(e) or "Unknown error")
-                yield "data:" + json.dumps(
-                    {
-                        "event": "message",
-                        "data": {"content": f"Error {error_result['code']}: {error_result['message']}\n\n"},
-                        **error_result,
-                    },
-                    ensure_ascii=False,
-                ) + "\n\n"
+                yield (
+                    "data:"
+                    + json.dumps(
+                        {
+                            "event": "message",
+                            "data": {"content": f"Error {error_result['code']}: {error_result['message']}\n\n"},
+                            **error_result,
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n\n"
+                )
 
         resp = Response(stream(), mimetype="text/event-stream")
         resp.headers.add_header("Cache-control", "no-cache")
@@ -1053,11 +1047,12 @@ async def agent_bot_completions(agent_id):
 
     return None
 
+
 @manager.route("/agentbots/<agent_id>/inputs", methods=["GET"])  # noqa: F821
 async def begin_inputs(agent_id):
     token = request.headers.get("Authorization").split()
     if len(token) != 2:
-        return get_error_data_result(message='Authorization is not valid!')
+        return get_error_data_result(message="Authorization is not valid!")
     token = token[1]
     objs = APIToken.query(beta=token)
     if not objs:
@@ -1068,9 +1063,7 @@ async def begin_inputs(agent_id):
         return get_error_data_result(f"Can't find agent by ID: {agent_id}")
 
     canvas = Canvas(json.dumps(cvs.dsl), objs[0].tenant_id, canvas_id=cvs.id)
-    return get_result(
-        data={"title": cvs.title, "avatar": cvs.avatar, "inputs": canvas.get_component_input_form("begin"),
-              "prologue": canvas.get_prologue(), "mode": canvas.get_mode()})
+    return get_result(data={"title": cvs.title, "avatar": cvs.avatar, "inputs": canvas.get_component_input_form("begin"), "prologue": canvas.get_prologue(), "mode": canvas.get_mode()})
 
 
 @manager.route("/searchbots/ask", methods=["POST"])  # noqa: F821
@@ -1078,7 +1071,7 @@ async def begin_inputs(agent_id):
 async def ask_about_embedded():
     token = request.headers.get("Authorization").split()
     if len(token) != 2:
-        return get_error_data_result(message='Authorization is not valid!')
+        return get_error_data_result(message="Authorization is not valid!")
     token = token[1]
     objs = APIToken.query(beta=token)
     if not objs:
@@ -1099,9 +1092,7 @@ async def ask_about_embedded():
             async for ans in async_ask(req["question"], req["kb_ids"], uid, search_config=search_config):
                 yield "data:" + json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
         except Exception as e:
-            yield "data:" + json.dumps(
-                {"code": 500, "message": str(e), "data": {"answer": "**ERROR**: " + str(e), "reference": []}},
-                ensure_ascii=False) + "\n\n"
+            yield "data:" + json.dumps({"code": 500, "message": str(e), "data": {"answer": "**ERROR**: " + str(e), "reference": []}}, ensure_ascii=False) + "\n\n"
         yield "data:" + json.dumps({"code": 0, "message": "", "data": True}, ensure_ascii=False) + "\n\n"
 
     resp = Response(stream(), mimetype="text/event-stream")
@@ -1117,7 +1108,7 @@ async def ask_about_embedded():
 async def retrieval_test_embedded():
     token = request.headers.get("Authorization").split()
     if len(token) != 2:
-        return get_error_data_result(message='Authorization is not valid!')
+        return get_error_data_result(message="Authorization is not valid!")
     token = token[1]
     objs = APIToken.query(beta=token)
     if not objs:
@@ -1131,8 +1122,7 @@ async def retrieval_test_embedded():
     if isinstance(kb_ids, str):
         kb_ids = [kb_ids]
     if not kb_ids:
-        return get_json_result(data=False, message='Please specify dataset firstly.',
-                               code=RetCode.DATA_ERROR)
+        return get_json_result(data=False, message="Please specify dataset firstly.", code=RetCode.DATA_ERROR)
     doc_ids = req.get("doc_ids")
     similarity_threshold = float(req.get("similarity_threshold", 0.0))
     vector_similarity_weight = float(req.get("vector_similarity_weight", 0.3))
@@ -1189,8 +1179,7 @@ async def retrieval_test_embedded():
                     tenant_ids.append(tenant.tenant_id)
                     break
             else:
-                return get_json_result(data=False, message="Only owner of dataset authorized for this operation.",
-                                       code=RetCode.OPERATING_ERROR)
+                return get_json_result(data=False, message="Only owner of dataset authorized for this operation.", code=RetCode.OPERATING_ERROR)
 
         e, kb = KnowledgebaseService.get_by_id(kb_ids[0])
         if not e:
@@ -1219,13 +1208,23 @@ async def retrieval_test_embedded():
 
         labels = label_question(_question, [kb])
         ranks = await settings.retriever.retrieval(
-            _question, embd_mdl, tenant_ids, kb_ids, page, size, similarity_threshold, vector_similarity_weight, top,
-            local_doc_ids, rerank_mdl=rerank_mdl, highlight=req.get("highlight"), rank_feature=labels
+            _question,
+            embd_mdl,
+            tenant_ids,
+            kb_ids,
+            page,
+            size,
+            similarity_threshold,
+            vector_similarity_weight,
+            top,
+            local_doc_ids,
+            rerank_mdl=rerank_mdl,
+            highlight=req.get("highlight"),
+            rank_feature=labels,
         )
         if use_kg:
             default_chat_model = get_tenant_default_model_by_type(kb.tenant_id, LLMType.CHAT)
-            ck = await settings.kg_retriever.retrieval(_question, tenant_ids, kb_ids, embd_mdl,
-                                                 LLMBundle(kb.tenant_id, default_chat_model))
+            ck = await settings.kg_retriever.retrieval(_question, tenant_ids, kb_ids, embd_mdl, LLMBundle(kb.tenant_id, default_chat_model))
             if ck["content_with_weight"]:
                 ranks["chunks"].insert(0, ck)
 
@@ -1239,8 +1238,7 @@ async def retrieval_test_embedded():
         return await _retrieval()
     except Exception as e:
         if str(e).find("not_found") > 0:
-            return get_json_result(data=False, message="No chunk found! Check the chunk status please!",
-                                   code=RetCode.DATA_ERROR)
+            return get_json_result(data=False, message="No chunk found! Check the chunk status please!", code=RetCode.DATA_ERROR)
         return server_error_response(e)
 
 
@@ -1249,7 +1247,7 @@ async def retrieval_test_embedded():
 async def related_questions_embedded():
     token = request.headers.get("Authorization").split()
     if len(token) != 2:
-        return get_error_data_result(message='Authorization is not valid!')
+        return get_error_data_result(message="Authorization is not valid!")
     token = token[1]
     objs = APIToken.query(beta=token)
     if not objs:
@@ -1297,7 +1295,7 @@ Related search terms:
 async def detail_share_embedded():
     token = request.headers.get("Authorization").split()
     if len(token) != 2:
-        return get_error_data_result(message='Authorization is not valid!')
+        return get_error_data_result(message="Authorization is not valid!")
     token = token[1]
     objs = APIToken.query(beta=token)
     if not objs:
@@ -1313,8 +1311,7 @@ async def detail_share_embedded():
             if SearchService.query(tenant_id=tenant.tenant_id, id=search_id):
                 break
         else:
-            return get_json_result(data=False, message="Has no permission for this operation.",
-                                   code=RetCode.OPERATING_ERROR)
+            return get_json_result(data=False, message="Has no permission for this operation.", code=RetCode.OPERATING_ERROR)
 
         search = SearchService.get_detail(search_id)
         if not search:
@@ -1329,7 +1326,7 @@ async def detail_share_embedded():
 async def mindmap():
     token = request.headers.get("Authorization").split()
     if len(token) != 2:
-        return get_error_data_result(message='Authorization is not valid!')
+        return get_error_data_result(message="Authorization is not valid!")
     token = token[1]
     objs = APIToken.query(beta=token)
     if not objs:
@@ -1341,10 +1338,11 @@ async def mindmap():
     search_id = req.get("search_id", "")
     search_app = SearchService.get_detail(search_id) if search_id else {}
 
-    mind_map =await gen_mindmap(req["question"], req["kb_ids"], tenant_id, search_app.get("search_config", {}))
+    mind_map = await gen_mindmap(req["question"], req["kb_ids"], tenant_id, search_app.get("search_config", {}))
     if "error" in mind_map:
         return server_error_response(Exception(mind_map["error"]))
     return get_json_result(data=mind_map)
+
 
 @manager.route("/sequence2txt", methods=["POST"])  # noqa: F821
 @token_required
@@ -1357,19 +1355,12 @@ async def sequence2txt(tenant_id):
 
     uploaded = files["file"]
 
-    ALLOWED_EXTS = {
-        ".wav", ".mp3", ".m4a", ".aac",
-        ".flac", ".ogg", ".webm",
-        ".opus", ".wma"
-    }
+    ALLOWED_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".webm", ".opus", ".wma"}
 
     filename = uploaded.filename or ""
     suffix = os.path.splitext(filename)[-1].lower()
     if suffix not in ALLOWED_EXTS:
-        return get_error_data_result(message=
-            f"Unsupported audio format: {suffix}. "
-            f"Allowed: {', '.join(sorted(ALLOWED_EXTS))}"
-        )
+        return get_error_data_result(message=f"Unsupported audio format: {suffix}. Allowed: {', '.join(sorted(ALLOWED_EXTS))}")
     fd, temp_audio_path = tempfile.mkstemp(suffix=suffix)
     os.close(fd)
     await uploaded.save(temp_audio_path)
@@ -1378,7 +1369,7 @@ async def sequence2txt(tenant_id):
         default_asr_model_config = get_tenant_default_model_by_type(tenant_id, LLMType.SPEECH2TEXT)
     except Exception as e:
         return get_error_data_result(message=str(e))
-    asr_mdl=LLMBundle(tenant_id, default_asr_model_config)
+    asr_mdl = LLMBundle(tenant_id, default_asr_model_config)
     if not stream_mode:
         text = asr_mdl.transcription(temp_audio_path)
         try:
@@ -1386,6 +1377,7 @@ async def sequence2txt(tenant_id):
         except Exception as e:
             logging.error(f"Failed to remove temp audio file: {str(e)}")
         return get_json_result(data={"text": text})
+
     async def event_stream():
         try:
             for evt in asr_mdl.stream_transcription(temp_audio_path):
@@ -1400,6 +1392,7 @@ async def sequence2txt(tenant_id):
                 logging.error(f"Failed to remove temp audio file: {str(e)}")
 
     return Response(event_stream(), content_type="text/event-stream")
+
 
 @manager.route("/tts", methods=["POST"])  # noqa: F821
 @token_required

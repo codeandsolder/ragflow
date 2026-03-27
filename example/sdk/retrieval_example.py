@@ -75,7 +75,7 @@ try:
     )
     print(f"Retrieved {len(results)} chunks:")
     for i, chunk in enumerate(results):
-        print(f"  [{i+1}] score={chunk.get('similarity', 'N/A'):.4f} content={chunk.get('content', '')[:80]}...")
+        print(f"  [{i + 1}] score={chunk.get('similarity', 'N/A'):.4f} content={chunk.get('content', '')[:80]}...")
 
     # --- Cleanup ---
 

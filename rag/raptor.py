@@ -54,7 +54,7 @@ class RecursiveAbstractiveProcessing4TreeOrganizedRetrieval:
         self._max_token = max_token
         self._max_errors = max(1, max_errors)
         self._error_count = 0
-        
+
     def _check_task_canceled(self, task_id: str, message: str = ""):
         if task_id and has_canceled(task_id):
             log_msg = f"Task {task_id} cancelled during RAPTOR {message}."
@@ -74,7 +74,7 @@ class RecursiveAbstractiveProcessing4TreeOrganizedRetrieval:
                 response = re.sub(r"^.*</think>", "", response, flags=re.DOTALL)
                 if response.find("**ERROR**") >= 0:
                     raise Exception(response)
-                await thread_pool_exec(set_llm_cache,self._llm_model.llm_name,system,response,history,gen_conf)
+                await thread_pool_exec(set_llm_cache, self._llm_model.llm_name, system, response, history, gen_conf)
                 return response
             except Exception as exc:
                 last_exc = exc

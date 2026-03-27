@@ -269,7 +269,7 @@ class TestChunksRetrieval:
             pytest.param({"highlight": "True"}, 0, True, "", marks=pytest.mark.skip(reason="highlight not functionnal")),
             ({"highlight": False}, 0, False, ""),
             ({"highlight": "False"}, 0, False, ""),
-            ({"highlight": None}, 0, False, "")
+            ({"highlight": None}, 0, False, ""),
         ],
     )
     def test_highlight(self, WebApiAuth, add_chunks, payload, expected_code, expected_highlight, expected_message):

@@ -33,12 +33,13 @@ from PIL import Image
 try:
     from docling.document_converter import DocumentConverter
 except Exception:
-    DocumentConverter = None  
+    DocumentConverter = None
 
 try:
     from deepdoc.parser.pdf_parser import RAGFlowPdfParser
 except Exception:
-    class RAGFlowPdfParser:  
+
+    class RAGFlowPdfParser:
         pass
 
 
@@ -51,7 +52,7 @@ class DoclingContentType(str, Enum):
 
 @dataclass
 class _BBox:
-    page_no: int  
+    page_no: int
     x0: float
     y0: float
     x1: float
@@ -62,17 +63,17 @@ def _extract_bbox_from_prov(item, prov_attr: str = "prov") -> Optional[_BBox]:
     prov = getattr(item, prov_attr, None)
     if not prov:
         return None
-    
+
     prov_item = prov[0] if isinstance(prov, list) else prov
     pn = getattr(prov_item, "page_no", None)
     bb = getattr(prov_item, "bbox", None)
     if pn is None or bb is None:
         return None
-    
+
     coords = [getattr(bb, attr) for attr in ("l", "t", "r", "b")]
     if None in coords:
         return None
-    
+
     return _BBox(page_no=int(pn), x0=coords[0], y0=coords[1], x1=coords[2], y1=coords[3])
 
 
@@ -87,9 +88,7 @@ class DoclingParser(RAGFlowPdfParser):
         self.request_timeout = request_timeout
 
     def _effective_server_url(self, docling_server_url: Optional[str] = None) -> str:
-        return (docling_server_url or self.docling_server_url or "").rstrip("/") or (
-            os.environ.get("DOCLING_SERVER_URL", "").rstrip("/")
-        )
+        return (docling_server_url or self.docling_server_url or "").rstrip("/") or (os.environ.get("DOCLING_SERVER_URL", "").rstrip("/"))
 
     @staticmethod
     def _is_http_endpoint_valid(url: str, timeout: int = 5) -> bool:
@@ -141,16 +140,14 @@ class DoclingParser(RAGFlowPdfParser):
             if bytes_io:
                 bytes_io.close()
 
-    def _make_line_tag(self,bbox: _BBox) -> str:
+    def _make_line_tag(self, bbox: _BBox) -> str:
         if bbox is None:
             return ""
-        x0,x1, top, bott = bbox.x0, bbox.x1, bbox.y0, bbox.y1
+        x0, x1, top, bott = bbox.x0, bbox.x1, bbox.y0, bbox.y1
         if hasattr(self, "page_images") and self.page_images and len(self.page_images) >= bbox.page_no:
-            _, page_height = self.page_images[bbox.page_no-1].size
-            top, bott = page_height-top ,page_height-bott
-        return "@@{}\t{:.1f}\t{:.1f}\t{:.1f}\t{:.1f}##".format(
-            bbox.page_no, x0,x1, top, bott
-        )
+            _, page_height = self.page_images[bbox.page_no - 1].size
+            top, bott = page_height - top, page_height - bott
+        return "@@{}\t{:.1f}\t{:.1f}\t{:.1f}\t{:.1f}##".format(bbox.page_no, x0, x1, top, bott)
 
     @staticmethod
     def extract_positions(txt: str) -> list[tuple[list[int], float, float, float, float]]:
@@ -178,10 +175,10 @@ class DoclingParser(RAGFlowPdfParser):
                 bottom = top + 4
             img0 = self.page_images[pns[0]]
             x0, y0, x1, y1 = int(left), int(top), int(right), int(min(bottom, img0.size[1]))
-            
+
             crop0 = img0.crop((x0, y0, x1, y1))
             imgs.append(crop0)
-            if 0 < ii < len(poss)-1:
+            if 0 < ii < len(poss) - 1:
                 positions.append((pns[0] + self.page_from, x0, x1, y0, y1))
             remain_bottom = bottom - img0.size[1]
             for pn in pns[1:]:
@@ -240,8 +237,8 @@ class DoclingParser(RAGFlowPdfParser):
                 section = payload.strip()
             else:
                 continue
-            
-            tag = self._make_line_tag(bbox) if isinstance(bbox,_BBox) else ""
+
+            tag = self._make_line_tag(bbox) if isinstance(bbox, _BBox) else ""
             if parse_method == "manual":
                 sections.append((section, typ, tag))
             elif parse_method == "paper":
@@ -263,9 +260,9 @@ class DoclingParser(RAGFlowPdfParser):
         left, top, right, bott = bbox
 
         x0 = float(left)
-        y0 = float(H-top)
+        y0 = float(H - top)
         x1 = float(right)
-        y1 = float(H-bott)
+        y1 = float(H - bott)
 
         x0, y0 = max(0.0, min(x0, W - 1)), max(0.0, min(y0, H - 1))
         x1, y1 = max(x0 + 1.0, min(x1, W)), max(y0 + 1.0, min(y1, H))
@@ -275,7 +272,7 @@ class DoclingParser(RAGFlowPdfParser):
         except Exception:
             return None, ""
 
-        pos = (page_no-1 if page_no>0 else 0, x0, x1, y0, y1)
+        pos = (page_no - 1 if page_no > 0 else 0, x0, x1, y0, y1)
         return crop, [pos]
 
     def _transfer_to_tables(self, doc):
@@ -447,9 +444,9 @@ class DoclingParser(RAGFlowPdfParser):
         binary: BytesIO | bytes | None = None,
         callback: Optional[Callable] = None,
         *,
-        output_dir: Optional[str] = None, 
-        lang: Optional[str] = None,        
-        method: str = "auto",             
+        output_dir: Optional[str] = None,
+        lang: Optional[str] = None,
+        method: str = "auto",
         delete_output: bool = True,
         parse_method: str = "raw",
         docling_server_url: Optional[str] = None,
@@ -494,7 +491,7 @@ class DoclingParser(RAGFlowPdfParser):
         except Exception as e:
             self.logger.warning(f"[Docling] render pages failed: {e}")
 
-        conv = DocumentConverter()  
+        conv = DocumentConverter()
         conv_res = conv.convert(str(src_path))
         doc = conv_res.document
         if callback:

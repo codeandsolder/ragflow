@@ -222,11 +222,7 @@ def test_update_internal_failure_paths(monkeypatch):
     monkeypatch.setattr(
         module.DialogService,
         "query",
-        lambda **kwargs: (
-            [SimpleNamespace(id="chat-1")]
-            if kwargs.get("id") == "chat-1"
-            else ([SimpleNamespace(id="dup")] if kwargs.get("name") == "dup-name" else [])
-        ),
+        lambda **kwargs: [SimpleNamespace(id="chat-1")] if kwargs.get("id") == "chat-1" else ([SimpleNamespace(id="dup")] if kwargs.get("name") == "dup-name" else []),
     )
     monkeypatch.setattr(
         module.TenantLLMService,
@@ -334,21 +330,25 @@ def test_list_missing_kb_warning_and_desc_false(monkeypatch, caplog):
     module = _load_chat_module(monkeypatch)
 
     monkeypatch.setattr(module, "request", SimpleNamespace(args={"desc": "False"}))
-    monkeypatch.setattr(module.DialogService, "get_list", lambda *_args, **_kwargs: [
-        {
-            "id": "chat-1",
-            "name": "chat-name",
-            "prompt_config": {"system": "Answer with {knowledge}", "parameters": [{"key": "knowledge", "optional": False}], "do_refer": True},
-            "similarity_threshold": 0.2,
-            "vector_similarity_weight": 0.3,
-            "top_n": 6,
-            "rerank_id": "",
-            "llm_setting": {"temperature": 0.1},
-            "llm_id": "glm-4",
-            "kb_ids": ["missing-kb"],
-            "icon": "icon.png",
-        }
-    ])
+    monkeypatch.setattr(
+        module.DialogService,
+        "get_list",
+        lambda *_args, **_kwargs: [
+            {
+                "id": "chat-1",
+                "name": "chat-name",
+                "prompt_config": {"system": "Answer with {knowledge}", "parameters": [{"key": "knowledge", "optional": False}], "do_refer": True},
+                "similarity_threshold": 0.2,
+                "vector_similarity_weight": 0.3,
+                "top_n": 6,
+                "rerank_id": "",
+                "llm_setting": {"temperature": 0.1},
+                "llm_id": "glm-4",
+                "kb_ids": ["missing-kb"],
+                "icon": "icon.png",
+            }
+        ],
+    )
     monkeypatch.setattr(module.KnowledgebaseService, "query", lambda **_kwargs: [])
 
     with caplog.at_level("WARNING"):

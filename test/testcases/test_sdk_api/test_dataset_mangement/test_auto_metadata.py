@@ -123,4 +123,3 @@ class TestAutoMetadataValidation:
         msg = str(exc_info.value)
         # Pydantic literal_error message should appear
         assert "Input should be" in msg or "literal_error" in msg
-

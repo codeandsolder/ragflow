@@ -23,7 +23,7 @@ from common.time_utils import current_timestamp, datetime_format
 from api.apps import login_required, current_user
 
 
-@manager.route('/new_token', methods=['POST'])  # noqa: F821
+@manager.route("/new_token", methods=["POST"])  # noqa: F821
 @login_required
 async def new_token():
     req = await get_request_json()
@@ -33,12 +33,14 @@ async def new_token():
             return get_data_error_result(message="Tenant not found!")
 
         tenant_id = tenants[0].tenant_id
-        obj = {"tenant_id": tenant_id, "token": generate_confirmation_token(),
-               "create_time": current_timestamp(),
-               "create_date": datetime_format(datetime.now()),
-               "update_time": None,
-               "update_date": None
-               }
+        obj = {
+            "tenant_id": tenant_id,
+            "token": generate_confirmation_token(),
+            "create_time": current_timestamp(),
+            "create_date": datetime_format(datetime.now()),
+            "update_time": None,
+            "update_date": None,
+        }
         if req.get("canvas_id"):
             obj["dialog_id"] = req["canvas_id"]
             obj["source"] = "agent"
@@ -53,7 +55,7 @@ async def new_token():
         return server_error_response(e)
 
 
-@manager.route('/token_list', methods=['GET'])  # noqa: F821
+@manager.route("/token_list", methods=["GET"])  # noqa: F821
 @login_required
 def token_list():
     try:
@@ -68,21 +70,20 @@ def token_list():
         return server_error_response(e)
 
 
-@manager.route('/rm', methods=['POST'])  # noqa: F821
+@manager.route("/rm", methods=["POST"])  # noqa: F821
 @validate_request("tokens", "tenant_id")
 @login_required
 async def rm():
     req = await get_request_json()
     try:
         for token in req["tokens"]:
-            APITokenService.filter_delete(
-                [APIToken.tenant_id == req["tenant_id"], APIToken.token == token])
+            APITokenService.filter_delete([APIToken.tenant_id == req["tenant_id"], APIToken.token == token])
         return get_json_result(data=True)
     except Exception as e:
         return server_error_response(e)
 
 
-@manager.route('/stats', methods=['GET'])  # noqa: F821
+@manager.route("/stats", methods=["GET"])  # noqa: F821
 @login_required
 def stats():
     try:
@@ -91,15 +92,10 @@ def stats():
             return get_data_error_result(message="Tenant not found!")
         objs = API4ConversationService.stats(
             tenants[0].tenant_id,
-            request.args.get(
-                "from_date",
-                (datetime.now() -
-                 timedelta(
-                     days=7)).strftime("%Y-%m-%d 00:00:00")),
-            request.args.get(
-                "to_date",
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-            "agent" if "canvas_id" in request.args else None)
+            request.args.get("from_date", (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d 00:00:00")),
+            request.args.get("to_date", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            "agent" if "canvas_id" in request.args else None,
+        )
 
         res = {"pv": [], "uv": [], "speed": [], "tokens": [], "round": [], "thumb_up": []}
 
@@ -107,8 +103,8 @@ def stats():
             dt = obj["dt"]
             res["pv"].append((dt, obj["pv"]))
             res["uv"].append((dt, obj["uv"]))
-            res["speed"].append((dt, float(obj["tokens"]) / (float(obj["duration"]) + 0.1))) # +0.1 to avoid division by zero
-            res["tokens"].append((dt, float(obj["tokens"]) / 1000.0)) # convert to thousands
+            res["speed"].append((dt, float(obj["tokens"]) / (float(obj["duration"]) + 0.1)))  # +0.1 to avoid division by zero
+            res["tokens"].append((dt, float(obj["tokens"]) / 1000.0))  # convert to thousands
             res["round"].append((dt, obj["round"]))
             res["thumb_up"].append((dt, obj["thumb_up"]))
 

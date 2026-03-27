@@ -24,6 +24,7 @@ from core.config.types import DatabaseType
 # Default values
 # ------------------------
 
+
 def test_db_defaults(monkeypatch):
     """Test that default database active type and all fields are correct."""
     monkeypatch.delenv("DB_TYPE", raising=False)
@@ -66,6 +67,7 @@ def test_db_defaults(monkeypatch):
 # ------------------------
 # YAML overrides
 # ------------------------
+
 
 def test_db_yaml_override(monkeypatch):
     """Test that YAML values override default database configuration."""
@@ -112,12 +114,7 @@ def test_db_yaml_override(monkeypatch):
 def test_yaml_priority_over_env(monkeypatch):
     """Ensure YAML values take precedence over environment variables."""
     monkeypatch.setenv("DB_TYPE", "postgres")
-    yaml_cfg = {
-        "database": {
-            "active": "mysql",
-            "mysql": {"host": "10.0.0.1", "port": 3306, "user": "yaml_user"}
-        }
-    }
+    yaml_cfg = {"database": {"active": "mysql", "mysql": {"host": "10.0.0.1", "port": 3306, "user": "yaml_user"}}}
     with patch("core.config.app.load_yaml", return_value=yaml_cfg):
         cfg = AppConfig()
 
@@ -131,6 +128,7 @@ def test_yaml_priority_over_env(monkeypatch):
 # OceanBase special logic
 # ------------------------
 
+
 def test_oceanbase_mysql_override(monkeypatch):
     """OceanBase with schema='mysql' uses MySQL config values."""
     monkeypatch.delenv("DB_TYPE", raising=False)
@@ -138,7 +136,7 @@ def test_oceanbase_mysql_override(monkeypatch):
         "database": {
             "active": "mysql",
             "mysql": {"host": "1.2.3.4", "port": 3306, "user": "mysql_user", "password": "mysql_pass", "name": "mysql_db"},
-            "oceanbase": {"scheme": "mysql", "config": {"user": "ob_user", "password": "ob_pass", "host": "ob_host", "port": 2882, "db_name": "ob_db"}}
+            "oceanbase": {"scheme": "mysql", "config": {"user": "ob_user", "password": "ob_pass", "host": "ob_host", "port": 2882, "db_name": "ob_db"}},
         }
     }
     with patch("core.config.app.load_yaml", return_value=yaml_cfg):
@@ -160,7 +158,7 @@ def test_oceanbase_native(monkeypatch):
         "database": {
             "active": "mysql",
             "mysql": {"host": "1.2.3.4", "port": 3306, "user": "mysql_user", "password": "mysql_pass", "name": "mysql_db"},
-            "oceanbase": {"scheme": "oceanbase", "config": {"user": "ob_user", "password": "ob_pass", "host": "ob_host", "port": 2882, "db_name": "ob_db"}}
+            "oceanbase": {"scheme": "oceanbase", "config": {"user": "ob_user", "password": "ob_pass", "host": "ob_host", "port": 2882, "db_name": "ob_db"}},
         }
     }
     with patch("core.config.app.load_yaml", return_value=yaml_cfg):
@@ -178,6 +176,7 @@ def test_oceanbase_native(monkeypatch):
 # ------------------------
 # Current property
 # ------------------------
+
 
 def test_database_current_property(monkeypatch):
     """DatabaseConfig.current returns correct active database config."""
@@ -199,6 +198,7 @@ def test_database_current_property(monkeypatch):
 # Optional: test connection_params reflects YAML overrides
 # ------------------------
 
+
 def test_mysql_connection_params_yaml_override():
     """MySQL connection_params reflects YAML username/password."""
     yaml_cfg = {"database": {"mysql": {"user": "yaml_user", "password": "yaml_pass"}}}
@@ -206,13 +206,6 @@ def test_mysql_connection_params_yaml_override():
         cfg = AppConfig()
 
     mysql_cfg = cfg.database.mysql
-    conn = {
-        "host": mysql_cfg.host,
-        "port": mysql_cfg.port,
-        "db": mysql_cfg.name,
-        "username": mysql_cfg.user,
-        "password": mysql_cfg.password
-    }
+    conn = {"host": mysql_cfg.host, "port": mysql_cfg.port, "db": mysql_cfg.name, "username": mysql_cfg.user, "password": mysql_cfg.password}
     assert conn["username"] == "yaml_user"
     assert conn["password"] == "yaml_pass"
-

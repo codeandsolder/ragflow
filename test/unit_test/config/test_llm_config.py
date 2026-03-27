@@ -29,58 +29,25 @@ def test_user_default_llm_defaults(monkeypatch):
     assert llm_cfg.factory == ""
     assert llm_cfg.allowed_factories is None
     assert llm_cfg.parsers == (
-        "naive:General,qa:Q&A,resume:Resume,manual:Manual,table:Table,"
-        "paper:Paper,book:Book,laws:Laws,presentation:Presentation,"
-        "picture:Picture,one:One,audio:Audio,email:Email,tag:Tag"
+        "naive:General,qa:Q&A,resume:Resume,manual:Manual,table:Table,paper:Paper,book:Book,laws:Laws,presentation:Presentation,picture:Picture,one:One,audio:Audio,email:Email,tag:Tag"
     )
 
     models = ("embedding_model", "chat_model", "rerank_model", "asr_model", "image2text_model")
     for model in models:
         model_cfg = llm_cfg.default_models[model]
-        assert model_cfg.model_dump() == {"name":"", "factory":"", "api_key":"", "base_url":""}
+        assert model_cfg.model_dump() == {"name": "", "factory": "", "api_key": "", "base_url": ""}
 
 
 def test_user_default_llm_overrides(monkeypatch):
     expected_models = {
-        "chat_model": {
-            "name": "chat-name",
-            "factory": "chat-factory",
-            "api_key": "chat-api-key",
-            "base_url": "https://api.chat.com"
-        },
-        "embedding_model": {
-            "name": "embedding-name",
-            "factory": "embedding-factory",
-            "api_key": "embedding-api-key",
-            "base_url": "https://api.embedding.com"
-        },
-        "rerank_model": {
-            "name": "rerank-name",
-            "factory": "rerank-factory",
-            "api_key": "rerank-api-key",
-            "base_url": "https://api.rerank.com"
-        },
-        "asr_model": {
-            "name": "asr-name",
-            "factory": "asr-factory",
-            "api_key": "asr-api-key",
-            "base_url": "https://api.asr.com"
-        },
-        "image2text_model": {
-            "name": "image2text-name",
-            "factory": "image2text-factory",
-            "api_key": "image2text-api-key",
-            "base_url": "https://api.image2text.com"
-        }
+        "chat_model": {"name": "chat-name", "factory": "chat-factory", "api_key": "chat-api-key", "base_url": "https://api.chat.com"},
+        "embedding_model": {"name": "embedding-name", "factory": "embedding-factory", "api_key": "embedding-api-key", "base_url": "https://api.embedding.com"},
+        "rerank_model": {"name": "rerank-name", "factory": "rerank-factory", "api_key": "rerank-api-key", "base_url": "https://api.rerank.com"},
+        "asr_model": {"name": "asr-name", "factory": "asr-factory", "api_key": "asr-api-key", "base_url": "https://api.asr.com"},
+        "image2text_model": {"name": "image2text-name", "factory": "image2text-factory", "api_key": "image2text-api-key", "base_url": "https://api.image2text.com"},
     }
     with patch("core.config.app.load_yaml") as mock_load:
-        mock_load.side_effect = [{
-            "user_default_llm": {
-            "factory": "mock-factory",
-            "api_key": "mock-api-key",
-            "parsers": "mock-parsers",
-            "default_models": expected_models}
-        }, {}]
+        mock_load.side_effect = [{"user_default_llm": {"factory": "mock-factory", "api_key": "mock-api-key", "parsers": "mock-parsers", "default_models": expected_models}}, {}]
         cfg = AppConfig()
 
     llm_cfg = cfg.user_default_llm

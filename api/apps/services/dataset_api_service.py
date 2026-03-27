@@ -61,12 +61,7 @@ async def create_dataset(tenant_id: str, req: dict):
         req["parser_config"] = parser_cfg
     req.update(ext_fields)
 
-    e, create_dict = KnowledgebaseService.create_with_name(
-        name=req.pop("name", None),
-        tenant_id=tenant_id,
-        parser_id=req.pop("parser_id", None),
-        **req
-    )
+    e, create_dict = KnowledgebaseService.create_with_name(name=req.pop("name", None), tenant_id=tenant_id, parser_id=req.pop("parser_id", None), **req)
 
     if not e:
         return False, create_dict
@@ -132,12 +127,12 @@ async def delete_datasets(tenant_id: str, ids: list = None, delete_all: bool = F
                 ]
             )
             File2DocumentService.delete_by_document_id(doc.id)
-        FileService.filter_delete(
-            [File.source_type == FileSource.KNOWLEDGEBASE, File.type == "folder", File.name == kb.name])
+        FileService.filter_delete([File.source_type == FileSource.KNOWLEDGEBASE, File.type == "folder", File.name == kb.name])
 
         # Drop index for this dataset
         try:
             from rag.nlp import search
+
             idxnm = search.index_name(kb.tenant_id)
             settings.docStoreConn.delete_idx(idxnm, kb_id)
         except Exception as e:
@@ -195,7 +190,7 @@ async def update_dataset(tenant_id: str, dataset_id: str, req: dict):
         parser_cfg["metadata"] = fields
         parser_cfg["enable_metadata"] = auto_meta.get("enabled", True)
         req["parser_config"] = parser_cfg
-    
+
     # Merge ext fields with req
     req.update(ext_fields)
 
@@ -222,8 +217,7 @@ async def update_dataset(tenant_id: str, dataset_id: str, req: dict):
         req["pipeline_id"] = ""
 
     if "name" in req and req["name"].lower() != kb.name.lower():
-        exists = KnowledgebaseService.get_or_none(name=req["name"], tenant_id=tenant_id,
-                                                  status=StatusEnum.VALID.value)
+        exists = KnowledgebaseService.get_or_none(name=req["name"], tenant_id=tenant_id, status=StatusEnum.VALID.value)
         if exists:
             return False, f"Dataset name '{req['name']}' already exists"
 
@@ -242,13 +236,13 @@ async def update_dataset(tenant_id: str, dataset_id: str, req: dict):
 
         if req["pagerank"] > 0:
             from rag.nlp import search
-            settings.docStoreConn.update({"kb_id": kb.id}, {PAGERANK_FLD: req["pagerank"]},
-                                         search.index_name(kb.tenant_id), kb.id)
+
+            settings.docStoreConn.update({"kb_id": kb.id}, {PAGERANK_FLD: req["pagerank"]}, search.index_name(kb.tenant_id), kb.id)
         else:
             # Elasticsearch requires PAGERANK_FLD be non-zero!
             from rag.nlp import search
-            settings.docStoreConn.update({"exists": PAGERANK_FLD}, {"remove": PAGERANK_FLD},
-                                         search.index_name(kb.tenant_id), kb.id)
+
+            settings.docStoreConn.update({"exists": PAGERANK_FLD}, {"remove": PAGERANK_FLD}, search.index_name(kb.tenant_id), kb.id)
     if "parse_type" in req:
         del req["parse_type"]
 
@@ -307,27 +301,13 @@ def list_datasets(tenant_id: str, args: dict):
     else:
         tenants = TenantService.get_joined_tenants_by_user_id(tenant_id)
         tenant_ids = [m["tenant_id"] for m in tenants]
-    kbs, total = KnowledgebaseService.get_list(
-        tenant_ids,
-        tenant_id,
-        page,
-        page_size,
-        orderby,
-        desc,
-        kb_id,
-        name,
-        keywords,
-        parser_id
-    )
+    kbs, total = KnowledgebaseService.get_list(tenant_ids, tenant_id, page, page_size, orderby, desc, kb_id, name, keywords, parser_id)
     users = UserService.get_by_ids([m["tenant_id"] for m in kbs])
     user_map = {m.id: m.to_dict() for m in users}
     response_data_list = []
     for kb in kbs:
         user_dict = user_map.get(kb["tenant_id"], {})
-        kb.update({
-            "nickname": user_dict.get("nickname", ""),
-            "tenant_avatar": user_dict.get("avatar", "")
-        })
+        kb.update({"nickname": user_dict.get("nickname", ""), "tenant_avatar": user_dict.get("avatar", "")})
         response_data_list.append(remap_dictionary_keys(kb))
     return True, {"data": response_data_list, "total": total}
 
@@ -344,13 +324,11 @@ async def get_knowledge_graph(dataset_id: str, tenant_id: str):
         return False, "No authorization."
     _, kb = KnowledgebaseService.get_by_id(dataset_id)
 
-    req = {
-        "kb_id": [dataset_id],
-        "knowledge_graph_kwd": ["graph"]
-    }
+    req = {"kb_id": [dataset_id], "knowledge_graph_kwd": ["graph"]}
 
     obj = {"graph": {}, "mind_map": {}}
     from rag.nlp import search
+
     if not settings.docStoreConn.index_exist(search.index_name(kb.tenant_id), dataset_id):
         return True, obj
     sres = await settings.retriever.search(req, search.index_name(kb.tenant_id), [dataset_id])
@@ -370,8 +348,7 @@ async def get_knowledge_graph(dataset_id: str, tenant_id: str):
         obj["graph"]["nodes"] = sorted(obj["graph"]["nodes"], key=lambda x: x.get("pagerank", 0), reverse=True)[:256]
         if "edges" in obj["graph"]:
             node_id_set = {o["id"] for o in obj["graph"]["nodes"]}
-            filtered_edges = [o for o in obj["graph"]["edges"] if
-                              o["source"] != o["target"] and o["source"] in node_id_set and o["target"] in node_id_set]
+            filtered_edges = [o for o in obj["graph"]["edges"] if o["source"] != o["target"] and o["source"] in node_id_set and o["target"] in node_id_set]
             obj["graph"]["edges"] = sorted(filtered_edges, key=lambda x: x.get("weight", 0), reverse=True)[:128]
     return True, obj
 
@@ -388,8 +365,8 @@ def delete_knowledge_graph(dataset_id: str, tenant_id: str):
         return False, "No authorization."
     _, kb = KnowledgebaseService.get_by_id(dataset_id)
     from rag.nlp import search
-    settings.docStoreConn.delete({"knowledge_graph_kwd": ["graph", "subgraph", "entity", "relation"]},
-                                 search.index_name(kb.tenant_id), dataset_id)
+
+    settings.docStoreConn.delete({"knowledge_graph_kwd": ["graph", "subgraph", "entity", "relation"]}, search.index_name(kb.tenant_id), dataset_id)
 
     return True, True
 

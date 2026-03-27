@@ -222,6 +222,7 @@ def test_logout_user_not_found_and_unauthorized_handlers(monkeypatch):
             assert "Not Found:" in payload["message"]
 
         async with quart_app.test_request_context("/protected"):
+
             @apps_module.login_required
             async def _protected():
                 return {"ok": True}

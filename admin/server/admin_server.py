@@ -15,6 +15,7 @@
 #
 
 import time
+
 start_ts = time.time()
 
 import os
@@ -39,7 +40,7 @@ from common.versions import get_ragflow_version
 
 stop_event = threading.Event()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     faulthandler.enable()
     init_root_logger("admin_service")
     logging.info(r"""
@@ -54,11 +55,9 @@ if __name__ == '__main__':
     app.register_blueprint(admin_bp)
     app.config["SESSION_PERMANENT"] = False
     app.config["SESSION_TYPE"] = "filesystem"
-    app.config["MAX_CONTENT_LENGTH"] = int(
-        os.environ.get("MAX_CONTENT_LENGTH", 1024 * 1024 * 1024)
-    )
+    app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_CONTENT_LENGTH", 1024 * 1024 * 1024))
     Session(app)
-    logging.info(f'RAGFlow admin version: {get_ragflow_version()}')
+    logging.info(f"RAGFlow admin version: {get_ragflow_version()}")
     show_configs()
     login_manager = LoginManager()
     login_manager.init_app(app)

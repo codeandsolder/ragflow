@@ -456,9 +456,7 @@ def test_github_fetch_user_info_async_success_and_error_unit(monkeypatch):
                     {"email": "octo-async@example.com", "primary": True},
                 ]
             )
-        return _FakeResponse(
-            {"login": "octocat-async", "name": "Octo Async", "avatar_url": "https://avatar.example/octo-async.png"}
-        )
+        return _FakeResponse({"login": "octocat-async", "name": "Octo Async", "avatar_url": "https://avatar.example/octo-async.png"})
 
     monkeypatch.setattr(github_module, "async_request", _fake_async_request)
     info = asyncio.run(client.async_fetch_user_info("async-token"))

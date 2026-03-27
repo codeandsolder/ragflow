@@ -31,7 +31,7 @@ from core.config.types import CacheType, DatabaseType, DocumentEngineType, Objec
         ("STORAGE_IMPL", "s3", "storage.active", ObjectStorageType.S3),
         ("DOC_ENGINE", "infinity", "doc_engine.active", DocumentEngineType.INFINITY),
         ("CACHE_TYPE", "redis", "cache.active", CacheType.REDIS),
-    ]
+    ],
 )
 def test_env_override_param(monkeypatch, env_name, env_value, expected_attr, expected_value):
     monkeypatch.setenv(env_name, env_value)
@@ -76,16 +76,10 @@ def test_env_overrides_paths_exist():
                 try:
                     get_field_value(current_model, part)
                 except AttributeError:
-                    pytest.fail(
-                        f"Field '{part}' (from path '{field_path}') not found "
-                        f"in {current_model.__class__.__name__}"
-                    )
+                    pytest.fail(f"Field '{part}' (from path '{field_path}') not found in {current_model.__class__.__name__}")
             else:
                 # Drill down to nested model
                 try:
                     current_model = get_field_value(current_model, part)
                 except AttributeError:
-                    pytest.fail(
-                        f"Nested field '{part}' (from path '{field_path}') not found "
-                        f"in {current_model.__class__.__name__}"
-                    )
+                    pytest.fail(f"Nested field '{part}' (from path '{field_path}') not found in {current_model.__class__.__name__}")

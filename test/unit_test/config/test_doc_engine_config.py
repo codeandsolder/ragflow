@@ -24,6 +24,7 @@ from core.config.types import DocumentEngineType
 # Defaults
 # ------------------------
 
+
 def test_doc_engine_defaults(monkeypatch):
     """Test default doc engine is Elasticsearch with correct default fields."""
     monkeypatch.delenv("DOC_ENGINE", raising=False)
@@ -70,10 +71,7 @@ def test_infinity_override(monkeypatch):
     """Test Infinity config loaded from YAML overrides and parses host:port correctly."""
     monkeypatch.delenv("DOC_ENGINE", raising=False)
     with patch("core.config.app.load_yaml") as mock_load:
-        mock_load.side_effect = [
-            {"doc_engine": {"active": "infinity", "infinity": {"uri": "host:9999"}}},
-            {}
-        ]
+        mock_load.side_effect = [{"doc_engine": {"active": "infinity", "infinity": {"uri": "host:9999"}}}, {}]
         cfg = AppConfig()
 
     infinity_cfg = cfg.doc_engine.infinity
@@ -85,13 +83,14 @@ def test_infinity_override(monkeypatch):
 # Active type handling
 # ------------------------
 
+
 @pytest.mark.parametrize(
     "engine_type, enum_val",
     [
         ("elasticsearch", DocumentEngineType.ELASTICSEARCH),
         ("opensearch", DocumentEngineType.OPENSEARCH),
         ("infinity", DocumentEngineType.INFINITY),
-    ]
+    ],
 )
 def test_doc_engine_active_types(engine_type, enum_val, monkeypatch):
     """Test DOC_ENGINE environment variable correctly maps to enum values."""
@@ -106,6 +105,7 @@ def test_doc_engine_active_types(engine_type, enum_val, monkeypatch):
 # ------------------------
 # Current property
 # ------------------------
+
 
 def test_doc_engine_current(monkeypatch):
     """Test doc_engine.current returns the correct engine instance."""
@@ -122,14 +122,12 @@ def test_doc_engine_current(monkeypatch):
 # Invalid engine
 # ------------------------
 
+
 def test_doc_engine_invalid(monkeypatch):
     """Test that an unknown engine type raises a ValueError."""
     monkeypatch.delenv("DOC_ENGINE", raising=False)
     with patch("core.config.app.load_yaml") as mock_load:
-        mock_load.side_effect = [
-            {"doc_engine": {"active": "unknown_engine"}},
-            {}
-        ]
+        mock_load.side_effect = [{"doc_engine": {"active": "unknown_engine"}}, {}]
         with pytest.raises(ValueError):
             AppConfig()
 
@@ -137,6 +135,7 @@ def test_doc_engine_invalid(monkeypatch):
 # ------------------------
 # YAML vs Env priority
 # ------------------------
+
 
 def test_yaml_overrides_env(monkeypatch):
     """Test that YAML values take priority over environment variables."""

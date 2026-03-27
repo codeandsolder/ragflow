@@ -22,7 +22,6 @@ from api.db.services.file_service import FileService
 
 
 class UserFillUpParam(ComponentParamBase):
-
     def __init__(self):
         super().__init__()
         self.enable_tips = True
@@ -59,7 +58,7 @@ class UserFillUp(ComponentBase):
                     ans = v
                 if not ans:
                     ans = ""
-                content = re.sub(r"\{%s\}"%k, ans, content)
+                content = re.sub(r"\{%s\}" % k, ans, content)
 
             self.set_output("tips", content)
         layout_recognize = self._param.layout_recognize or None

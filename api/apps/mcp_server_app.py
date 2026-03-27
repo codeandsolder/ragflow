@@ -26,6 +26,7 @@ from api.utils.api_utils import get_data_error_result, get_json_result, get_mcp_
 from api.utils.web_utils import get_float, safe_json_parse
 from common.mcp_tool_call_conn import MCPToolCallSession, close_multiple_mcp_toolcall_sessions
 
+
 @manager.route("/list", methods=["POST"])  # noqa: F821
 @login_required
 async def list_mcp() -> Response:

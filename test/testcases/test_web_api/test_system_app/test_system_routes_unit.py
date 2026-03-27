@@ -122,9 +122,7 @@ def _load_system_module(monkeypatch):
     monkeypatch.setitem(sys.modules, "api.db.services.knowledgebase_service", kb_service_mod)
 
     user_service_mod = ModuleType("api.db.services.user_service")
-    user_service_mod.UserTenantService = SimpleNamespace(
-        query=lambda **_kwargs: [SimpleNamespace(role="owner", tenant_id="tenant-1")]
-    )
+    user_service_mod.UserTenantService = SimpleNamespace(query=lambda **_kwargs: [SimpleNamespace(role="owner", tenant_id="tenant-1")])
     monkeypatch.setitem(sys.modules, "api.db.services.user_service", user_service_mod)
 
     db_models_mod = ModuleType("api.db.db_models")

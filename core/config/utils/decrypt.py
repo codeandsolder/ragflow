@@ -30,9 +30,7 @@ def decrypt_password(password: str, password_conf) -> str:
         return password
 
     if not password_conf.private_key or not password_conf.encrypt_module:
-        raise DecryptPasswordError(
-            "Database encryption enabled but PRIVATE_KEY or ENCRYPT_MODULE missing"
-        )
+        raise DecryptPasswordError("Database encryption enabled but PRIVATE_KEY or ENCRYPT_MODULE missing")
 
     try:
         module_name, func_name = password_conf.encrypt_module.split("#")

@@ -144,7 +144,7 @@ class TestDatasetsList:
     @pytest.mark.parametrize(
         "params, assertions",
         [
-            ({"orderby": "update_time"}, lambda r: (is_sorted(r["data"], "update_time", True))),
+            ({"orderby": "update_time"}, lambda r: is_sorted(r["data"], "update_time", True)),
         ],
         ids=["orderby_update_time"],
     )
@@ -158,8 +158,8 @@ class TestDatasetsList:
     @pytest.mark.parametrize(
         "params, assertions",
         [
-            ({"desc": "True"}, lambda r: (is_sorted(r["data"], "update_time", True))),
-            ({"desc": "False"}, lambda r: (is_sorted(r["data"], "update_time", False))),
+            ({"desc": "True"}, lambda r: is_sorted(r["data"], "update_time", True)),
+            ({"desc": "False"}, lambda r: is_sorted(r["data"], "update_time", False)),
         ],
         ids=["desc=True", "desc=False"],
     )

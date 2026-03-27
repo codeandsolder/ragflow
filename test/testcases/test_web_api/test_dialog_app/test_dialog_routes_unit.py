@@ -153,16 +153,7 @@ def _load_dialog_module(monkeypatch):
         @staticmethod
         def get_api_key(tenant_id, model_name, model_type=None):
             return _MockTableObject(
-                id=1,
-                tenant_id=tenant_id,
-                llm_factory="",
-                model_type="chat",
-                llm_name=model_name,
-                api_key="fake-api-key",
-                api_base="https://api.example.com",
-                max_tokens=8192,
-                used_tokens=0,
-                status=1
+                id=1, tenant_id=tenant_id, llm_factory="", model_type="chat", llm_name=model_name, api_key="fake-api-key", api_base="https://api.example.com", max_tokens=8192, used_tokens=0, status=1
             )
 
     tenant_llm_service_mod.TenantLLMService = _TenantLLMService
@@ -220,6 +211,7 @@ def _load_dialog_module(monkeypatch):
     def _validate_request(*_args, **_kwargs):
         def _decorator(func):
             if inspect.iscoroutinefunction(func):
+
                 @wraps(func)
                 async def _wrapped(*func_args, **func_kwargs):
                     return await func(*func_args, **func_kwargs)
@@ -433,11 +425,7 @@ def test_get_get_kb_names_and_list_dialogs_exception_matrix_unit(monkeypatch):
     monkeypatch.setattr(
         module.KnowledgebaseService,
         "get_by_id",
-        lambda kid: (
-            (True, SimpleNamespace(status=module.StatusEnum.VALID.value, name="KB-1"))
-            if kid == "kb-1"
-            else (False, None)
-        ),
+        lambda kid: (True, SimpleNamespace(status=module.StatusEnum.VALID.value, name="KB-1")) if kid == "kb-1" else (False, None),
     )
     _set_request_args(monkeypatch, module, {"dialog_id": "dialog-1"})
     res = get_handler()

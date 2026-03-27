@@ -235,39 +235,41 @@ class AliyunCodeInterpreterProvider(SandboxProvider):
                 # Build arguments string for main() call
                 if arguments:
                     import json as json_module
+
                     args_json = json_module.dumps(arguments)
-                    wrapped_code = f'''{code}
+                    wrapped_code = f"""{code}
 
 if __name__ == "__main__":
     import json
     result = main(**{args_json})
     print(json.dumps(result) if isinstance(result, dict) else result)
-'''
+"""
                 else:
-                    wrapped_code = f'''{code}
+                    wrapped_code = f"""{code}
 
 if __name__ == "__main__":
     import json
     result = main()
     print(json.dumps(result) if isinstance(result, dict) else result)
-'''
+"""
             else:  # javascript
                 if arguments:
                     import json as json_module
+
                     args_json = json_module.dumps(arguments)
-                    wrapped_code = f'''{code}
+                    wrapped_code = f"""{code}
 
 // Call main and output result
 const result = main({args_json});
 console.log(typeof result === 'object' ? JSON.stringify(result) : String(result));
-'''
+"""
                 else:
-                    wrapped_code = f'''{code}
+                    wrapped_code = f"""{code}
 
 // Call main and output result
 const result = main();
 console.log(typeof result === 'object' ? JSON.stringify(result) : String(result));
-'''
+"""
             logger.debug(f"Aliyun Code Interpreter: Wrapped code (first 200 chars): {wrapped_code[:200]}")
 
             start_time = time.time()

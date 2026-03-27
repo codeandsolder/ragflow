@@ -457,13 +457,16 @@ class TestDatetimeFormat:
 
         assert result == expected
 
-    @pytest.mark.parametrize("year,month,day,hour,minute,second,microsecond", [
-        (2024, 1, 1, 0, 0, 0, 0),  # Start of day
-        (2024, 12, 31, 23, 59, 59, 999999),  # End of year
-        (2000, 6, 15, 12, 30, 45, 500000),  # Random date
-        (1970, 1, 1, 0, 0, 0, 123456),  # Epoch equivalent
-        (2030, 3, 20, 6, 15, 30, 750000),  # Future date
-    ])
+    @pytest.mark.parametrize(
+        "year,month,day,hour,minute,second,microsecond",
+        [
+            (2024, 1, 1, 0, 0, 0, 0),  # Start of day
+            (2024, 12, 31, 23, 59, 59, 999999),  # End of year
+            (2000, 6, 15, 12, 30, 45, 500000),  # Random date
+            (1970, 1, 1, 0, 0, 0, 123456),  # Epoch equivalent
+            (2030, 3, 20, 6, 15, 30, 750000),  # Future date
+        ],
+    )
     def test_parametrized_datetimes(self, year, month, day, hour, minute, second, microsecond):
         """Test multiple datetime scenarios using parametrization"""
         original_dt = datetime.datetime(year, month, day, hour, minute, second, microsecond)

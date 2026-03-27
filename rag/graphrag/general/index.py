@@ -66,9 +66,7 @@ async def run_graphrag(
     try:
         subgraph = await asyncio.wait_for(
             generate_subgraph(
-                LightKGExt if "method" not in row["kb_parser_config"].get("graphrag", {})
-                    or row["kb_parser_config"]["graphrag"]["method"] != "general"
-                else GeneralKGExt,
+                LightKGExt if "method" not in row["kb_parser_config"].get("graphrag", {}) or row["kb_parser_config"]["graphrag"]["method"] != "general" else GeneralKGExt,
                 tenant_id,
                 kb_id,
                 doc_id,
@@ -186,14 +184,16 @@ async def run_graphrag_for_kb(
         current_chunk = ""
 
         # DEBUG: Obtener todos los chunks primero
-        raw_chunks = list(settings.retriever.chunk_list(
-            doc_id,
-            tenant_id,
-            [kb_id],
-            max_count=10000,  # FIX: Aumentar límite para procesar todos los chunks
-            fields=fields_for_chunks,
-            sort_by_position=True,
-        ))
+        raw_chunks = list(
+            settings.retriever.chunk_list(
+                doc_id,
+                tenant_id,
+                [kb_id],
+                max_count=10000,  # FIX: Aumentar límite para procesar todos los chunks
+                fields=fields_for_chunks,
+                sort_by_position=True,
+            )
+        )
 
         callback(msg=f"[DEBUG] chunk_list() returned {len(raw_chunks)} raw chunks for doc {doc_id}")
 
@@ -259,7 +259,7 @@ async def run_graphrag_for_kb(
                             chat_model,
                             embedding_model,
                             callback,
-                            task_id=row["id"]
+                            task_id=row["id"],
                         ),
                         timeout=deadline,
                     )
@@ -461,8 +461,18 @@ async def generate_subgraph(
         "removed_kwd": "N",
     }
     cid = chunk_id(chunk)
-    await thread_pool_exec(settings.docStoreConn.delete,{"knowledge_graph_kwd": "subgraph", "source_id": doc_id},search.index_name(tenant_id),kb_id,)
-    await thread_pool_exec(settings.docStoreConn.insert,[{"id": cid, **chunk}],search.index_name(tenant_id),kb_id,)
+    await thread_pool_exec(
+        settings.docStoreConn.delete,
+        {"knowledge_graph_kwd": "subgraph", "source_id": doc_id},
+        search.index_name(tenant_id),
+        kb_id,
+    )
+    await thread_pool_exec(
+        settings.docStoreConn.insert,
+        [{"id": cid, **chunk}],
+        search.index_name(tenant_id),
+        kb_id,
+    )
     now = asyncio.get_running_loop().time()
     callback(msg=f"generated subgraph for doc {doc_id} in {now - start:.2f} seconds.")
     return subgraph
@@ -593,10 +603,20 @@ async def extract_community(
         chunk["content_sm_ltks"] = rag_tokenizer.fine_grained_tokenize(chunk["content_ltks"])
         chunks.append(chunk)
 
-    await thread_pool_exec(settings.docStoreConn.delete,{"knowledge_graph_kwd": "community_report", "kb_id": kb_id},search.index_name(tenant_id),kb_id,)
+    await thread_pool_exec(
+        settings.docStoreConn.delete,
+        {"knowledge_graph_kwd": "community_report", "kb_id": kb_id},
+        search.index_name(tenant_id),
+        kb_id,
+    )
     es_bulk_size = 4
     for b in range(0, len(chunks), es_bulk_size):
-        doc_store_result = await thread_pool_exec(settings.docStoreConn.insert,chunks[b : b + es_bulk_size],search.index_name(tenant_id),kb_id,)
+        doc_store_result = await thread_pool_exec(
+            settings.docStoreConn.insert,
+            chunks[b : b + es_bulk_size],
+            search.index_name(tenant_id),
+            kb_id,
+        )
         if doc_store_result:
             error_message = f"Insert chunk error: {doc_store_result}, please check log file and Elasticsearch/Infinity status!"
             raise Exception(error_message)

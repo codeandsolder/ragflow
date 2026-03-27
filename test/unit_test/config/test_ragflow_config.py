@@ -39,10 +39,7 @@ def test_ragflow_defaults(monkeypatch):
 def test_ragflow_env_override(monkeypatch):
     """RAGFlowConfig via AppConfig with environment variable overrides"""
     monkeypatch.setenv("REGISTER_ENABLED", "0")
-    monkeypatch.setenv(
-        "RAGFLOW_SECRET_KEY",
-        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-    )
+    monkeypatch.setenv("RAGFLOW_SECRET_KEY", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
 
     with patch("core.config.app.load_yaml", return_value={}):
         cfg = AppConfig()

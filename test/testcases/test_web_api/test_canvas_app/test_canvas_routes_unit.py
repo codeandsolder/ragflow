@@ -208,6 +208,7 @@ def _load_canvas_module(monkeypatch):
         @classmethod
         def normalize_dsl(cls, dsl):
             import json
+
             if isinstance(dsl, str):
                 return json.loads(dsl)
             return dsl
@@ -556,14 +557,14 @@ def test_templates_rm_save_get_matrix_unit(monkeypatch):
     assert created["save"]
     assert any(item[0] == "save_or_replace_latest" for item in created["versions"])
 
-    _set_request_json(monkeypatch, module, {"id": "canvas-1", "title": "Renamed", "dsl": "{\"m\": 1}"})
+    _set_request_json(monkeypatch, module, {"id": "canvas-1", "title": "Renamed", "dsl": '{"m": 1}'})
     monkeypatch.setattr(module.UserCanvasService, "accessible", lambda *_args, **_kwargs: False)
     res = _run(inspect.unwrap(module.save)())
     assert res["code"] == module.RetCode.OPERATING_ERROR
 
     updates = []
     versions = []
-    _set_request_json(monkeypatch, module, {"id": "canvas-1", "title": "Renamed", "dsl": "{\"m\": 1}"})
+    _set_request_json(monkeypatch, module, {"id": "canvas-1", "title": "Renamed", "dsl": '{"m": 1}'})
     monkeypatch.setattr(module.UserCanvasService, "accessible", lambda *_args, **_kwargs: True)
     monkeypatch.setattr(module.UserCanvasService, "update_by_id", lambda canvas_id, payload: updates.append((canvas_id, payload)))
     monkeypatch.setattr(module.UserCanvasVersionService, "save_or_replace_latest", lambda *_args, **kwargs: versions.append(("save_or_replace_latest", kwargs)))

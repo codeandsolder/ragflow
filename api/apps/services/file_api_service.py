@@ -48,15 +48,15 @@ async def upload_file(tenant_id: str, pf_id: str, file_objs: list):
 
     file_res = []
     for file_obj in file_objs:
-        MAX_FILE_NUM_PER_USER = int(os.environ.get('MAX_FILE_NUM_PER_USER', 0))
+        MAX_FILE_NUM_PER_USER = int(os.environ.get("MAX_FILE_NUM_PER_USER", 0))
         if 0 < MAX_FILE_NUM_PER_USER <= await thread_pool_exec(DocumentService.get_doc_count, tenant_id):
             return False, "Exceed the maximum file number of a free user!"
 
         if not file_obj.filename:
             file_obj_names = [pf_folder.name, file_obj.filename]
         else:
-            full_path = '/' + file_obj.filename
-            file_obj_names = full_path.split('/')
+            full_path = "/" + file_obj.filename
+            file_obj_names = full_path.split("/")
         file_len = len(file_obj_names)
 
         file_id_list = await thread_pool_exec(FileService.get_id_list_by_id, pf_id, file_obj_names, 1, [pf_id])
@@ -66,25 +66,19 @@ async def upload_file(tenant_id: str, pf_id: str, file_objs: list):
             e, file = await thread_pool_exec(FileService.get_by_id, file_id_list[len_id_list - 1])
             if not e:
                 return False, "Folder not found!"
-            last_folder = await thread_pool_exec(
-                FileService.create_folder, file, file_id_list[len_id_list - 1], file_obj_names, len_id_list
-            )
+            last_folder = await thread_pool_exec(FileService.create_folder, file, file_id_list[len_id_list - 1], file_obj_names, len_id_list)
         else:
             e, file = await thread_pool_exec(FileService.get_by_id, file_id_list[len_id_list - 2])
             if not e:
                 return False, "Folder not found!"
-            last_folder = await thread_pool_exec(
-                FileService.create_folder, file, file_id_list[len_id_list - 2], file_obj_names, len_id_list
-            )
+            last_folder = await thread_pool_exec(FileService.create_folder, file, file_id_list[len_id_list - 2], file_obj_names, len_id_list)
 
         filetype = filename_type(file_obj_names[file_len - 1])
         location = file_obj_names[file_len - 1]
         while await thread_pool_exec(settings.STORAGE_IMPL.obj_exist, last_folder.id, location):
             location += "_"
         blob = await thread_pool_exec(file_obj.read)
-        filename = await thread_pool_exec(
-            duplicate_name, FileService.query, name=file_obj_names[file_len - 1], parent_id=last_folder.id
-        )
+        filename = await thread_pool_exec(duplicate_name, FileService.query, name=file_obj_names[file_len - 1], parent_id=last_folder.id)
         await thread_pool_exec(settings.STORAGE_IMPL.put, last_folder.id, location, blob)
         file_data = {
             "id": get_uuid(),
@@ -126,16 +120,18 @@ async def create_folder(tenant_id: str, name: str, pf_id: str = None, file_type:
     else:
         ft = FileType.VIRTUAL.value
 
-    file = FileService.insert({
-        "id": get_uuid(),
-        "parent_id": pf_id,
-        "tenant_id": tenant_id,
-        "created_by": tenant_id,
-        "name": name,
-        "location": "",
-        "size": 0,
-        "type": ft,
-    })
+    file = FileService.insert(
+        {
+            "id": get_uuid(),
+            "parent_id": pf_id,
+            "tenant_id": tenant_id,
+            "created_by": tenant_id,
+            "name": name,
+            "location": "",
+            "size": 0,
+            "type": ft,
+        }
+    )
     return True, file.to_json()
 
 
@@ -170,7 +166,6 @@ def list_files(tenant_id: str, args: dict):
         return False, "File not found!"
 
     return True, {"total": total, "files": files, "parent_folder": parent_folder.to_json()}
-
 
 
 def get_parent_folder(file_id: str):
@@ -211,6 +206,7 @@ async def delete_files(uid: str, file_ids: list):
     :param file_ids: list of file IDs to delete
     :return: (success, result) or (success, error_message)
     """
+
     def _delete_single_file(file):
         try:
             if file.location:
@@ -299,8 +295,7 @@ async def move_files(uid: str, src_file_ids: list, dest_file_id: str = None, new
 
     if new_name:
         file = files_dict[src_file_ids[0]]
-        if file.type != FileType.FOLDER.value and \
-                pathlib.Path(new_name.lower()).suffix != pathlib.Path(file.name.lower()).suffix:
+        if file.type != FileType.FOLDER.value and pathlib.Path(new_name.lower()).suffix != pathlib.Path(file.name.lower()).suffix:
             return False, "The extension of file can't be changed"
         target_parent_id = dest_folder.id if dest_folder else file.parent_id
         for f in FileService.query(name=new_name, parent_id=target_parent_id):
@@ -315,16 +310,18 @@ async def move_files(uid: str, src_file_ids: list, dest_file_id: str = None, new
             if existing_folder:
                 new_folder = existing_folder[0]
             else:
-                new_folder = FileService.insert({
-                    "id": get_uuid(),
-                    "parent_id": dest_folder_entry.id,
-                    "tenant_id": source_file_entry.tenant_id,
-                    "created_by": source_file_entry.tenant_id,
-                    "name": effective_name,
-                    "location": "",
-                    "size": 0,
-                    "type": FileType.FOLDER.value,
-                })
+                new_folder = FileService.insert(
+                    {
+                        "id": get_uuid(),
+                        "parent_id": dest_folder_entry.id,
+                        "tenant_id": source_file_entry.tenant_id,
+                        "created_by": source_file_entry.tenant_id,
+                        "name": effective_name,
+                        "location": "",
+                        "size": 0,
+                        "type": FileType.FOLDER.value,
+                    }
+                )
 
             sub_files = FileService.list_all_files_by_parent_id(source_file_entry.id)
             for sub_file in sub_files:
@@ -343,8 +340,10 @@ async def move_files(uid: str, src_file_ids: list, dest_file_id: str = None, new
                 new_location += "_"
             try:
                 settings.STORAGE_IMPL.move(
-                    source_file_entry.parent_id, source_file_entry.location,
-                    dest_folder_entry.id, new_location,
+                    source_file_entry.parent_id,
+                    source_file_entry.location,
+                    dest_folder_entry.id,
+                    new_location,
                 )
             except Exception as storage_err:
                 raise RuntimeError(f"Move file failed at storage layer: {str(storage_err)}")

@@ -94,6 +94,7 @@ async def set_api_key():
             assert factory in ChatModel, f"Chat model from {factory} is not supported yet."
             mdl = ChatModel[factory](req["api_key"], llm.llm_name, base_url=base_url, **extra)
             try:
+
                 async def check_streamly():
                     async for chunk in mdl.async_chat_streamly(
                         None,
@@ -130,7 +131,7 @@ async def set_api_key():
             break
 
     if req.get("verify", False):
-        return get_json_result(data={"message": msg, "success": len(msg.strip())==0})
+        return get_json_result(data={"message": msg, "success": len(msg.strip()) == 0})
 
     if msg:
         return get_data_error_result(message=msg)
@@ -264,6 +265,7 @@ async def add_llm():
                 **extra,
             )
             try:
+
                 async def check_streamly():
                     async for chunk in mdl.async_chat_streamly(
                         None,
@@ -312,6 +314,7 @@ async def add_llm():
             assert factory in TTSModel, f"TTS model from {factory} is not supported yet."
             mdl = TTSModel[factory](key=model_api_key, model_name=mdl_nm, base_url=model_base_url)
             try:
+
                 def drain_tts():
                     for _ in mdl.tts("Hello~ RAGFlower!"):
                         pass

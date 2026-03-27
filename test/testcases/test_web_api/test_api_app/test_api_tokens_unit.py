@@ -83,7 +83,7 @@ def _load_api_app(monkeypatch):
         "message": str(exc),
         "data": None,
     }
-    api_utils_mod.validate_request = lambda *_args, **_kwargs: (lambda fn: fn)
+    api_utils_mod.validate_request = lambda *_args, **_kwargs: lambda fn: fn
     monkeypatch.setitem(sys.modules, "api.utils.api_utils", api_utils_mod)
 
     api_service_mod = ModuleType("api.db.services.api_service")

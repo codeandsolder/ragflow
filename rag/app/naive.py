@@ -1079,10 +1079,7 @@ def chunk(filename, binary=None, from_page=0, to_page=100000, lang="Chinese", ca
     # Attach PDF outline as transient metadata on the first chunk.
     # task_executor.py will extract and persist it as document metadata.
     if res and pdf_parser and getattr(pdf_parser, "outlines", None):
-        res[0]["__outline__"] = [
-            {"title": title, "depth": depth}
-            for title, depth in pdf_parser.outlines
-        ]
+        res[0]["__outline__"] = [{"title": title, "depth": depth} for title, depth in pdf_parser.outlines]
 
     return res
 

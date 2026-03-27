@@ -147,13 +147,8 @@ def _load_conversation_module(monkeypatch):
     if "api.db.services.user_service" not in sys.modules:
         user_service_mod = ModuleType("api.db.services.user_service")
         user_service_mod.UserService = SimpleNamespace()  # Dummy UserService class
-        user_service_mod.TenantService = SimpleNamespace(
-            get_info_by=lambda _uid: [],
-            get_by_id=lambda _uid: (False, None)
-        )
-        user_service_mod.UserTenantService = SimpleNamespace(
-            query=lambda **_kwargs: []
-        )
+        user_service_mod.TenantService = SimpleNamespace(get_info_by=lambda _uid: [], get_by_id=lambda _uid: (False, None))
+        user_service_mod.UserTenantService = SimpleNamespace(query=lambda **_kwargs: [])
         monkeypatch.setitem(sys.modules, "api.db.services.user_service", user_service_mod)
 
     module_name = "test_conversation_routes_unit_module"

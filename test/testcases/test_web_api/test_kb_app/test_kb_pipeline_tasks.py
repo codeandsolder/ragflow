@@ -32,6 +32,7 @@ from utils import wait_for
 
 TASK_STATUS_DONE = "3"
 
+
 def _find_task(data, task_id):
     if isinstance(data, dict):
         if data.get("id") == task_id:

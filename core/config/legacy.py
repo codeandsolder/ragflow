@@ -69,10 +69,7 @@ def normalize_legacy_yaml(raw: dict[str, Any]) -> dict[str, Any]:
             raw["database"] = db
 
     # storage
-    _conflict(
-        ("minio", "s3", "oss", "azure", "azure_sas", "azure_spn", "opendal"),
-        "storage"
-    )
+    _conflict(("minio", "s3", "oss", "azure", "azure_sas", "azure_spn", "opendal"), "storage")
 
     if "storage" not in raw:
         storage = {}

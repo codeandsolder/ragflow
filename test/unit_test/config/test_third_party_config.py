@@ -25,22 +25,13 @@ def test_third_party_overrides():
     return_value = {
         "third_party": {
             "oauth": {
-                "oauth2": {
-                    "client_id": "oauth2-client-id",
-                    "client_secret": "oauth2-client-secret"
-                },
-                "oidc": {
-                    "client_id": "oidc-client-id",
-                    "client_secret": "oidc-client-secret"
-                },
-                "github": {
-                    "client_id": "github-client-id",
-                    "client_secret": "github-client-secret"
-                }
+                "oauth2": {"client_id": "oauth2-client-id", "client_secret": "oauth2-client-secret"},
+                "oidc": {"client_id": "oidc-client-id", "client_secret": "oidc-client-secret"},
+                "github": {"client_id": "github-client-id", "client_secret": "github-client-secret"},
             },
             "tcadp": {
                 "region": "us-east-1",
-            }
+            },
         }
     }
 

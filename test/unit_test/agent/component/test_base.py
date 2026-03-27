@@ -38,9 +38,7 @@ class _ParamWithDataFrameInOutputs(ComponentParamBase):
 
     def __init__(self):
         super().__init__()
-        self.outputs = {
-            "result": {"value": pd.DataFrame({"x": [10], "y": [20]}), "type": "DataFrame"}
-        }
+        self.outputs = {"result": {"value": pd.DataFrame({"x": [10], "y": [20]}), "type": "DataFrame"}}
 
     def check(self):
         pass  # Minimal param for testing; no validation needed

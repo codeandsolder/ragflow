@@ -61,6 +61,7 @@ class LLMParam(ComponentParamBase):
 
     def gen_conf(self):
         conf = {}
+
         def get_attr(nm):
             try:
                 return getattr(self, nm)
@@ -86,18 +87,13 @@ class LLM(ComponentBase):
     def __init__(self, canvas, component_id, param: ComponentParamBase):
         super().__init__(canvas, component_id, param)
         chat_model_config = get_model_config_by_type_and_name(self._canvas.get_tenant_id(), TenantLLMService.llm_id2llm_type(self._param.llm_id), self._param.llm_id)
-        self.chat_mdl = LLMBundle(self._canvas.get_tenant_id(), chat_model_config,
-                                  max_retries=self._param.max_retries,
-                                  retry_interval=self._param.delay_after_error)
+        self.chat_mdl = LLMBundle(self._canvas.get_tenant_id(), chat_model_config, max_retries=self._param.max_retries, retry_interval=self._param.delay_after_error)
         self.imgs = []
 
     def get_input_form(self) -> dict[str, dict]:
         res = {}
         for k, v in self.get_input_elements().items():
-            res[k] = {
-                "type": "line",
-                "name": v["name"]
-            }
+            res[k] = {"type": "line", "name": v["name"]}
         return res
 
     def get_input_elements(self) -> dict[str, Any]:
@@ -247,10 +243,7 @@ class LLM(ComponentBase):
 
         self.imgs = self._uniq_images(self.imgs + extracted_imgs)
         if self.imgs and TenantLLMService.llm_id2llm_type(self._param.llm_id) == LLMType.CHAT.value:
-            self.chat_mdl = LLMBundle(self._canvas.get_tenant_id(), LLMType.IMAGE2TEXT.value,
-                                      self._param.llm_id, max_retries=self._param.max_retries,
-                                      retry_interval=self._param.delay_after_error
-                                      )
+            self.chat_mdl = LLMBundle(self._canvas.get_tenant_id(), LLMType.IMAGE2TEXT.value, self._param.llm_id, max_retries=self._param.max_retries, retry_interval=self._param.delay_after_error)
 
         msg, sys_prompt = self._sys_prompt_and_msg(self._canvas.get_history(self._param.message_history_window_size)[:-1], args)
         user_defined_prompt, sys_prompt = self._extract_prompts(sys_prompt)
@@ -262,11 +255,11 @@ class LLM(ComponentBase):
     def _extract_prompts(self, sys_prompt):
         pts = {}
         for tag in ["TASK_ANALYSIS", "PLAN_GENERATION", "REFLECTION", "CONTEXT_SUMMARY", "CONTEXT_RANKING", "CITATION_GUIDELINES"]:
-            r = re.search(rf"<{tag}>(.*?)</{tag}>", sys_prompt, flags=re.DOTALL|re.IGNORECASE)
+            r = re.search(rf"<{tag}>(.*?)</{tag}>", sys_prompt, flags=re.DOTALL | re.IGNORECASE)
             if not r:
                 continue
             pts[tag.lower()] = r.group(1)
-            sys_prompt = re.sub(rf"<{tag}>(.*?)</{tag}>", "", sys_prompt, flags=re.DOTALL|re.IGNORECASE)
+            sys_prompt = re.sub(rf"<{tag}>(.*?)</{tag}>", "", sys_prompt, flags=re.DOTALL | re.IGNORECASE)
         return pts, sys_prompt
 
     async def _generate_async(self, msg: list[dict], **kwargs) -> str:
@@ -289,7 +282,7 @@ class LLM(ComponentBase):
                     last_idx += len("<think>")
                     return "<think>"
                 elif delta_ans.find("<think>") > 0:
-                    delta_ans = txt[last_idx:last_idx + delta_ans.find("<think>")]
+                    delta_ans = txt[last_idx : last_idx + delta_ans.find("<think>")]
                     last_idx += delta_ans.find("<think>")
                     return delta_ans
                 elif delta_ans.endswith("</think>"):
@@ -329,7 +322,7 @@ class LLM(ComponentBase):
                 last_idx += len("<think>")
                 return "<think>"
             elif delta_ans.find("<think>") > 0:
-                delta_ans = txt[last_idx:last_idx + delta_ans.find("<think>")]
+                delta_ans = txt[last_idx : last_idx + delta_ans.find("<think>")]
                 last_idx += delta_ans.find("<think>")
                 return delta_ans
             elif delta_ans.endswith("</think>"):
@@ -363,7 +356,7 @@ class LLM(ComponentBase):
 
         self.set_output("content", answer)
 
-    @timeout(int(os.environ.get("COMPONENT_EXEC_TIMEOUT", 10*60)))
+    @timeout(int(os.environ.get("COMPONENT_EXEC_TIMEOUT", 10 * 60)))
     async def _invoke_async(self, **kwargs):
         if self.check_if_canceled("LLM processing"):
             return
@@ -410,9 +403,7 @@ class LLM(ComponentBase):
 
         downstreams = self._canvas.get_component(self._id)["downstream"] if self._canvas.get_component(self._id) else []
         ex = self.exception_handler()
-        if any([self._canvas.get_component_obj(cid).component_name.lower() == "message" for cid in downstreams]) and not (
-            ex and ex["goto"]
-        ):
+        if any([self._canvas.get_component_obj(cid).component_name.lower() == "message" for cid in downstreams]) and not (ex and ex["goto"]):
             self.set_output("content", partial(self._stream_output_async, prompt, deepcopy(msg)))
             return
 
@@ -421,9 +412,7 @@ class LLM(ComponentBase):
             if self.check_if_canceled("LLM processing"):
                 return
 
-            _, msg_fit = message_fit_in(
-                [{"role": "system", "content": prompt}, *deepcopy(msg)], int(self.chat_mdl.max_length * 0.97)
-            )
+            _, msg_fit = message_fit_in([{"role": "system", "content": prompt}, *deepcopy(msg)], int(self.chat_mdl.max_length * 0.97))
             error = ""
             ans = await self._generate_async(msg_fit)
             msg_fit.pop(0)
@@ -440,15 +429,15 @@ class LLM(ComponentBase):
             else:
                 self.set_output("_ERROR", error)
 
-    @timeout(int(os.environ.get("COMPONENT_EXEC_TIMEOUT", 10*60)))
+    @timeout(int(os.environ.get("COMPONENT_EXEC_TIMEOUT", 10 * 60)))
     def _invoke(self, **kwargs):
         return asyncio.run(self._invoke_async(**kwargs))
 
-    async def add_memory(self, user:str, assist:str, func_name: str, params: dict, results: str, user_defined_prompt:dict={}):
+    async def add_memory(self, user: str, assist: str, func_name: str, params: dict, results: str, user_defined_prompt: dict = {}):
         summ = await tool_call_summary(self.chat_mdl, func_name, params, results, user_defined_prompt)
         logging.info(f"[MEMORY]: {summ}")
         self._canvas.add_memory(user, assist, summ)
 
     def thoughts(self) -> str:
-        _, msg,_ = self._prepare_prompt_variables()
-        return "⌛Give me a moment—starting from: \n\n" + re.sub(r"(User's query:|[\\]+)", '', msg[-1]['content'], flags=re.DOTALL) + "\n\nI’ll figure out our best next move."
+        _, msg, _ = self._prepare_prompt_variables()
+        return "⌛Give me a moment—starting from: \n\n" + re.sub(r"(User's query:|[\\]+)", "", msg[-1]["content"], flags=re.DOTALL) + "\n\nI’ll figure out our best next move."

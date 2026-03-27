@@ -22,31 +22,37 @@ class M(BaseModel):
     flag: bool
 
 
-@pytest.mark.parametrize("value", [
-    "1",
-    "true",
-    "True",
-    "TRUE",
-    "yes",
-    "on",
-    1,
-    True,
-])
+@pytest.mark.parametrize(
+    "value",
+    [
+        "1",
+        "true",
+        "True",
+        "TRUE",
+        "yes",
+        "on",
+        1,
+        True,
+    ],
+)
 def test_bool_true(value):
     m = M(flag=value)
     assert m.flag is True
 
 
-@pytest.mark.parametrize("value", [
-    "0",
-    "false",
-    "False",
-    "FALSE",
-    "no",
-    "off",
-    0,
-    False,
-])
+@pytest.mark.parametrize(
+    "value",
+    [
+        "0",
+        "false",
+        "False",
+        "FALSE",
+        "no",
+        "off",
+        0,
+        False,
+    ],
+)
 def test_bool_false(value):
     m = M(flag=value)
     assert m.flag is False

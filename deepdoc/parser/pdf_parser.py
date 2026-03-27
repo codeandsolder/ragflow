@@ -45,7 +45,6 @@ from rag.prompts.generator import vision_llm_describe_prompt
 from common import settings
 
 
-
 from common.misc_utils import thread_pool_exec
 
 LOCK_KEY_pdfplumber = "global_shared_lock_pdfplumber"
@@ -220,7 +219,7 @@ class RAGFlowPdfParser:
             return True
         if cp == 0xFFFD:
             return True
-        if cp < 0x20 and ch not in ('\t', '\n', '\r'):
+        if cp < 0x20 and ch not in ("\t", "\n", "\r"):
             return True
         if 0x80 <= cp <= 0x9F:
             return True
@@ -296,13 +295,9 @@ class RAGFlowPdfParser:
                 subset_font_count += 1
 
             cp = ord(text[0])
-            if (0x2E80 <= cp <= 0x9FFF or 0xF900 <= cp <= 0xFAFF
-                    or 0x20000 <= cp <= 0x2FA1F
-                    or 0xAC00 <= cp <= 0xD7AF
-                    or 0x3040 <= cp <= 0x30FF):
+            if 0x2E80 <= cp <= 0x9FFF or 0xF900 <= cp <= 0xFAFF or 0x20000 <= cp <= 0x2FA1F or 0xAC00 <= cp <= 0xD7AF or 0x3040 <= cp <= 0x30FF:
                 cjk_like += 1
-            elif (0x21 <= cp <= 0x2F or 0x3A <= cp <= 0x40
-                    or 0x5B <= cp <= 0x60 or 0x7B <= cp <= 0x7E):
+            elif 0x21 <= cp <= 0x2F or 0x3A <= cp <= 0x40 or 0x5B <= cp <= 0x60 or 0x7B <= cp <= 0x7E:
                 ascii_punct_sym += 1
 
         if total_non_space < min_chars:
@@ -762,7 +757,11 @@ class RAGFlowPdfParser:
             if total_count > 0 and garbled_count / total_count >= 0.5:
                 logging.info(
                     "Page %d: detected garbled pdfplumber text (garbled=%d/%d), falling back to OCR for box at (%.1f, %.1f)",
-                    pagenum, garbled_count, total_count, b["x0"], b["top"],
+                    pagenum,
+                    garbled_count,
+                    total_count,
+                    b["x0"],
+                    b["top"],
                 )
                 b["text"] = ""
                 continue
@@ -771,7 +770,10 @@ class RAGFlowPdfParser:
             if total_count > 0 and self._is_garbled_by_font_encoding(box_chars, min_chars=5):
                 logging.info(
                     "Page %d: detected font-encoding garbled text (%d chars), falling back to OCR for box at (%.1f, %.1f)",
-                    pagenum, total_count, b["x0"], b["top"],
+                    pagenum,
+                    total_count,
+                    b["x0"],
+                    b["top"],
                 )
                 b["text"] = ""
 
@@ -1560,19 +1562,18 @@ class RAGFlowPdfParser:
                         sample_text = "".join(c.get("text", "") for c in sample)
                         if self._is_garbled_text(sample_text, threshold=0.3):
                             logging.warning(
-                                "Page %d: pdfplumber extracted mostly garbled characters (%d chars), "
-                                "clearing to use OCR fallback.",
-                                page_from + pi + 1, len(page_ch),
+                                "Page %d: pdfplumber extracted mostly garbled characters (%d chars), clearing to use OCR fallback.",
+                                page_from + pi + 1,
+                                len(page_ch),
                             )
                             self.page_chars[pi] = []
                             continue
                         # Strategy 2: font-encoding garbling (CJK mapped to ASCII)
                         if self._is_garbled_by_font_encoding(page_ch):
                             logging.warning(
-                                "Page %d: detected font-encoding garbled text "
-                                "(subset fonts with no CJK output, %d chars), "
-                                "clearing to use OCR fallback.",
-                                page_from + pi + 1, len(page_ch),
+                                "Page %d: detected font-encoding garbled text (subset fonts with no CJK output, %d chars), clearing to use OCR fallback.",
+                                page_from + pi + 1,
+                                len(page_ch),
                             )
                             self.page_chars[pi] = []
 

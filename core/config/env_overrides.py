@@ -27,13 +27,11 @@ ENV_OVERRIDES = {
     # 3. EnvOverrideSource will read these environment variables and construct a nested dict
     # 4. The environment variable values should be compatible with the model field type.
     #    Use helper functions like str_to_bool or str_to_int for safe conversion if needed.
-
     # Base
     "database.active": "DB_TYPE",
     "storage.active": "STORAGE_IMPL",
     "doc_engine.active": "DOC_ENGINE",
     "cache.active": "CACHE_TYPE",
-
     # Ragflow / API
     "ragflow.register_enabled": "REGISTER_ENABLED",
     "ragflow.secret_key": "RAGFLOW_SECRET_KEY",
@@ -42,7 +40,6 @@ ENV_OVERRIDES = {
     "ragflow.default_superuser_email": "DEFAULT_SUPERUSER_EMAIL",
     "ragflow.default_superuser_password": "DEFAULT_SUPERUSER_PASSWORD",
     "ragflow.default_superuser_nickname": "DEFAULT_SUPERUSER_NICKNAME",
-
     # RAG
     "rag.embedding_batch_size": "EMBEDDING_BATCH_SIZE",
     "rag.ocr_gpu_mem_limit_mb": "OCR_GPU_MEM_LIMIT_MB",
@@ -50,7 +47,6 @@ ENV_OVERRIDES = {
     "rag.doc_bulk_size": "DOC_BULK_SIZE",
     "rag.doc_maximum_size": "MAX_CONTENT_LENGTH",
     "rag.max_file_num_per_user": "MAX_FILE_NUM_PER_USER",
-
     # Sandbox
     "sandbox.enabled": "SANDBOX_ENABLED",
     "sandbox.host": "SANDBOX_HOST",

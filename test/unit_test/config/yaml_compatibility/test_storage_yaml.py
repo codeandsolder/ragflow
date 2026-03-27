@@ -23,7 +23,7 @@ def test_storage_old_yaml():
     return_value = {
         "minio": {"host": "127.0.0.1:9000", "user": "minio", "password": "pass"},
         "s3": {"access_key": "old", "secret_key": "oldsecret", "bucket": "oldbucket"},
-        "oss": {"access_key": "old", "secret_key": "oldsecret", "bucket": "oldbucket"}
+        "oss": {"access_key": "old", "secret_key": "oldsecret", "bucket": "oldbucket"},
     }
     with patch("core.config.app.load_yaml", return_value=return_value):
         config = AppConfig()
@@ -34,12 +34,13 @@ def test_storage_old_yaml():
     assert s3_cfg.bucket == "oldbucket"
     assert oss_cfg.bucket == "oldbucket"
 
+
 def test_storage_new_yaml():
     return_value = {
         "storage": {
             "minio": {"host": "127.0.0.2:9000", "user": "new", "password": "newpass"},
             "s3": {"access_key": "new", "secret_key": "newsecret", "bucket": "newbucket"},
-            "oss": {"access_key": "new", "secret_key": "newsecret", "bucket": "newbucket"}
+            "oss": {"access_key": "new", "secret_key": "newsecret", "bucket": "newbucket"},
         }
     }
     with patch("core.config.app.load_yaml", return_value=return_value):

@@ -245,6 +245,7 @@ def test_detail_branches(monkeypatch):
 
     def _raise_tenants(**_kwargs):
         raise RuntimeError("detail boom")
+
     monkeypatch.setattr(module.UserTenantService, "query", _raise_tenants)
     res = inspect.unwrap(module.detail)()
     assert res["code"] == module.RetCode.EXCEPTION_ERROR, res

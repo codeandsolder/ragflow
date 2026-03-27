@@ -30,10 +30,10 @@ STRUCTURED_EXTENSIONS = EXCEL_EXTENSIONS | CSV_EXTENSIONS
 def is_structured_file_type(file_type: Optional[str]) -> bool:
     """
     Check if a file type is structured data (Excel, CSV, etc.)
-    
+
     Args:
         file_type: File extension (e.g., ".xlsx", ".csv")
-        
+
     Returns:
         True if file is structured data type
     """
@@ -51,11 +51,11 @@ def is_structured_file_type(file_type: Optional[str]) -> bool:
 def is_tabular_pdf(parser_id: str = "", parser_config: Optional[dict] = None) -> bool:
     """
     Check if a PDF is being parsed as tabular data.
-    
+
     Args:
         parser_id: Parser ID (e.g., "table", "naive")
         parser_config: Parser configuration dict
-        
+
     Returns:
         True if PDF is being parsed as tabular data
     """
@@ -72,25 +72,20 @@ def is_tabular_pdf(parser_id: str = "", parser_config: Optional[dict] = None) ->
     return False
 
 
-def should_skip_raptor(
-        file_type: Optional[str] = None,
-        parser_id: str = "",
-        parser_config: Optional[dict] = None,
-        raptor_config: Optional[dict] = None
-) -> bool:
+def should_skip_raptor(file_type: Optional[str] = None, parser_id: str = "", parser_config: Optional[dict] = None, raptor_config: Optional[dict] = None) -> bool:
     """
     Determine if Raptor should be skipped for a given document.
-    
+
     This function implements the logic to automatically disable Raptor for:
     1. Excel files (.xls, .xlsx, .csv, etc.)
     2. PDFs with tabular data (using table parser or html4excel)
-    
+
     Args:
         file_type: File extension (e.g., ".xlsx", ".pdf")
         parser_id: Parser ID being used
         parser_config: Parser configuration dict
         raptor_config: Raptor configuration dict (can override with auto_disable_for_structured_data)
-        
+
     Returns:
         True if Raptor should be skipped, False otherwise
     """
@@ -116,19 +111,15 @@ def should_skip_raptor(
     return False
 
 
-def get_skip_reason(
-        file_type: Optional[str] = None,
-        parser_id: str = "",
-        parser_config: Optional[dict] = None
-) -> str:
+def get_skip_reason(file_type: Optional[str] = None, parser_id: str = "", parser_config: Optional[dict] = None) -> str:
     """
     Get a human-readable reason why Raptor was skipped.
-    
+
     Args:
         file_type: File extension
         parser_id: Parser ID being used
         parser_config: Parser configuration dict
-        
+
     Returns:
         Reason string, or empty string if Raptor should not be skipped
     """

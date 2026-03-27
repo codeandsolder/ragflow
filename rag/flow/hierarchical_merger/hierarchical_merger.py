@@ -102,43 +102,32 @@ class HierarchicalMerger(ProcessBase):
                 matches.append(len(self._param.levels))
         assert len(matches) == len(lines), f"{len(matches)} vs. {len(lines)}"
 
-        root = {
-            "level": -1,
-            "index": -1,
-            "texts": [],
-            "children": []
-        }
+        root = {"level": -1, "index": -1, "texts": [], "children": []}
         for i, m in enumerate(matches):
             if m == 0:
-                root["children"].append({
-                    "level": m,
-                    "index": i,
-                    "texts": [],
-                    "children": []
-                })
+                root["children"].append({"level": m, "index": i, "texts": [], "children": []})
             elif m == len(self._param.levels):
+
                 def dfs(b):
                     if not b["children"]:
                         b["texts"].append(i)
                     else:
                         dfs(b["children"][-1])
+
                 dfs(root)
             else:
+
                 def dfs(b):
                     nonlocal m, i
-                    if not b["children"] or  m == b["level"] + 1:
-                        b["children"].append({
-                            "level": m,
-                            "index": i,
-                            "texts": [],
-                            "children": []
-                        })
+                    if not b["children"] or m == b["level"] + 1:
+                        b["children"].append({"level": m, "index": i, "texts": [], "children": []})
                         return
                     dfs(b["children"][-1])
 
                 dfs(root)
 
         all_pathes = []
+
         def dfs(n, path, depth):
             nonlocal all_pathes
             if not n["children"] and path:
@@ -150,7 +139,7 @@ class HierarchicalMerger(ProcessBase):
                 else:
                     _path = path
                 _path.extend([nn["index"], *nn["texts"]])
-                dfs(nn, _path, depth+1)
+                dfs(nn, _path, depth + 1)
 
                 if depth == self._param.hierarchy:
                     all_pathes.append(_path)

@@ -67,11 +67,11 @@ async def create_or_upload(tenant_id: str = None):
             form = await request.form
             pf_id = form.get("parent_id")
             files = await request.files
-            if 'file' not in files:
+            if "file" not in files:
                 return get_error_argument_result("No file part!")
-            file_objs = files.getlist('file')
+            file_objs = files.getlist("file")
             for file_obj in file_objs:
-                if file_obj.filename == '':
+                if file_obj.filename == "":
                     return get_error_argument_result("No file selected!")
 
             success, result = await file_api_service.upload_file(tenant_id, pf_id, file_objs)
@@ -84,9 +84,7 @@ async def create_or_upload(tenant_id: str = None):
             if err is not None:
                 return get_error_argument_result(err)
 
-            success, result = await file_api_service.create_folder(
-                tenant_id, req["name"], req.get("parent_id"), req.get("type")
-            )
+            success, result = await file_api_service.create_folder(tenant_id, req["name"], req.get("parent_id"), req.get("type"))
             if success:
                 return get_result(data=result)
             else:
@@ -195,7 +193,6 @@ async def delete(tenant_id: str = None):
         return get_error_data_result(message="Internal server error")
 
 
-
 @manager.route("/files/move", methods=["POST"])  # noqa: F821
 @login_required
 @add_tenant_id_to_kwargs
@@ -240,9 +237,7 @@ async def move(tenant_id: str = None):
         return get_error_argument_result(err)
 
     try:
-        success, result = await file_api_service.move_files(
-            tenant_id, req["src_file_ids"], req.get("dest_file_id"), req.get("new_name")
-        )
+        success, result = await file_api_service.move_files(tenant_id, req["src_file_ids"], req.get("dest_file_id"), req.get("new_name"))
         if success:
             return get_result(data=result)
         else:
@@ -360,5 +355,3 @@ def ancestors(tenant_id: str = None, file_id: str = None):
     except Exception as e:
         logging.exception(e)
         return get_error_data_result(message="Internal server error")
-
-

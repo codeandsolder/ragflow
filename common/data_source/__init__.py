@@ -1,4 +1,3 @@
-
 """
 Thanks to https://github.com/onyx-dot-app/onyx
 
@@ -45,13 +44,7 @@ from .rdbms_connector import RDBMSConnector
 from .webdav_connector import WebDAVConnector
 from .config import BlobType, DocumentSource
 from .models import Document, TextSection, ImageSection, BasicExpertInfo
-from .exceptions import (
-    ConnectorMissingCredentialError,
-    ConnectorValidationError,
-    CredentialExpiredError,
-    InsufficientPermissionsError,
-    UnexpectedValidationError
-)
+from .exceptions import ConnectorMissingCredentialError, ConnectorValidationError, CredentialExpiredError, InsufficientPermissionsError, UnexpectedValidationError
 
 __all__ = [
     "BlobStorageConnector",

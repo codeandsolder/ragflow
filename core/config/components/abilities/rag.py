@@ -33,10 +33,7 @@ class RAGConfig(BaseModel):
     # Document & File
     doc_bulk_size: int = Field(default=4)
     doc_maximum_size: int = Field(default=128 * 1024 * 1024)
-    max_file_num_per_user: int = Field(
-        default=0,
-        description="Max number of files per user, 0 means unlimited"
-    )
+    max_file_num_per_user: int = Field(default=0, description="Max number of files per user, 0 means unlimited")
 
     tei_model: str = Field(default="Qwen/Qwen3-Embedding-0.6B")
     tei_port: int = Field(default=6380)

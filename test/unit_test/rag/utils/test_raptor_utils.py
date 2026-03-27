@@ -19,35 +19,30 @@ Unit tests for Raptor utility functions.
 """
 
 import pytest
-from rag.utils.raptor_utils import (
-    is_structured_file_type,
-    is_tabular_pdf,
-    should_skip_raptor,
-    get_skip_reason,
-    EXCEL_EXTENSIONS,
-    CSV_EXTENSIONS,
-    STRUCTURED_EXTENSIONS
-)
+from rag.utils.raptor_utils import is_structured_file_type, is_tabular_pdf, should_skip_raptor, get_skip_reason, EXCEL_EXTENSIONS, CSV_EXTENSIONS, STRUCTURED_EXTENSIONS
 
 
 class TestIsStructuredFileType:
     """Test file type detection for structured data"""
 
-    @pytest.mark.parametrize("file_type,expected", [
-        (".xlsx", True),
-        (".xls", True),
-        (".xlsm", True),
-        (".xlsb", True),
-        (".csv", True),
-        (".tsv", True),
-        ("xlsx", True),  # Without leading dot
-        ("XLSX", True),  # Uppercase
-        (".pdf", False),
-        (".docx", False),
-        (".txt", False),
-        ("", False),
-        (None, False),
-    ])
+    @pytest.mark.parametrize(
+        "file_type,expected",
+        [
+            (".xlsx", True),
+            (".xls", True),
+            (".xlsm", True),
+            (".xlsb", True),
+            (".csv", True),
+            (".tsv", True),
+            ("xlsx", True),  # Without leading dot
+            ("XLSX", True),  # Uppercase
+            (".pdf", False),
+            (".docx", False),
+            (".txt", False),
+            ("", False),
+            (None, False),
+        ],
+    )
     def test_file_type_detection(self, file_type, expected):
         """Test detection of various file types"""
         assert is_structured_file_type(file_type) == expected
@@ -131,7 +126,7 @@ class TestShouldSkipRaptor:
     def test_override_with_config(self):
         """Test that auto-disable can be overridden"""
         raptor_config = {"auto_disable_for_structured_data": False}
-        
+
         # Should not skip even for Excel files
         assert should_skip_raptor(".xlsx", raptor_config=raptor_config) is False
         assert should_skip_raptor(".csv", raptor_config=raptor_config) is False
@@ -222,7 +217,7 @@ class TestIntegrationScenarios:
         parser_id = "naive"
         parser_config = {}
         raptor_config = {"use_raptor": True}
-        
+
         # Should skip Raptor
         assert should_skip_raptor(file_type, parser_id, parser_config, raptor_config) is True
         reason = get_skip_reason(file_type, parser_id, parser_config)
@@ -231,7 +226,7 @@ class TestIntegrationScenarios:
     def test_scientific_csv_data(self):
         """Test scenario: Scientific experimental CSV results"""
         file_type = ".csv"
-        
+
         # Should skip Raptor
         assert should_skip_raptor(file_type) is True
         reason = get_skip_reason(file_type)
@@ -242,7 +237,7 @@ class TestIntegrationScenarios:
         file_type = ".pdf"
         parser_id = "table"
         parser_config = {}
-        
+
         # Should skip Raptor
         assert should_skip_raptor(file_type, parser_id, parser_config) is True
         reason = get_skip_reason(file_type, parser_id, parser_config)
@@ -253,7 +248,7 @@ class TestIntegrationScenarios:
         file_type = ".pdf"
         parser_id = "naive"
         parser_config = {}
-        
+
         # Should NOT skip Raptor
         assert should_skip_raptor(file_type, parser_id, parser_config) is False
         reason = get_skip_reason(file_type, parser_id, parser_config)
@@ -263,13 +258,13 @@ class TestIntegrationScenarios:
         """Test scenario: Mixed dataset with various file types"""
         files = [
             (".xlsx", "naive", {}, True),  # Excel - skip
-            (".csv", "naive", {}, True),   # CSV - skip
-            (".pdf", "table", {}, True),   # Tabular PDF - skip
+            (".csv", "naive", {}, True),  # CSV - skip
+            (".pdf", "table", {}, True),  # Tabular PDF - skip
             (".pdf", "naive", {}, False),  # Regular PDF - don't skip
-            (".docx", "naive", {}, False), # Word doc - don't skip
+            (".docx", "naive", {}, False),  # Word doc - don't skip
             (".txt", "naive", {}, False),  # Text file - don't skip
         ]
-        
+
         for file_type, parser_id, parser_config, expected_skip in files:
             result = should_skip_raptor(file_type, parser_id, parser_config)
             assert result == expected_skip, f"Failed for {file_type}"
@@ -278,7 +273,7 @@ class TestIntegrationScenarios:
         """Test scenario: Override auto-disable for special Excel processing"""
         file_type = ".xlsx"
         raptor_config = {"auto_disable_for_structured_data": False}
-        
+
         # Should NOT skip when explicitly disabled
         assert should_skip_raptor(file_type, raptor_config=raptor_config) is False
 

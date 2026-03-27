@@ -50,10 +50,7 @@ def _condition_parsing_complete(_auth, dataset_id):
 @pytest.fixture(scope="function")
 def add_dataset_with_metadata(HttpApiAuth):
     # First create the dataset
-    res = create_dataset(HttpApiAuth, {
-        "name": f"test_metadata_{int(__import__('time').time())}",
-        "chunk_method": "naive"
-    })
+    res = create_dataset(HttpApiAuth, {"name": f"test_metadata_{int(__import__('time').time())}", "chunk_method": "naive"})
 
     assert res["code"] == 0, f"Failed to create dataset: {res}"
     dataset_id = res["data"]["id"]
@@ -65,33 +62,17 @@ def add_dataset_with_metadata(HttpApiAuth):
     metadata_config = {
         "type": "object",
         "properties": {
-            "character": {
-                "description": "Historical figure name",
-                "type": "string"
-            },
-            "era": {
-                "description": "Historical era",
-                "type": "string"
-            },
-            "achievements": {
-                "description": "Major achievements",
-                "type": "array",
-                "items": {
-                    "type": "string"
-                }
-            }
-        }
+            "character": {"description": "Historical figure name", "type": "string"},
+            "era": {"description": "Historical era", "type": "string"},
+            "achievements": {"description": "Major achievements", "type": "array", "items": {"type": "string"}},
+        },
     }
 
     res = requests.post(
         url=f"{HOST_ADDRESS}/{VERSION}/kb/update_metadata_setting",
         headers={"Content-Type": "application/json"},
         auth=HttpApiAuth,
-        json={
-            "kb_id": dataset_id,
-            "metadata": metadata_config,
-            "enable_metadata": False
-        }
+        json={"kb_id": dataset_id, "metadata": metadata_config, "enable_metadata": False},
     ).json()
 
     assert res["code"] == 0, f"Failed to configure metadata: {res}"
@@ -136,14 +117,10 @@ class TestMetadataWithRetrieval:
         doc2_id = res["data"][1]["id"]
 
         # Add different metadata to each document
-        res = update_document(HttpApiAuth, dataset_id, doc1_id, {
-            "meta_fields": {"character": "Zhuge Liang", "era": "Three Kingdoms"}
-        })
+        res = update_document(HttpApiAuth, dataset_id, doc1_id, {"meta_fields": {"character": "Zhuge Liang", "era": "Three Kingdoms"}})
         assert res["code"] == 0, f"Failed to update doc1 metadata: {res}"
 
-        res = update_document(HttpApiAuth, dataset_id, doc2_id, {
-            "meta_fields": {"character": "Cao Cao", "era": "Late Eastern Han"}
-        })
+        res = update_document(HttpApiAuth, dataset_id, doc2_id, {"meta_fields": {"character": "Cao Cao", "era": "Late Eastern Han"}})
         assert res["code"] == 0, f"Failed to update doc2 metadata: {res}"
 
         # Parse both documents
@@ -154,20 +131,14 @@ class TestMetadataWithRetrieval:
         assert _condition_parsing_complete(HttpApiAuth, dataset_id), "Parsing timeout"
 
         # Test retrieval WITH metadata filter for "Zhuge Liang"
-        res = retrieval_chunks(HttpApiAuth, {
-            "question": "Zhuge Liang",
-            "dataset_ids": [dataset_id],
-            "metadata_condition": {
-                "logic": "and",
-                "conditions": [
-                    {
-                        "name": "character",
-                        "comparison_operator": "is",
-                        "value": "Zhuge Liang"
-                    }
-                ]
-            }
-        })
+        res = retrieval_chunks(
+            HttpApiAuth,
+            {
+                "question": "Zhuge Liang",
+                "dataset_ids": [dataset_id],
+                "metadata_condition": {"logic": "and", "conditions": [{"name": "character", "comparison_operator": "is", "value": "Zhuge Liang"}]},
+            },
+        )
         assert res["code"] == 0, f"Retrieval with metadata filter failed: {res}"
 
         chunks_with_filter = res["data"]["chunks"]

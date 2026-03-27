@@ -29,7 +29,7 @@ class TestStringToBytes:
         """Test that string input is converted to bytes"""
         input_string = "hello world"
         result = string_to_bytes(input_string)
-        
+
         assert isinstance(result, bytes)
         assert result == b"hello world"
 
@@ -37,20 +37,23 @@ class TestStringToBytes:
         """Test that bytes input is returned unchanged"""
         input_bytes = b"hello world"
         result = string_to_bytes(input_bytes)
-        
+
         assert isinstance(result, bytes)
         assert result == input_bytes
         assert result is input_bytes  # Should be the same object
 
-    @pytest.mark.parametrize("input_val,expected", [
-        ("test", b"test"),
-        ("", b""),
-        ("123", b"123"),
-        ("Hello World", b"Hello World"),
-        ("Hello 世界 🌍", "Hello 世界 🌍".encode("utf-8")),
-        ("Hello, world! @#$%^&*()", b"Hello, world! @#$%^&*()"),
-        ("Newline\nTab\tQuote\"", b"Newline\nTab\tQuote\""),
-    ])
+    @pytest.mark.parametrize(
+        "input_val,expected",
+        [
+            ("test", b"test"),
+            ("", b""),
+            ("123", b"123"),
+            ("Hello World", b"Hello World"),
+            ("Hello 世界 🌍", "Hello 世界 🌍".encode("utf-8")),
+            ("Hello, world! @#$%^&*()", b"Hello, world! @#$%^&*()"),
+            ('Newline\nTab\tQuote"', b'Newline\nTab\tQuote"'),
+        ],
+    )
     def test_various_string_inputs(self, input_val, expected):
         """Test conversion of various string inputs including unicode and special characters"""
         result = string_to_bytes(input_val)
@@ -61,15 +64,18 @@ class TestStringToBytes:
 class TestBytesToString:
     """Test cases for bytes_to_string function"""
 
-    @pytest.mark.parametrize("input_bytes,expected", [
-        (b"hello world", "hello world"),
-        (b"test", "test"),
-        (b"", ""),
-        (b"123", "123"),
-        (b"Hello World", "Hello World"),
-        ("Hello 世界 🌍".encode("utf-8"), "Hello 世界 🌍"),
-        (b"Special: @#$%^&*()", "Special: @#$%^&*()"),
-    ])
+    @pytest.mark.parametrize(
+        "input_bytes,expected",
+        [
+            (b"hello world", "hello world"),
+            (b"test", "test"),
+            (b"", ""),
+            (b"123", "123"),
+            (b"Hello World", "Hello World"),
+            ("Hello 世界 🌍".encode("utf-8"), "Hello 世界 🌍"),
+            (b"Special: @#$%^&*()", "Special: @#$%^&*()"),
+        ],
+    )
     def test_various_bytes_inputs(self, input_bytes, expected):
         """Test conversion of various bytes inputs including unicode"""
         result = bytes_to_string(input_bytes)
@@ -80,7 +86,7 @@ class TestBytesToString:
         """Test that invalid UTF-8 bytes raise an error"""
         # Invalid UTF-8 sequence
         invalid_bytes = b"\xff\xfe"
-        
+
         with pytest.raises(UnicodeDecodeError):
             bytes_to_string(invalid_bytes)
 
@@ -88,27 +94,33 @@ class TestBytesToString:
 class TestRoundtripConversion:
     """Test roundtrip conversions between string and bytes"""
 
-    @pytest.mark.parametrize("test_string", [
-        "Simple text",
-        "Hello, World! 世界",
-        "Unicode: 你好世界 🌍",
-        "Special: !@#$%^&*()",
-        "Multiline\nWith\tTabs",
-        "",
-    ])
+    @pytest.mark.parametrize(
+        "test_string",
+        [
+            "Simple text",
+            "Hello, World! 世界",
+            "Unicode: 你好世界 🌍",
+            "Special: !@#$%^&*()",
+            "Multiline\nWith\tTabs",
+            "",
+        ],
+    )
     def test_string_to_bytes_to_string(self, test_string):
         """Test converting string to bytes and back for various inputs"""
         as_bytes = string_to_bytes(test_string)
         back_to_string = bytes_to_string(as_bytes)
         assert back_to_string == test_string
 
-    @pytest.mark.parametrize("test_bytes", [
-        b"Simple text",
-        b"Hello, World!",
-        "Unicode: 你好世界 🌍".encode("utf-8"),
-        b"Special: !@#$%^&*()",
-        b"",
-    ])
+    @pytest.mark.parametrize(
+        "test_bytes",
+        [
+            b"Simple text",
+            b"Hello, World!",
+            "Unicode: 你好世界 🌍".encode("utf-8"),
+            b"Special: !@#$%^&*()",
+            b"",
+        ],
+    )
     def test_bytes_to_string_to_bytes(self, test_bytes):
         """Test converting bytes to string and back for various inputs"""
         as_string = bytes_to_string(test_bytes)

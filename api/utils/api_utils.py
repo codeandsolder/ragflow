@@ -53,6 +53,7 @@ from common.misc_utils import thread_pool_exec
 
 requests.models.complexjson.dumps = functools.partial(json.dumps, cls=CustomJSONEncoder)
 
+
 def _safe_jsonify(payload: dict):
     if has_app_context():
         return jsonify(payload)
@@ -89,8 +90,10 @@ async def _coerce_request_data() -> dict:
     request._cached_payload = payload
     return payload
 
+
 async def get_request_json():
     return await _coerce_request_data()
+
 
 def serialize_for_json(obj):
     """
@@ -210,6 +213,7 @@ def not_allowed_parameters(*params):
             if inspect.iscoroutinefunction(func):
                 return await func(*args, **kwargs)
             return func(*args, **kwargs)
+
         return wrapper
 
     return decorator
@@ -237,10 +241,12 @@ def add_tenant_id_to_kwargs(func):
     @wraps(func)
     async def wrapper(**kwargs):
         from api.apps import current_user
+
         kwargs["tenant_id"] = current_user.id
         if inspect.iscoroutinefunction(func):
             return await func(**kwargs)
         return func(**kwargs)
+
     return wrapper
 
 
@@ -718,24 +724,15 @@ async def is_strong_enough(chat_model, embedding_model):
     async def _is_strong_enough():
         nonlocal chat_model, embedding_model
         if embedding_model:
-            await asyncio.wait_for(
-                thread_pool_exec(embedding_model.encode, ["Are you strong enough!?"]),
-                timeout=10
-            )
+            await asyncio.wait_for(thread_pool_exec(embedding_model.encode, ["Are you strong enough!?"]), timeout=10)
 
         if chat_model:
-            res = await asyncio.wait_for(
-                chat_model.async_chat("Nothing special.", [{"role": "user", "content": "Are you strong enough!?"}]),
-                timeout=30
-            )
+            res = await asyncio.wait_for(chat_model.async_chat("Nothing special.", [{"role": "user", "content": "Are you strong enough!?"}]), timeout=30)
             if "**ERROR**" in res:
                 raise Exception(res)
 
     # Pressure test for GraphRAG task
-    tasks = [
-        asyncio.create_task(_is_strong_enough())
-        for _ in range(count)
-    ]
+    tasks = [asyncio.create_task(_is_strong_enough()) for _ in range(count)]
     try:
         await asyncio.gather(*tasks, return_exceptions=False)
     except Exception as e:

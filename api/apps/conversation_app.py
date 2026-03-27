@@ -112,7 +112,7 @@ async def get():
 def getsse(dialog_id):
     token = request.headers.get("Authorization").split()
     if len(token) != 2:
-        return get_data_error_result(message='Authorization is not valid!')
+        return get_data_error_result(message="Authorization is not valid!")
     token = token[1]
     objs = APIToken.query(beta=token)
     if not objs:
@@ -221,6 +221,7 @@ async def completion():
         is_embedded = bool(chat_model_id)
         # Remove stream from req to avoid duplicate argument error
         stream_mode = req.pop("stream", True)
+
         async def stream():
             nonlocal dia, msg, req, conv
             try:
@@ -253,6 +254,7 @@ async def completion():
     except Exception as e:
         return server_error_response(e)
 
+
 @manager.route("/sequence2txt", methods=["POST"])  # noqa: F821
 @login_required
 async def sequence2txt():
@@ -264,19 +266,12 @@ async def sequence2txt():
 
     uploaded = files["file"]
 
-    ALLOWED_EXTS = {
-        ".wav", ".mp3", ".m4a", ".aac",
-        ".flac", ".ogg", ".webm",
-        ".opus", ".wma"
-    }
+    ALLOWED_EXTS = {".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".webm", ".opus", ".wma"}
 
     filename = uploaded.filename or ""
     suffix = os.path.splitext(filename)[-1].lower()
     if suffix not in ALLOWED_EXTS:
-        return get_data_error_result(message=
-            f"Unsupported audio format: {suffix}. "
-            f"Allowed: {', '.join(sorted(ALLOWED_EXTS))}"
-        )
+        return get_data_error_result(message=f"Unsupported audio format: {suffix}. Allowed: {', '.join(sorted(ALLOWED_EXTS))}")
     fd, temp_audio_path = tempfile.mkstemp(suffix=suffix)
     os.close(fd)
     await uploaded.save(temp_audio_path)
@@ -286,7 +281,7 @@ async def sequence2txt():
     except Exception as e:
         return get_data_error_result(message=str(e))
 
-    asr_mdl=LLMBundle(current_user.id, default_asr_model_config)
+    asr_mdl = LLMBundle(current_user.id, default_asr_model_config)
     if not stream_mode:
         text = asr_mdl.transcription(temp_audio_path)
         try:
@@ -294,6 +289,7 @@ async def sequence2txt():
         except Exception as e:
             logging.error(f"Failed to remove temp audio file: {str(e)}")
         return get_json_result(data={"text": text})
+
     async def event_stream():
         try:
             for evt in asr_mdl.stream_transcription(temp_audio_path):
@@ -308,6 +304,7 @@ async def sequence2txt():
                 logging.error(f"Failed to remove temp audio file: {str(e)}")
 
     return Response(event_stream(), content_type="text/event-stream")
+
 
 @manager.route("/tts", methods=["POST"])  # noqa: F821
 @login_required

@@ -80,7 +80,7 @@ def list_searches():
             search_apps = [s for s in search_apps if s["tenant_id"] in owner_ids]
             total = len(search_apps)
             if page_number and items_per_page:
-                search_apps = search_apps[(page_number - 1) * items_per_page: page_number * items_per_page]
+                search_apps = search_apps[(page_number - 1) * items_per_page : page_number * items_per_page]
         return get_json_result(data={"search_apps": search_apps, "total": total})
     except Exception as e:
         return server_error_response(e)

@@ -34,7 +34,7 @@ from api.apps.services import dataset_api_service
 @manager.route("/datasets", methods=["POST"])  # noqa: F821
 @login_required
 @add_tenant_id_to_kwargs
-async def create(tenant_id: str=None):
+async def create(tenant_id: str = None):
     """
     Create a new dataset.
     ---
@@ -330,7 +330,7 @@ def list_datasets(tenant_id):
         return get_error_data_result(message="Internal server error")
 
 
-@manager.route('/datasets/<dataset_id>/knowledge_graph', methods=['GET'])  # noqa: F821
+@manager.route("/datasets/<dataset_id>/knowledge_graph", methods=["GET"])  # noqa: F821
 @login_required
 @add_tenant_id_to_kwargs
 async def knowledge_graph(tenant_id, dataset_id):
@@ -339,17 +339,13 @@ async def knowledge_graph(tenant_id, dataset_id):
         if success:
             return get_result(data=result)
         else:
-            return get_result(
-                data=False,
-                message=result,
-                code=RetCode.AUTHENTICATION_ERROR
-            )
+            return get_result(data=False, message=result, code=RetCode.AUTHENTICATION_ERROR)
     except Exception as e:
         logging.exception(e)
         return get_error_data_result(message="Internal server error")
 
 
-@manager.route('/datasets/<dataset_id>/knowledge_graph', methods=['DELETE'])  # noqa: F821
+@manager.route("/datasets/<dataset_id>/knowledge_graph", methods=["DELETE"])  # noqa: F821
 @login_required
 @add_tenant_id_to_kwargs
 def delete_knowledge_graph(tenant_id, dataset_id):
@@ -358,11 +354,7 @@ def delete_knowledge_graph(tenant_id, dataset_id):
         if success:
             return get_result(data=result)
         else:
-            return get_result(
-                data=False,
-                message=result,
-                code=RetCode.AUTHENTICATION_ERROR
-            )
+            return get_result(data=False, message=result, code=RetCode.AUTHENTICATION_ERROR)
     except Exception as e:
         logging.exception(e)
         return get_error_data_result(message="Internal server error")
@@ -502,6 +494,7 @@ async def update_auto_metadata(tenant_id, dataset_id):
           type: object
     """
     from api.utils.validation_utils import AutoMetadataConfig
+
     cfg, err = await validate_and_parse_json_request(request, AutoMetadataConfig)
     if err is not None:
         return get_error_argument_result(err)

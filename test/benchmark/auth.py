@@ -11,10 +11,9 @@ def encrypt_password(password_plain: str) -> str:
     try:
         from api.utils.crypt import crypt
     except Exception as exc:
-        raise AuthError(
-            "Password encryption unavailable; install pycryptodomex (uv sync --python 3.12 --group test)."
-        ) from exc
+        raise AuthError("Password encryption unavailable; install pycryptodomex (uv sync --python 3.12 --group test).") from exc
     return crypt(password_plain)
+
 
 def register_user(client: HttpClient, email: str, nickname: str, password_enc: str) -> None:
     payload = {"email": email, "nickname": nickname, "password": password_enc}

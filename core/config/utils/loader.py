@@ -59,11 +59,7 @@ def merge_dicts(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any
     """
     result = copy.deepcopy(base)
     for k, v in override.items():
-        if (
-            k in result
-            and isinstance(result[k], dict)
-            and isinstance(v, dict)
-        ):
+        if k in result and isinstance(result[k], dict) and isinstance(v, dict):
             result[k] = merge_dicts(result[k], v)
         else:
             result[k] = v
@@ -80,4 +76,3 @@ def get_llm_factories() -> list:
         return []
     except (JSONDecodeError, KeyError) as e:
         raise RuntimeError(f"Failed to load LLM factories from {LLM_FACTORY_PATH}: {e}") from e
-

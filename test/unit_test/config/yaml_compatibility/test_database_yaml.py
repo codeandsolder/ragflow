@@ -31,6 +31,7 @@ def test_database_old_yaml():
     assert mysql_cfg.name == "old_db"
     assert pg_cfg.database == "old_pg"
 
+
 def test_database_new_yaml():
     return_value = {
         "database": {

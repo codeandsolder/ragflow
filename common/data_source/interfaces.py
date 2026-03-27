@@ -1,4 +1,5 @@
 """Interface definitions"""
+
 import abc
 import uuid
 from abc import ABC, abstractmethod
@@ -8,15 +9,10 @@ from typing import Any, Dict, Generator, TypeVar, Generic, Callable, TypeAlias
 from collections.abc import Iterator
 from anthropic import BaseModel
 
-from common.data_source.models import (
-    Document,
-    SlimDocument,
-    ConnectorCheckpoint,
-    ConnectorFailure,
-    SecondsSinceUnixEpoch, GenerateSlimDocumentOutput
-)
+from common.data_source.models import Document, SlimDocument, ConnectorCheckpoint, ConnectorFailure, SecondsSinceUnixEpoch, GenerateSlimDocumentOutput
 
 GenerateDocumentsOutput = Iterator[list[Document]]
+
 
 class LoadConnector(ABC):
     """Load connector interface"""
@@ -153,9 +149,7 @@ class CredentialsProviderInterface(abc.ABC, Generic[T]):
         raise NotImplementedError
 
 
-class StaticCredentialsProvider(
-    CredentialsProviderInterface["StaticCredentialsProvider"]
-):
+class StaticCredentialsProvider(CredentialsProviderInterface["StaticCredentialsProvider"]):
     """Implementation (a very simple one!) to handle static credentials."""
 
     def __init__(
@@ -212,9 +206,7 @@ class BaseConnector(abc.ABC, Generic[CT]):
     @staticmethod
     def parse_metadata(metadata: dict[str, Any]) -> list[str]:
         """Parse the metadata for a document/chunk into a string to pass to Generative AI as additional context"""
-        custom_parser_req_msg = (
-            "Specific metadata parsing required, connector has not implemented it."
-        )
+        custom_parser_req_msg = "Specific metadata parsing required, connector has not implemented it."
         metadata_lines = []
         for metadata_key, metadata_value in metadata.items():
             if isinstance(metadata_value, str):
@@ -222,7 +214,7 @@ class BaseConnector(abc.ABC, Generic[CT]):
             elif isinstance(metadata_value, list):
                 if not all([isinstance(val, str) for val in metadata_value]):
                     raise RuntimeError(custom_parser_req_msg)
-                metadata_lines.append(f'{metadata_key}: {", ".join(metadata_value)}')
+                metadata_lines.append(f"{metadata_key}: {', '.join(metadata_value)}")
             else:
                 raise RuntimeError(custom_parser_req_msg)
         return metadata_lines
@@ -330,14 +322,10 @@ class CheckpointOutputWrapper(Generic[CT]):
             elif isinstance(document_or_failure, ConnectorFailure):
                 yield None, document_or_failure, None
             else:
-                raise ValueError(
-                    f"Invalid document_or_failure type: {type(document_or_failure)}"
-                )
+                raise ValueError(f"Invalid document_or_failure type: {type(document_or_failure)}")
 
         if self.next_checkpoint is None:
-            raise RuntimeError(
-                "Checkpoint is None. This should never happen - the connector should always return a checkpoint."
-            )
+            raise RuntimeError("Checkpoint is None. This should never happen - the connector should always return a checkpoint.")
 
         yield None, None, self.next_checkpoint
 
@@ -416,4 +404,3 @@ class IndexingHeartbeatInterface(ABC):
         Amount can be a positive number to indicate progress or <= 0
         just to act as a keep-alive.
         """
-

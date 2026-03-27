@@ -47,9 +47,7 @@ class MySQLConfig(BaseModel):
                 if self.password:
                     auth += f":{quote_plus(self.password)}"
                 auth += "@"
-            self.dsn = MySQLDsn(
-                f"mysql+pymysql://{auth}{self.host}:{self.port}/{self.name}"
-            )
+            self.dsn = MySQLDsn(f"mysql+pymysql://{auth}{self.host}:{self.port}/{self.name}")
         return self
 
 
@@ -73,9 +71,7 @@ class PostgresConfig(BaseModel):
                     auth += f":{quote_plus(self.password)}"
                 auth += "@"
 
-            self.dsn = PostgresDsn(
-                f"postgresql+asyncpg://{auth}{self.host}:{self.port}/{self.database}"
-            )
+            self.dsn = PostgresDsn(f"postgresql+asyncpg://{auth}{self.host}:{self.port}/{self.database}")
         return self
 
 

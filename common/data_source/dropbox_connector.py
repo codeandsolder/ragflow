@@ -90,12 +90,12 @@ class DropboxConnector(LoadConnector, PollConnector):
         # Collect all files first to count filename occurrences
         all_files = []
         self._collect_files_recursive(path, start, end, all_files)
-        
+
         # Count filename occurrences
         filename_counts: dict[str, int] = {}
         for entry, _ in all_files:
             filename_counts[entry.name] = filename_counts.get(entry.name, 0) + 1
-        
+
         # Process files in batches
         batch: list[Document] = []
         for entry, downloaded_file in all_files:
@@ -104,15 +104,15 @@ class DropboxConnector(LoadConnector, PollConnector):
                 modified_time = modified_time.replace(tzinfo=timezone.utc)
             else:
                 modified_time = modified_time.astimezone(timezone.utc)
-            
+
             # Use full path only if filename appears multiple times
             if filename_counts.get(entry.name, 0) > 1:
                 # Remove leading slash and replace slashes with ' / '
-                relative_path = entry.path_display.lstrip('/')
-                semantic_id = relative_path.replace('/', ' / ') if relative_path else entry.name
+                relative_path = entry.path_display.lstrip("/")
+                semantic_id = relative_path.replace("/", " / ") if relative_path else entry.name
             else:
                 semantic_id = entry.name
-            
+
             batch.append(
                 Document(
                     id=f"dropbox:{entry.id}",
@@ -124,11 +124,11 @@ class DropboxConnector(LoadConnector, PollConnector):
                     size_bytes=entry.size if getattr(entry, "size", None) is not None else len(downloaded_file),
                 )
             )
-            
+
             if len(batch) == self.batch_size:
                 yield batch
                 batch = []
-        
+
         if batch:
             yield batch
 

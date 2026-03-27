@@ -52,6 +52,7 @@ MINIMAL_DSL = {
     "variables": {},
 }
 
+
 @pytest.fixture(scope="function")
 def agent_id(HttpApiAuth, request):
     res = list_agents(HttpApiAuth, {"page_size": 1000})

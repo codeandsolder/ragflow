@@ -156,6 +156,8 @@ dependencies = [
     "python-gitlab>=7.0.0",
     "alibabacloud-dingtalk>=2.0.0",
     "quart-schema==0.23.0",
+    "pyarrow>=22.0.0",
+    "pytest>=9.0.2",
 ]
 
 [dependency-groups]
@@ -209,10 +211,11 @@ ignore = ["E402"]
 
 [tool.pytest.ini_options]
 pythonpath = [
-    "."
+    ".",
+    "sdk/python"
 ]
 
-testpaths = ["test"]
+testpaths = ["test/unit_test"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -235,13 +238,13 @@ filterwarnings = [
 
 # Command line options
 addopts = [
+    "--import-mode=importlib",
     "-v",  # Verbose output
     "--strict-markers",  # Enforce marker definitions
     "--tb=short",  # Simplified traceback
     "--disable-warnings",  # Disable warnings
     "--color=yes"  # Colored output
 ]
-
 
 # Coverage configuration
 [tool.coverage.run]
