@@ -74,17 +74,30 @@ const errorHandler = (error: {
   return response ?? { data: { code: 1999 } };
 };
 
-const request: RequestMethod = extend({
-  errorHandler,
-  timeout: 300000,
-  getResponse: true,
-});
+  const request: RequestMethod = extend({
+    errorHandler,
+    timeout: 300000,
+    getResponse: true,
+  });
+
+  // Handle CSRF token from server response
+  request.interceptors.response.use(
+    (response) => {
+      if (response.headers['x-csrf-token']) {
+        const csrfToken = response.headers['x-csrf-token'];
+        document.cookie = `csrf_token=${csrfToken}; path=/; SameSite=Strict; Secure; HttpOnly`;
+      }
+      return response;
+    },
+    (error) => Promise.reject(error)
+  );
 
 // avoid duplicate 401 redirects
 let isRedirecting = false;
 
 interface RequestInterceptorOptions extends RequestOptions {
   skipToken?: boolean;
+  skipCsrf?: boolean;
 }
 
 request.interceptors.request.use((url: string, options: RequestInterceptorOptions) => {
@@ -104,6 +117,9 @@ request.interceptors.request.use((url: string, options: RequestInterceptorOption
         ...(options.skipToken
           ? undefined
           : { [Authorization]: getAuthorization() }),
+        ...(options.skipCsrf
+          ? undefined
+          : { 'X-CSRF-Token': document.cookie.replace(/(?:(?:^|.*;\s*)csrf_token\s*=\s*([^;]*).*$)|^.*$/, '$1') }),
         ...options.headers,
       },
       interceptors: true,

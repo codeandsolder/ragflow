@@ -11,6 +11,12 @@ import { convertTheKeysOfTheObjectToSnake } from './common-util';
 import { setCachedLlmList } from './llm-cache';
 import { addTenantParams } from './llm-util';
 
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    skipToken?: boolean;
+  }
+}
+
 const FAILED_TO_FETCH = 'Failed to fetch';
 
 export const RetcodeMessage = {
@@ -76,11 +82,23 @@ const errorHandler = (error: {
 // avoid duplicate 401 redirects
 let isRedirecting = false;
 
-const request = axios.create({
-  //   errorHandler,
-  timeout: 300000,
-  //   getResponse: true,
-});
+  const request = axios.create({
+    //   errorHandler,
+    timeout: 300000,
+    //   getResponse: true,
+  });
+
+  // Handle CSRF token from server response
+  request.interceptors.response.use(
+    (response) => {
+      if (response.headers['x-csrf-token']) {
+        const csrfToken = response.headers['x-csrf-token'];
+        document.cookie = `csrf_token=${csrfToken}; path=/; SameSite=Strict; Secure; HttpOnly`;
+      }
+      return response;
+    },
+    (error) => Promise.reject(error)
+  );
 
 request.interceptors.request.use(
   (config) => {
@@ -94,8 +112,16 @@ request.interceptors.request.use(
       ...config,
       data: dataWithTenantParams,
       params,
-      skipToken: (config as { skipToken?: boolean }).skipToken,
+      skipToken: config.skipToken,
     };
+
+    // Add CSRF token for cookie-based authentication
+    if (!newConfig.skipToken && !config.skipCsrf) {
+      const csrfToken = document.cookie.replace(/(?:(?:^|.*;\s*)csrf_token\s*=\s*([^;]*).*$)|^.*$/, '$1');
+      if (csrfToken) {
+        newConfig.headers['X-CSRF-Token'] = csrfToken;
+      }
+    }
 
     if (!newConfig.skipToken) {
       newConfig.headers.set(Authorization, getAuthorization());
