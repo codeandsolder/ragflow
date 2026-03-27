@@ -37,7 +37,14 @@ GRAPH_FIELD_SEP = "<SEP>"
 
 ErrorHandlerFn = Callable[[BaseException | None, str | None, dict | None], None]
 
-chat_limiter = asyncio.Semaphore(int(os.environ.get("MAX_CONCURRENT_CHATS", 10)))
+_chat_limiter = None
+
+
+def get_chat_limiter():
+    global _chat_limiter
+    if _chat_limiter is None:
+        _chat_limiter = asyncio.Semaphore(int(os.environ.get("MAX_CONCURRENT_CHATS", 10)))
+    return _chat_limiter
 
 
 @dataclasses.dataclass
@@ -298,7 +305,7 @@ def chunk_id(chunk):
 
 
 async def graph_node_to_chunk(kb_id, embd_mdl, ent_name, meta, chunks):
-    global chat_limiter
+    limiter = get_chat_limiter()
     enable_timeout_assertion = os.environ.get("ENABLE_TIMEOUT_ASSERTION")
     chunk = {
         "id": get_uuid(),
@@ -316,7 +323,7 @@ async def graph_node_to_chunk(kb_id, embd_mdl, ent_name, meta, chunks):
     chunk["content_sm_ltks"] = rag_tokenizer.fine_grained_tokenize(chunk["content_ltks"])
     ebd = get_embed_cache(embd_mdl.llm_name, ent_name)
     if ebd is None:
-        async with chat_limiter:
+        async with limiter:
             timeout = 3 if enable_timeout_assertion else 30000000
             ebd, _ = await asyncio.wait_for(thread_pool_exec(embd_mdl.encode, [ent_name]), timeout=timeout)
         ebd = ebd[0]
@@ -349,6 +356,7 @@ async def get_relation(tenant_id, kb_id, from_ent_name, to_ent_name, size=1):
 
 
 async def graph_edge_to_chunk(kb_id, embd_mdl, from_ent_name, to_ent_name, meta, chunks):
+    limiter = get_chat_limiter()
     enable_timeout_assertion = os.environ.get("ENABLE_TIMEOUT_ASSERTION")
     chunk = {
         "id": get_uuid(),
@@ -367,7 +375,7 @@ async def graph_edge_to_chunk(kb_id, embd_mdl, from_ent_name, to_ent_name, meta,
     txt = f"{from_ent_name}->{to_ent_name}"
     ebd = get_embed_cache(embd_mdl.llm_name, txt)
     if ebd is None:
-        async with chat_limiter:
+        async with limiter:
             timeout = 3 if enable_timeout_assertion else 300000000
             ebd, _ = await asyncio.wait_for(thread_pool_exec(embd_mdl.encode, [txt + f": {meta['description']}"]), timeout=timeout)
         ebd = ebd[0]
@@ -423,7 +431,7 @@ async def get_graph(tenant_id, kb_id, exclude_rebuild=None):
 
 
 async def set_graph(tenant_id: str, kb_id: str, embd_mdl, graph: nx.Graph, change: GraphChange, callback):
-    global chat_limiter
+    limiter = get_chat_limiter()
     start = asyncio.get_running_loop().time()
 
     await thread_pool_exec(settings.docStoreConn.delete, {"knowledge_graph_kwd": ["graph", "subgraph"]}, search.index_name(tenant_id), kb_id)
@@ -434,7 +442,7 @@ async def set_graph(tenant_id: str, kb_id: str, embd_mdl, graph: nx.Graph, chang
     if change.removed_edges:
 
         async def del_edges(from_node, to_node):
-            async with chat_limiter:
+            async with limiter:
                 await thread_pool_exec(settings.docStoreConn.delete, {"knowledge_graph_kwd": ["relation"], "from_entity_kwd": from_node, "to_entity_kwd": to_node}, search.index_name(tenant_id), kb_id)
 
         tasks = []

@@ -70,12 +70,12 @@ export type RFState = {
   setEdgesByNodeId: (nodeId: string, edges: Edge[]) => void;
   updateNodeForm: (
     nodeId: string,
-    values: any,
-    path?: (string | number)[],
+    values: Partial<IAgentFormType> | Record<string, unknown>,
+    path?: (string | number)[]
   ) => RAGFlowNodeType[];
-  replaceNodeForm: (nodeId: string, values: any) => void;
+  replaceNodeForm: (nodeId: string, values: Partial<IAgentFormType>) => void;
   onSelectionChange: OnSelectionChangeFunc;
-  addNode: (nodes: RAGFlowNodeType) => void;
+  addNode: (node: RAGFlowNodeType) => void;
   getNode: (id?: string | null) => RAGFlowNodeType | undefined;
   updateNode: (node: RAGFlowNodeType) => void;
   addEdge: (connection: Connection) => void;
@@ -85,7 +85,7 @@ export type RFState = {
     source: string,
     sourceHandle?: string | null,
     target?: string | null,
-    isConnecting?: boolean,
+    isConnecting?: boolean
   ) => void;
   duplicateNode: (id: string, name: string) => void;
   duplicateIterationNode: (id: string, name: string) => void;
@@ -96,7 +96,7 @@ export type RFState = {
   deleteAgentToolNodeById: (id: string) => void;
   deleteIterationNodeById: (id: string) => void;
   findNodeByName: (operatorName: Operator) => RAGFlowNodeType | undefined;
-  updateMutableNodeFormItem: (id: string, field: string, value: any) => void;
+  updateMutableNodeFormItem: (id: string, field: string, value: Record<string, unknown>) => void;
   getOperatorTypeFromId: (id?: string | null) => string | undefined;
   getParentIdById: (id?: string | null) => string | undefined;
   updateNodeName: (id: string, name: string) => void;
@@ -111,7 +111,7 @@ export type RFState = {
   findUpstreamNodeById: (id?: string | null) => RAGFlowNodeType | undefined;
   deleteEdgesBySourceAndSourceHandle: (
     source: string,
-    sourceHandle: string,
+    sourceHandle: string
   ) => void; // Deleting a condition of a classification operator will delete the related edge
   findAgentToolNodeById: (id: string | null) => string | undefined;
   selectNodeIds: (nodeIds: string[]) => void;
@@ -424,7 +424,7 @@ const useGraphStore = create<RFState>()(
       },
       updateNodeForm: (
         nodeId: string,
-        values: any,
+        values: Partial<IAgentFormType> | Record<string, unknown>,
         path: (string | number)[] = [],
       ) => {
         const nextNodes = get().nodes.map((node) => {
@@ -500,7 +500,7 @@ const useGraphStore = create<RFState>()(
           }
         }
       },
-      updateMutableNodeFormItem: (id: string, field: string, value: any) => {
+      updateMutableNodeFormItem: (id: string, field: string, value: Record<string, unknown>) => {
         const { nodes } = get();
         const idx = nodes.findIndex((x) => x.id === id);
         if (idx) {

@@ -46,6 +46,45 @@ class ExeSQLParam(ToolParamBase):
         self.password = ""
         self.max_records = 1024
 
+    def _validate_sql(self, sql):
+        sql_upper = sql.upper().strip()
+        if sql_upper.startswith("/*") or sql_upper.startswith("--") or sql_upper.startswith(";"):
+            raise ValueError("SQL comments are not allowed.")
+        dangerous_patterns = [
+            r"\bDROP\b",
+            r"\bDELETE\b",
+            r"\bUPDATE\b",
+            r"\bINSERT\b",
+            r"\bALTER\b",
+            r"\bCREATE\b",
+            r"\bTRUNCATE\b",
+            r"\bGRANT\b",
+            r"\bREVOKE\b",
+            r"\bEXEC\b",
+            r"\bEXECUTE\b",
+            r"\bxp_",
+            r"\bsp_\w+",
+            r"\bINTO\s+OUTFILE\b",
+            r"\bINTO\s+DUMPFILE\b",
+            r"\bLOAD_FILE\b",
+            r"\bBENCHMARK\b",
+            r"\bSLEEP\b",
+        ]
+        for pattern in dangerous_patterns:
+            if re.search(pattern, sql_upper, re.IGNORECASE):
+                raise ValueError(f"SQL statement contains forbidden operation: {pattern}")
+
+        statements = [s.strip() for s in sql.split(";") if s.strip()]
+        if len(statements) > 1:
+            raise ValueError("Multiple SQL statements are not allowed.")
+
+        dangerous_chars = ["--", "/*", "*/", ";", "xp_", "sp_"]
+        for char in dangerous_chars:
+            if char in sql:
+                raise ValueError(f"SQL contains forbidden character sequence: {char}")
+
+        return True
+
     def check(self):
         self.check_valid_value(self.db_type, "Choose DB type", ["mysql", "postgres", "mariadb", "mssql", "IBM DB2", "trino", "oceanbase"])
         self.check_empty(self.database, "Database name")
@@ -112,7 +151,11 @@ class ExeSQL(ToolBase, ABC):
         if self.check_if_canceled("ExeSQL processing"):
             return
 
+        self._param._validate_sql(sql)
+
         sqls = sql.split(";")
+        if len(sqls) > 1:
+            raise ValueError("Multiple SQL statements are not allowed.")
         if self._param.db_type in ["mysql", "mariadb"]:
             db = pymysql.connect(db=self._param.database, user=self._param.username, host=self._param.host, port=self._param.port, password=self._param.password)
         elif self._param.db_type == "oceanbase":

@@ -20,6 +20,7 @@ import logging
 import os
 import random
 import re
+
 import time
 from abc import ABC
 from copy import deepcopy
@@ -36,6 +37,7 @@ from rag.llm import FACTORY_DEFAULT_BASE_URL, LITELLM_PROVIDER_PREFIX, Supported
 from rag.nlp import is_chinese, is_english
 
 from common.misc_utils import thread_pool_exec
+from rag.utils.circuit_breaker import LLMCircuitBreaker
 
 
 class LLMErrorCode(StrEnum):
@@ -157,13 +159,35 @@ class Base(ABC):
         self.client = OpenAI(api_key=key, base_url=base_url, timeout=timeout)
         self.async_client = AsyncOpenAI(api_key=key, base_url=base_url, timeout=timeout)
         self.model_name = model_name
-        # Configure retry parameters
         self.max_retries = kwargs.get("max_retries", int(os.environ.get("LLM_MAX_RETRIES", 5)))
         self.base_delay = kwargs.get("retry_interval", float(os.environ.get("LLM_BASE_DELAY", 2.0)))
         self.max_rounds = kwargs.get("max_rounds", 5)
         self.is_tools = False
         self.tools = []
         self.toolcall_sessions = {}
+        self._init_provider_specific(key, model_name, base_url, **kwargs)
+
+    def _init_provider_specific(self, key, model_name, base_url, **kwargs):
+        pass
+
+    @staticmethod
+    def _create_local_llm_client(base_url, model_name):
+        from urllib.parse import urljoin
+
+        base_url = urljoin(base_url, "v1")
+        return OpenAI(api_key="empty", base_url=base_url), base_url, model_name.split("___")[0]
+
+    @property
+    def circuit_breaker(self):
+        return LLMCircuitBreaker.get_breaker(
+            self._FACTORY_NAME if hasattr(self, "_FACTORY_NAME") else "default",
+            failure_threshold=5,
+            recovery_timeout=30,
+        )
+
+    @property
+    def circuit_state(self):
+        return self.circuit_breaker.state
 
     def _get_delay(self):
         return self.base_delay * random.uniform(10, 150)
@@ -332,7 +356,7 @@ class Base(ABC):
         if self._should_retry(error_code):
             delay = self._get_delay()
             logging.warning(f"Error: {error_code}. Retrying in {delay:.2f} seconds... (Attempt {attempt + 1}/{self.max_retries})")
-            await asyncio.sleep(delay)
+            time.sleep(delay)
             return None
 
         msg = f"{ERROR_PREFIX}: {error_code} - {str(e)}"
@@ -1511,7 +1535,7 @@ class LiteLLMBase(ABC):
         if self._should_retry(error_code):
             delay = self._get_delay()
             logging.warning(f"Error: {error_code}. Retrying in {delay:.2f} seconds... (Attempt {attempt + 1}/{self.max_retries})")
-            await asyncio.sleep(delay)
+            time.sleep(delay)
             return None
         msg = f"{ERROR_PREFIX}: {error_code} - {str(e)}"
         logging.error(f"async_chat_streamly giving up: {msg}")

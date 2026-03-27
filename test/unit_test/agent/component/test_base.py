@@ -17,7 +17,6 @@
 import json
 
 import pandas as pd
-import pytest
 
 from agent.component.base import ComponentParamBase
 

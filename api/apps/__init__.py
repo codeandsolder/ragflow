@@ -58,7 +58,9 @@ def _unauthorized_message(error):
 
 
 app = Quart(__name__)
-app = cors(app, allow_origin="*")
+allowed_origins_str = os.environ.get("ALLOWED_ORIGINS", "")
+allowed_origins = [o.strip() for o in allowed_origins_str.split(",") if o.strip()] if allowed_origins_str else []
+app = cors(app, allow_origin=allowed_origins if allowed_origins else "*")
 
 # openapi supported
 QuartSchema(app)
@@ -126,7 +128,7 @@ def _load_user():
         logging.warning(f"load_user got exception {e_auth}")
         try:
             authorization = request.headers.get("Authorization")
-            if len(authorization.split()) == 2:
+            if authorization and len(authorization.split()) == 2:
                 objs = APIToken.query(token=authorization.split()[1])
                 if objs:
                     user = UserService.query(id=objs[0].tenant_id, status=StatusEnum.VALID.value)

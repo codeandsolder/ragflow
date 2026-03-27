@@ -4,6 +4,7 @@ import { SharedBadge } from '@/components/shared-badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useNavigatePage } from '@/hooks/logic-hooks/navigate-hooks';
 import { IKnowledge } from '@/interfaces/database/knowledge';
+import { memo } from 'react';
 import { t } from 'i18next';
 import { ChevronRight } from 'lucide-react';
 import { DatasetDropdown } from './dataset-dropdown';
@@ -13,7 +14,7 @@ export type DatasetCardProps = {
   dataset: IKnowledge;
 } & Pick<ReturnType<typeof useRenameDataset>, 'showDatasetRenameModal'>;
 
-export function DatasetCard({
+export const DatasetCard = memo(function DatasetCard({
   dataset,
   showDatasetRenameModal,
 }: DatasetCardProps) {
@@ -37,7 +38,7 @@ export function DatasetCard({
       onClick={navigateToDataset(dataset.id)}
     />
   );
-}
+});
 
 export function SeeAllCard() {
   const { navigateToDatasetList } = useNavigatePage();
@@ -46,6 +47,14 @@ export function SeeAllCard() {
     <Card
       className="w-full flex-none h-full cursor-pointer"
       onClick={() => navigateToDatasetList({ isCreate: false })}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          navigateToDatasetList({ isCreate: false });
+        }
+      }}
+      aria-label={t('common.seeAll')}
+      role="button"
+      tabIndex={0}
     >
       <CardContent className="p-2.5 pt-1 w-full h-full flex items-center justify-center gap-1.5 text-text-secondary">
         {t('common.seeAll')} <ChevronRight className="size-4" />

@@ -16,20 +16,17 @@
 
 import json
 from .base import Base
+from ..exceptions import RAGFlowError, APIError
 
 
 class Session(Base):
     def __init__(self, rag, res_dict):
         self.id = None
         self.name = "New session"
-        self.messages = [{"role": "assistant", "content": "Hi! I am your assistant, can I help you?"}]
-        for key, value in res_dict.items():
-            if key == "chat_id" and value is not None:
-                self.chat_id = None
-                self.__session_type = "chat"
-            if key == "agent_id" and value is not None:
-                self.agent_id = None
-                self.__session_type = "agent"
+        self.messages = None
+        self.chat_id = None
+        self.agent_id = None
+        self.__session_type = None
         super().__init__(rag, res_dict)
 
     def ask(self, question="", stream=False, **kwargs):
@@ -42,7 +39,7 @@ class Session(Base):
         elif self.__session_type == "chat":
             res = self._ask_chat(question, stream, **kwargs)
         else:
-            raise Exception(f"Unknown session type: {self.__session_type}")
+            raise RAGFlowError(f"Unknown session type: {self.__session_type}")
 
         if stream:
             for line in res.iter_lines(decode_unicode=True):
@@ -75,7 +72,7 @@ class Session(Base):
             try:
                 json_data = res.json()
             except ValueError:
-                raise Exception(f"Invalid response {res}")
+                raise RAGFlowError(f"Invalid response {res}")
             yield self._structure_answer(json_data["data"])
 
     def _structure_answer(self, json_data):
@@ -108,7 +105,7 @@ class Session(Base):
         res = self.put(f"/chats/{self.chat_id}/sessions/{self.id}", update_message)
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res.get("message"))
+            raise APIError(res.get("message"))
 
 
 class Message(Base):

@@ -12,7 +12,7 @@ Generated from comprehensive code review of all major modules.
 
 ---
 
-## 1. api/ - Backend API Server (6.5/10)
+## 1. api/ - Backend API Server
 
 ### Security
 - [🔴 **CRITICAL**] CORS allows `*` (any origin) - `apps/__init__.py:61`
@@ -27,8 +27,6 @@ Generated from comprehensive code review of all major modules.
 ### Performance
 - [🟠 **HIGH**] N+1 query pattern - `document_service.py:111-114`
   - Batch-fetch all metadata at once
-- [🟡 **MEDIUM**] 20-item IN clause limit creates multiple queries - `common_service.py:381-394`
-  - Use database-native batch methods
 - [🟡 **MEDIUM**] No pagination limits - `document_service.py:173-174`
   - Add default limits to prevent memory exhaustion
 
@@ -50,12 +48,12 @@ Generated from comprehensive code review of all major modules.
 
 ---
 
-## 2. rag/ - Core RAG Logic (6.5/10)
+## 2. rag/ - Core RAG Logic
 
 ### Architecture
-- [🔴 **CRITICAL**] `do_handle_task` is 250+ lines - `task_executor.py:966-1211`
+- [🔴 **CRITICAL**] `do_handle_task` is 246 lines - `task_executor.py:966-1211`
   - Split into handler classes using Strategy pattern
-- [🔴 **CRITICAL**] `Dealer` class is 650+ lines - `search.py:38-686`
+- [🔴 **CRITICAL**] `Dealer` class is 334 lines - `search.py:38-686`
   - Extract: Searcher, Reranker, CitationInserter
 - [🔴 **CRITICAL**] LLM provider code duplication (40+ classes) - `chat_model.py`
   - Use template method pattern for common code
@@ -67,11 +65,6 @@ Generated from comprehensive code review of all major modules.
 - [🟡 **MEDIUM**] Hardcoded fusion weights `0.05,0.95` - `search.py:141`
 
 ### Reliability
-- [🔴 **CRITICAL**] Global semaphore `chat_limiter` - `graphrag/utils.py:40`
-  - Move to service context
-- [🔴 **CRITICAL**] Magic timeout `10000000000` (30 years!) - `graphrag/general/index.py:64`
-- [🔴 **CRITICAL**] No circuit breaker pattern
-  - Failures cascade across services
 - [🟠 **HIGH**] `time.sleep()` blocks event loop - `chat_model.py:319`
   - Use `asyncio.sleep()` instead
 
@@ -82,17 +75,11 @@ Generated from comprehensive code review of all major modules.
 
 ---
 
-## 3. deepdoc/ - Document Parsing & OCR (7.5/10)
+## 3. deepdoc/ - Document Parsing & OCR
 
 ### Critical Bugs
-- [🔴 **CRITICAL**] Infinite retry loop (100k iterations) - `ocr.py:365-372, 474-481`
+- [🔴 **CRITICAL**] Infinite retry loop - `ocr.py:365-372, 474-481`
   - Cap at 3-5 retries with backoff
-- [🔴 **CRITICAL**] Recursive call with zoom factor causing OOM - `pdf_parser.py:1695-1696`
-  - Add max recursion depth and use iterative approach
-- [🔴 **CRITICAL**] `loaded_models` dict never cleared - `ocr.py:36`
-  - Memory grows indefinitely in long-running processes
-
-### Memory
 - [🔴 **CRITICAL**] No streaming for large documents - entire PDF loaded
   - Implement page-by-page processing
 - [🔴 **CRITICAL**] Page images at full resolution `72*zoomin` DPI - `pdf_parser.py:1545`
@@ -123,16 +110,12 @@ Generated from comprehensive code review of all major modules.
 
 ---
 
-## 4. agent/ - Canvas Workflow Engine (6/10)
+## 4. agent/ - Canvas Workflow Engine
 
 ### Security
-- [🔴 **CRITICAL**] SQL injection in `exesql.py` - tools/exesql.py:58-115
+- [🔴 **CRITICAL**] SQL injection in `exesql.py` - `tools/exesql.py:58-115`
   - Only checks specific password values, doesn't sanitize
   - Multiple statements via `split(";")` not validated
-- [🔴 **CRITICAL**] gVisor runtime not enforced - `sandbox/executor_manager/core/container.py:88`
-  - Containers may run unsandboxed if gVisor not installed
-- [🔴 **CRITICAL**] Tmpfs with exec permission - `container.py:93-95`
-  - `exec` permission could allow privilege escalation
 
 ### Async/Await Bugs
 - [🔴 **CRITICAL**] Nested `asyncio.run()` calls - `component/message.py:77-78`
@@ -145,12 +128,10 @@ Generated from comprehensive code review of all major modules.
 ### Error Handling
 - [🔴 **CRITICAL**] String error returns instead of exceptions - `variable_assigner.py:121-186`
   - `"ERROR:VARIABLE_NOT_LIST"` becomes variable value
-- [🟠 **HIGH**] Thread limiter shared across instances - `component/base.py:349`
 - [🟠 **HIGH**] Exception handler bypasses normal flow - `canvas.py:578-587`
   - Goto can skip components that should execute
 
 ### Code Quality
-- [🟠 **HIGH**] O(n²) complexity in list comprehension - `canvas.py:634-648`
 - [🟡 **MEDIUM**] Assert instead of proper error handling - `variable_assigner.py:48-49`
 - [🟡 **MEDIUM**] Silent JSON validation failure - `component/base.py:215-217`
 - [🟡 **MEDIUM**] No file size limits in file parsing - `canvas.py:754-772`
@@ -161,7 +142,7 @@ Generated from comprehensive code review of all major modules.
 
 ---
 
-## 5. web/ - React Frontend (7/10)
+## 5. web/ - React Frontend
 
 ### Security
 - [🔴 **CRITICAL**] `dangerouslySetInnerHTML` without DOMPurify - `delete-source-modal.tsx:27,34`
@@ -194,7 +175,7 @@ Generated from comprehensive code review of all major modules.
 
 ---
 
-## 6. docker/ - Docker Deployment (5/10)
+## 6. docker/ - Docker Deployment
 
 ### Security
 - [🔴 **CRITICAL**] Hardcoded default passwords - `.env:42,52,111,138,146`
@@ -228,7 +209,7 @@ Generated from comprehensive code review of all major modules.
 
 ---
 
-## 7. sdk/ - Python SDK (5/10)
+## 7. sdk/ - Python SDK
 
 ### Error Handling
 - [🔴 **CRITICAL**] No retry logic anywhere in the SDK
@@ -265,7 +246,7 @@ Generated from comprehensive code review of all major modules.
 
 ---
 
-## 8. test/ - Testing Infrastructure (6.5/10)
+## 8. test/ - Testing Infrastructure
 
 ### Test Quality
 - [🔴 **CRITICAL**] 25+ tests marked `@pytest.mark.skip(reason="Failed")`
@@ -301,17 +282,17 @@ Generated from comprehensive code review of all major modules.
 ## Quick Wins (High Impact, Low Effort)
 
 1. Generate random passwords in `.env`:
-   ```bash
-   openssl rand -hex 32
-   ```
+```bash
+openssl rand -hex 32
+```
 
 2. Add DOMPurify to `dangerouslySetInnerHTML` in `web/`
 
 3. Fix infinite retry loops in `deepdoc/vision/ocr.py`:
-   ```python
-   # Change from 100000 to 3-5
-   for i in range(5):
-   ```
+```python
+# Change from 100000 to 3-5
+for i in range(5):
+```
 
 4. Remove dead code in `api/apps/kb_app.py:49-324`
 
@@ -328,20 +309,18 @@ Generated from comprehensive code review of all major modules.
 ## Long-term Improvements
 
 1. **Refactor large classes**:
-   - `Dealer` (650 lines) → Searcher, Reranker, CitationInserter
-   - `do_handle_task` (250 lines) → Task handlers
+   - `Dealer` (334 lines) → Searcher, Reranker, CitationInserter
+   - `do_handle_task` (246 lines) → Task handlers
    - `Canvas` store (659 lines) → Multiple stores
 
-2. **Add circuit breakers** for external API calls
+2. **Implement streaming** for large document processing
 
-3. **Implement streaming** for large document processing
+3. **Add comprehensive type hints** and enable strict TypeScript
 
-4. **Add comprehensive type hints** and enable strict TypeScript
+4. **Create test data factories** for consistent test data
 
-5. **Create test data factories** for consistent test data
+5. **Implement memory monitoring** and adaptive processing
 
-6. **Implement memory monitoring** and adaptive processing
+6. **Add OpenAPI documentation** using existing QuartSchema
 
-7. **Add OpenAPI documentation** using existing QuartSchema
-
-8. **Create baseline metrics** for benchmarking regressions
+7. **Create baseline metrics** for benchmarking regressions

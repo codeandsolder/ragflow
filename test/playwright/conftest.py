@@ -30,10 +30,22 @@ BASE_URL_DEFAULT = "http://127.0.0.1"
 LOGIN_PATH_DEFAULT = "/login"
 DEFAULT_TIMEOUT_MS = 30000
 DEFAULT_HANG_TIMEOUT_S = 1800
-AUTH_READY_TIMEOUT_MS_DEFAULT = 15000
-REG_EMAIL_BASE_DEFAULT = "qa@infiniflow.org"
-REG_NICKNAME_DEFAULT = "qa"
-REG_PASSWORD_DEFAULT = "123"
+
+
+def _env_int(name: str, default: int) -> int:
+    value = os.getenv(name)
+    if not value:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
+AUTH_READY_TIMEOUT_MS_DEFAULT = _env_int("AUTH_READY_TIMEOUT_MS", 15000)
+REG_EMAIL_BASE_DEFAULT = os.getenv("REG_EMAIL_BASE", "qa@infiniflow.org")
+REG_NICKNAME_DEFAULT = os.getenv("REG_NICKNAME", "qa")
+REG_PASSWORD_DEFAULT = os.getenv("REG_PASSWORD", "123")
 REG_EMAIL_LOCAL_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 REG_EMAIL_BACKEND_RE = re.compile(r"^[\w\._-]{1,}@([\w_-]+\.)+[\w-]{2,}$")
 AUTH_FORM_SELECTOR = "form[data-testid='auth-form']"
@@ -49,25 +61,11 @@ _PROVIDER_READY_CACHE: dict[str, dict] = {}
 _DATASET_READY_CACHE: dict[str, dict] = {}
 
 
-class _RegisterDisabled(RuntimeError):
-    pass
-
-
 def _env_bool(name: str, default: bool = False) -> bool:
     value = os.getenv(name)
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
-def _env_int(name: str, default: int) -> int:
-    value = os.getenv(name)
-    if not value:
-        return default
-    try:
-        return int(value)
-    except ValueError:
-        return default
 
 
 def _env_int_with_fallback(primary: str, fallback: str | None, default: int) -> int:
@@ -80,6 +78,10 @@ def _env_int_with_fallback(primary: str, fallback: str | None, default: int) -> 
         return int(value)
     except ValueError:
         return default
+
+
+class _RegisterDisabled(RuntimeError):
+    pass
 
 
 def _sync_seeded_credentials_from_admin_env() -> None:
@@ -928,6 +930,20 @@ def seeded_user_credentials(base_url: str, login_url: str, browser) -> tuple[str
 @pytest.fixture
 def reg_nickname() -> str:
     return REG_NICKNAME_DEFAULT
+
+
+DEFAULT_LLM_ID = os.getenv("DEFAULT_LLM_ID", "glm-4-flash@ZHIPU-AI")
+DEFAULT_EMBD_ID = os.getenv("DEFAULT_EMBD_ID", "BAAI/bge-small-en-v1.5@Builtin")
+
+
+@pytest.fixture(scope="session")
+def default_llm_id() -> str:
+    return DEFAULT_LLM_ID
+
+
+@pytest.fixture(scope="session")
+def default_embd_id() -> str:
+    return DEFAULT_EMBD_ID
 
 
 @pytest.fixture(scope="session")

@@ -253,7 +253,6 @@ class TestCustomJSONEncoder:
                 self.value = "test"
 
         obj = TestType()
-        encoder = CustomJSONEncoder(with_type=True)
         result = json.dumps(obj, cls=CustomJSONEncoder, with_type=True)
 
         decoded = json.loads(result)

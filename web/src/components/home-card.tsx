@@ -39,11 +39,17 @@ export function HomeCard({
       as="article"
       data-testid={testId}
       data-agent-name={data.name}
+      aria-label={`${data.name}${data.description ? `, ${data.description}` : ''}`}
       onClick={() => {
         // navigateToSearch(data?.id);
         onClick?.();
       }}
       tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          onClick?.();
+        }
+      }}
       className="px-2.5 py-4 flex gap-2 items-start group h-full w-full hover:shadow-md"
     >
       <div>

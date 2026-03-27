@@ -19,6 +19,9 @@ import json
 import re
 from collections import defaultdict
 
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
 from common.query_base import QueryBase
 from common.doc_store.doc_store_base import MatchTextExpr
 from rag.nlp import rag_tokenizer, term_weight, synonym
@@ -105,7 +108,7 @@ class FulltextQueryer(QueryBase):
                 sm = rag_tokenizer.fine_grained_tokenize(tk).split() if need_fine_grained_tokenize(tk) else []
                 sm = [
                     re.sub(
-                        r"[ ,\./;'\[\]\\`~!@#$%\^&\*\(\)=\+_<>\?:\"\{\}\|，。；‘’【】、！￥……（）——《》？：“”-]+",
+                        r"[ ,\./;'\[\]\\`~!@#$%\^&\*\(\)=\+_<>\?:\"\{\}\|，。；‘’【】、！￥……（）——《》？：" "]+",
                         "",
                         m,
                     )
@@ -157,9 +160,6 @@ class FulltextQueryer(QueryBase):
         return None, keywords
 
     def hybrid_similarity(self, avec, bvecs, atks, btkss, tkweight=0.3, vtweight=0.7):
-        from sklearn.metrics.pairwise import cosine_similarity
-        import numpy as np
-
         sims = cosine_similarity([avec], bvecs)
         tksim = self.token_similarity(atks, btkss)
         if np.sum(sims[0]) == 0:

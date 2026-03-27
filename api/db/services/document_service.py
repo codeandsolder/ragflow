@@ -104,7 +104,15 @@ class DocumentService(CommonService):
             docs = docs.order_by(cls.model.getter_by(orderby).asc())
 
         count = docs.count()
-        docs = docs.paginate(page_number, items_per_page)
+        DEFAULT_ITEMS_PER_PAGE = 100
+        if page_number and items_per_page:
+            docs = docs.paginate(page_number, items_per_page)
+        elif page_number:
+            docs = docs.paginate(page_number, DEFAULT_ITEMS_PER_PAGE)
+        elif items_per_page:
+            docs = docs.paginate(1, items_per_page)
+        else:
+            docs = docs.paginate(1, DEFAULT_ITEMS_PER_PAGE)
 
         docs_list = list(docs.dicts())
         doc_ids_on_page = [doc["id"] for doc in docs_list]
@@ -170,8 +178,16 @@ class DocumentService(CommonService):
         else:
             docs = docs.order_by(cls.model.getter_by(orderby).asc())
 
+        DEFAULT_ITEMS_PER_PAGE = 100
+
         if page_number and items_per_page:
             docs = docs.paginate(page_number, items_per_page)
+        elif page_number:
+            docs = docs.paginate(page_number, DEFAULT_ITEMS_PER_PAGE)
+        elif items_per_page:
+            docs = docs.paginate(1, items_per_page)
+        else:
+            docs = docs.paginate(1, DEFAULT_ITEMS_PER_PAGE)
 
         docs_list = list(docs.dicts())
         if return_empty_metadata:
@@ -783,8 +799,7 @@ class DocumentService(CommonService):
     @classmethod
     @DB.connection_context()
     def get_doc_count(cls, tenant_id):
-        docs = cls.model.select(cls.model.id).join(Knowledgebase, on=(Knowledgebase.id == cls.model.kb_id)).where(Knowledgebase.tenant_id == tenant_id)
-        return len(docs)
+        return cls.model.select(cls.model.id).join(Knowledgebase, on=(Knowledgebase.id == cls.model.kb_id)).where(Knowledgebase.tenant_id == tenant_id).count()
 
     @classmethod
     @DB.connection_context()

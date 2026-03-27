@@ -163,15 +163,13 @@ class LayoutRecognizer(Recognizer):
 class LayoutRecognizer4YOLOv10(LayoutRecognizer):
     labels = [
         "title",
-        "Text",
-        "Reference",
-        "Figure",
-        "Figure caption",
-        "Table",
-        "Table caption",
-        "Table caption",
-        "Equation",
-        "Figure caption",
+        "text",
+        "reference",
+        "figure",
+        "figure caption",
+        "table",
+        "table caption",
+        "equation",
     ]
 
     def __init__(self, domain):
@@ -246,9 +244,8 @@ class AscendLayoutRecognizer(Recognizer):
         "Figure caption",
         "Table",
         "Table caption",
-        "Table caption",
         "Equation",
-        "Figure caption",
+        "Equation",
     ]
 
     def __init__(self, domain):

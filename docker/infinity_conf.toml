@@ -39,9 +39,12 @@ mem_index_capacity       = 65536
 # [storage.object_storage]
 # url                      = "127.0.0.1:9000"
 # bucket_name              = "infinity"
-# access_key               = "minioadmin"
-# secret_key               = "minioadmin"
+# access_key               = "${MINIO_USER}"       # Set via MINIO_USER env var
+# secret_key               = "${MINIO_PASSWORD}"   # Set via MINIO_PASSWORD env var
 # enable_https             = false
+#
+# NOTE: For production, ensure MINIO_USER and MINIO_PASSWORD are set
+# in your .env file and passed to the container via docker-compose.
 
 [buffer]
 buffer_manager_size      = "8GB"

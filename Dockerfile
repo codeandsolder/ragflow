@@ -159,6 +159,7 @@ RUN --mount=type=cache,id=ragflow_uv,target=/root/.cache/uv,sharing=locked \
         sed -i 's|mirrors.aliyun.com/pypi|pypi.org|g' uv.lock; \
     fi; \
     uv sync --python 3.12 --frozen && \
+    uv pip install docling==2.71.0 && \
     # Ensure pip is available in the venv for runtime package installation (fixes #12651)
     .venv/bin/python3 -m ensurepip --upgrade
 
@@ -216,4 +217,10 @@ RUN mv /etc/nginx/ragflow.conf.golang /etc/nginx/conf.d/ragflow.conf.golang && \
 COPY --from=builder /ragflow/web/dist /ragflow/web/dist
 
 COPY --from=builder /ragflow/VERSION /ragflow/VERSION
+
+RUN useradd -m -s /bin/bash ragflow && \
+    chown -R ragflow:ragflow /ragflow
+
+USER ragflow
+
 ENTRYPOINT ["./entrypoint.sh"]

@@ -90,10 +90,14 @@ request.interceptors.request.use(
     // Add tenant parameters to data
     const dataWithTenantParams = addTenantParams(data, config.url);
 
-    const newConfig = { ...config, data: dataWithTenantParams, params };
+    const newConfig = {
+      ...config,
+      data: dataWithTenantParams,
+      params,
+      skipToken: (config as { skipToken?: boolean }).skipToken,
+    };
 
-    // Skip token if explicitly requested
-    if (!(newConfig as any).skipToken) {
+    if (!newConfig.skipToken) {
       newConfig.headers.set(Authorization, getAuthorization());
     }
 
@@ -146,7 +150,7 @@ request.interceptors.response.use(
     return response;
   },
   function (error) {
-    console.log('🚀 ~ error:', error);
+    console.error('Request error:', error);
 
     // Handle HTTP 401 (token expired / invalid)
     const status = error?.response?.status;

@@ -75,7 +75,13 @@ class Message(ComponentBase):
             if isinstance(v, partial):
                 iter_obj = v()
                 if inspect.isasyncgen(iter_obj):
-                    ans = asyncio.run(self._consume_async_gen(iter_obj))
+                    try:
+                        loop = asyncio.get_running_loop()
+                        ans = loop.run_until_complete(self._consume_async_gen(iter_obj))
+                    except RuntimeError:
+                        loop = asyncio.new_event_loop()
+                        ans = loop.run_until_complete(self._consume_async_gen(iter_obj))
+                        loop.close()
                 else:
                     for t in iter_obj:
                         ans += t

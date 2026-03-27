@@ -17,6 +17,7 @@
 
 from .base import Base
 from .session import Session
+from .exceptions import RAGFlowError, APIError
 
 
 class Chat(Base):
@@ -24,8 +25,8 @@ class Chat(Base):
         self.id = ""
         self.name = "assistant"
         self.avatar = "path/to/avatar"
-        self.llm = Chat.LLM(rag, {})
-        self.prompt = Chat.Prompt(rag, {})
+        self.llm = Chat.LLM(rag, None)
+        self.prompt = Chat.Prompt(rag, None)
         super().__init__(rag, res_dict)
 
     class LLM(Base):
@@ -59,24 +60,26 @@ class Chat(Base):
             )
             super().__init__(rag, res_dict)
 
-    def update(self, update_message: dict):
+    def update(self, update_message: dict) -> "Chat":
         if not isinstance(update_message, dict):
-            raise Exception("ValueError('`update_message` must be a dict')")
+            raise RAGFlowError("`update_message` must be a dict")
         if update_message.get("llm") == {}:
-            raise Exception("ValueError('`llm` cannot be empty')")
+            raise RAGFlowError("`llm` cannot be empty")
         if update_message.get("prompt") == {}:
-            raise Exception("ValueError('`prompt` cannot be empty')")
+            raise RAGFlowError("`prompt` cannot be empty")
         res = self.put(f"/chats/{self.id}", update_message)
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
+        self._update_from_dict(self.rag, res.get("data", {}))
+        return self
 
     def create_session(self, name: str = "New session") -> Session:
         res = self.post(f"/chats/{self.id}/sessions", {"name": name})
         res = res.json()
         if res.get("code") == 0:
             return Session(self.rag, res["data"])
-        raise Exception(res["message"])
+        raise APIError(res["message"])
 
     def list_sessions(self, page: int = 1, page_size: int = 30, orderby: str = "create_time", desc: bool = True, id: str = None, name: str = None) -> list[Session]:
         res = self.get(f"/chats/{self.id}/sessions", {"page": page, "page_size": page_size, "orderby": orderby, "desc": desc, "id": id, "name": name})
@@ -86,10 +89,10 @@ class Chat(Base):
             for data in res["data"]:
                 result_list.append(Session(self.rag, data))
             return result_list
-        raise Exception(res["message"])
+        raise APIError(res["message"])
 
     def delete_sessions(self, ids: list[str] | None = None, delete_all: bool = False):
         res = self.rm(f"/chats/{self.id}/sessions", {"ids": ids, "delete_all": delete_all})
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res.get("message"))
+            raise APIError(res.get("message"))

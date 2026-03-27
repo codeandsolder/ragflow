@@ -214,8 +214,11 @@ class ComponentParamBase(ABC):
         try:
             with open(param_validation_path, "r") as fin:
                 validation_json = json.loads(fin.read())
-        except BaseException:
+        except (FileNotFoundError, PermissionError) as e:
+            logging.debug(f"Validation file not accessible: {e}")
             return
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in validation file {param_validation_path}: {e}")
 
         self._validate_param(self, validation_json)
 
@@ -345,7 +348,6 @@ class ComponentParamBase(ABC):
 
 class ComponentBase(ABC):
     component_name: str
-    thread_limiter = asyncio.Semaphore(int(os.environ.get("MAX_CONCURRENT_CHATS", 10)))
     variable_ref_patt = r"\{* *\{([a-zA-Z:0-9]+@[A-Za-z0-9_.-]+|sys\.[A-Za-z0-9_.]+|env\.[A-Za-z0-9_.]+)\} *\}*"
 
     def __str__(self):
@@ -368,6 +370,7 @@ class ComponentBase(ABC):
         self._id = id
         self._param = param
         self._param.check()
+        self.thread_limiter = asyncio.Semaphore(int(os.environ.get("MAX_CONCURRENT_CHATS", 10)))
 
     def is_canceled(self) -> bool:
         return self._canvas.is_canceled()

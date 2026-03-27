@@ -302,12 +302,15 @@ class SelfManagedProvider(SandboxProvider):
         # Validate endpoint URL format
         endpoint = config.get("endpoint", "")
         if endpoint:
-            # Check if it's a valid HTTP/HTTPS URL or localhost
-            import re
+            from urllib.parse import urlparse
 
-            url_pattern = r"^(https?://|http://localhost|http://[\d\.]+:[a-z]+:[/]|http://[\w\.]+:)"
-            if not re.match(url_pattern, endpoint):
+            parsed = urlparse(endpoint)
+            if not parsed.scheme or parsed.scheme not in ("http", "https"):
                 return False, f"Invalid endpoint format: {endpoint}. Must start with http:// or https://"
+            if not parsed.netloc:
+                return False, f"Invalid endpoint format: {endpoint}. Missing hostname"
+            if parsed.port and (parsed.port < 1 or parsed.port > 65535):
+                return False, f"Invalid endpoint: {endpoint}. Port must be between 1 and 65535"
 
         # Validate pool_size is positive
         pool_size = config.get("pool_size", 10)

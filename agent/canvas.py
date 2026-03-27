@@ -21,6 +21,7 @@ import binascii
 import json
 import logging
 import re
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -90,11 +91,22 @@ class Graph:
         self.task_id = task_id if task_id else get_uuid()
         self.custom_header = custom_header
         self._thread_pool = ThreadPoolExecutor(max_workers=5)
+        self._lock = threading.Lock()
         self.load()
 
     def load(self):
         self.components = self.dsl["components"]
         cpn_nms = set([])
+
+        def validate_component_depth(component_dict, max_depth=20, current_depth=0):
+            if current_depth > max_depth:
+                raise ValueError(f"Component nesting too deep (max {max_depth} levels)")
+            for key, value in component_dict.items():
+                if isinstance(value, dict):
+                    validate_component_depth(value, max_depth, current_depth + 1)
+
+        validate_component_depth(self.components)
+
         for k, cpn in self.components.items():
             cpn_nms.add(cpn["obj"]["component_name"])
             param = component_class(cpn["obj"]["component_name"] + "Param")()
@@ -192,7 +204,8 @@ class Graph:
     def get_variable_value(self, exp: str) -> Any:
         exp = exp.strip("{").strip("}").strip(" ").strip("{").strip("}")
         if exp.find("@") < 0:
-            return self.globals[exp]
+            with self._lock:
+                return self.globals[exp]
         cpn_id, var_nm = exp.split("@")
         cpn = self.get_component(cpn_id)
         if not cpn:
@@ -238,8 +251,9 @@ class Graph:
     def set_variable_value(self, exp: str, value):
         exp = exp.strip("{").strip("}").strip(" ").strip("{").strip("}")
         if exp.find("@") < 0:
-            self.globals[exp] = value
-            return
+            with self._lock:
+                self.globals[exp] = value
+                return
         cpn_id, var_nm = exp.split("@")
         cpn = self.get_component(cpn_id)
         if not cpn:
@@ -371,7 +385,8 @@ class Canvas(Graph):
                     self.globals[k] = ""
 
     async def run(self, **kwargs):
-        self.globals["sys.date"] = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        with self._lock:
+            self.globals["sys.date"] = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         st = time.perf_counter()
         self._loop = asyncio.get_running_loop()
         self.message_id = get_uuid()
@@ -400,12 +415,16 @@ class Canvas(Graph):
         for k in kwargs.keys():
             if k in ["query", "user_id", "files"] and kwargs[k]:
                 if k == "files":
-                    self.globals[f"sys.{k}"] = await self.get_files_async(kwargs[k], layout_recognize)
+                    files_async = await self.get_files_async(kwargs[k], layout_recognize)
+                    with self._lock:
+                        self.globals[f"sys.{k}"] = files_async
                 else:
-                    self.globals[f"sys.{k}"] = kwargs[k]
-        if not self.globals["sys.conversation_turns"]:
-            self.globals["sys.conversation_turns"] = 0
-        self.globals["sys.conversation_turns"] += 1
+                    with self._lock:
+                        self.globals[f"sys.{k}"] = kwargs[k]
+        with self._lock:
+            if not self.globals.get("sys.conversation_turns"):
+                self.globals["sys.conversation_turns"] = 0
+            self.globals["sys.conversation_turns"] += 1
 
         def decorate(event, dt):
             nonlocal created_at
@@ -631,9 +650,16 @@ class Canvas(Graph):
                 break
             idx = to
 
-            if any([self.get_component_obj(c).component_name.lower() == "userfillup" for c in self.path[idx:]]):
-                path = [c for c in self.path[idx:] if self.get_component(c)["obj"].component_name.lower() == "userfillup"]
-                path.extend([c for c in self.path[idx:] if self.get_component(c)["obj"].component_name.lower() != "userfillup"])
+            userfillup = []
+            other = []
+            for c in self.path[idx:]:
+                cpn = self.components[c]["obj"]
+                if cpn.component_name.lower() == "userfillup":
+                    userfillup.append(c)
+                else:
+                    other.append(c)
+            if userfillup:
+                path = userfillup + other
                 another_inputs = {}
                 tips = ""
                 for c in path:
@@ -754,6 +780,22 @@ class Canvas(Graph):
     async def get_files_async(self, files: Union[None, list[dict]], layout_recognize: str = None) -> list[str]:
         if not files:
             return []
+
+        # File size limits
+        MAX_FILE_SIZE_MB = 50
+        MAX_TOTAL_SIZE_MB = 200
+
+        total_size = 0
+        for file in files:
+            if "size" not in file:
+                raise ValueError(f"File {file['name']} missing size attribute")
+            file_size_mb = file["size"] / (1024 * 1024)
+            if file_size_mb > MAX_FILE_SIZE_MB:
+                raise ValueError(f"File {file['name']} is too large ({file_size_mb:.1f}MB). Maximum allowed: {MAX_FILE_SIZE_MB}MB")
+            total_size += file_size_mb
+
+        if total_size > MAX_TOTAL_SIZE_MB:
+            raise ValueError(f"Total file size ({total_size:.1f}MB) exceeds maximum allowed: {MAX_TOTAL_SIZE_MB}MB")
 
         def image_to_base64(file):
             return "data:{};base64,{}".format(file["mime_type"], base64.b64encode(FileService.get_blob(file["created_by"], file["id"])).decode("utf-8"))

@@ -7,7 +7,7 @@ import authorizationUtil, {
   redirectToLogin,
 } from '@/utils/authorization-util';
 import notification from '@/utils/notification';
-import { RequestMethod, extend } from 'umi-request';
+import { RequestMethod, extend, RequestOptions } from 'umi-request';
 import { convertTheKeysOfTheObjectToSnake } from './common-util';
 import { setCachedLlmList } from './llm-cache';
 import { addTenantParams } from './llm-util';
@@ -83,7 +83,11 @@ const request: RequestMethod = extend({
 // avoid duplicate 401 redirects
 let isRedirecting = false;
 
-request.interceptors.request.use((url: string, options: any) => {
+interface RequestInterceptorOptions extends RequestOptions {
+  skipToken?: boolean;
+}
+
+request.interceptors.request.use((url: string, options: RequestInterceptorOptions) => {
   const data = convertTheKeysOfTheObjectToSnake(options.data);
   const params = convertTheKeysOfTheObjectToSnake(options.params);
 
@@ -180,7 +184,7 @@ export const get = (url: string) => {
   return request.get(url);
 };
 
-export const post = (url: string, body: any) => {
+export const post = (url: string, body: Record<string, unknown>) => {
   return request.post(url, { data: body });
 };
 

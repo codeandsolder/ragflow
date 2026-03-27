@@ -15,6 +15,7 @@
 #
 
 from .base import Base
+from .exceptions import APIError
 
 
 class Memory(Base):
@@ -44,7 +45,7 @@ class Memory(Base):
         res = self.put(f"/memories/{self.id}", update_dict)
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
         self._update_from_dict(self.rag, res.get("data", {}))
         return self
 
@@ -52,7 +53,7 @@ class Memory(Base):
         res = self.get(f"/memories/{self.id}/config")
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
         self._update_from_dict(self.rag, res.get("data", {}))
         return self
 
@@ -61,14 +62,14 @@ class Memory(Base):
         res = self.get(f"/memories/{self.id}", params)
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
         return res["data"]
 
     def forget_message(self, message_id: int):
         res = self.rm(f"/messages/{self.id}:{message_id}", {})
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
         return True
 
     def update_message_status(self, message_id: int, status: bool):
@@ -76,12 +77,12 @@ class Memory(Base):
         res = self.put(f"/messages/{self.id}:{message_id}", update_message)
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
         return True
 
     def get_message_content(self, message_id: int) -> dict:
         res = self.get(f"/messages/{self.id}:{message_id}/content")
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
         return res["data"]

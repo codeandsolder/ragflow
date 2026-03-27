@@ -22,7 +22,7 @@ import pytest
 import pickle
 import base64
 from unittest.mock import patch
-from api.utils.configs import serialize_b64, deserialize_b64, RestrictedUnpickler, restricted_loads, safe_module
+from api.utils.configs import serialize_b64, deserialize_b64, restricted_loads, safe_module
 
 
 class TestSerializeB64:
@@ -160,7 +160,7 @@ class TestRestrictedUnpickler:
 
             with pytest.raises(pickle.UnpicklingError):
                 restricted_loads(pickled)
-        except:
+        except Exception:
             # If we can't create the unsafe pickle, skip this test
             pytest.skip("Unable to create unsafe pickle for testing")
 

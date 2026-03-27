@@ -22,7 +22,7 @@ from common import (
     document_filter,
     document_infos,
     document_metadata_summary,
-    # document_metadata_update,  # still unused while metadata_update tests stay TODO
+    document_metadata_update,
     document_rename,
     document_set_meta,
     document_update_metadata_setting,

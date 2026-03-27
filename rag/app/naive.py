@@ -53,7 +53,7 @@ from rag.nlp import (
     tokenize_table,
     append_context2table_image4pdf,
     tokenize_chunks_with_images,
-)  # noqa: F401
+)
 
 
 def _normalize_section_text_for_rtl_presentation_forms(sections):

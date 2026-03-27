@@ -7,7 +7,7 @@ import request from './next-request';
 
 type Service<T extends string> = Record<
   T,
-  (params?: any, urlAppendix?: string) => any
+  (params?: unknown, urlAppendix?: string) => unknown
 >;
 
 const Methods = ['post', 'delete', 'put'];
@@ -18,7 +18,7 @@ const registerServer = <T extends string>(
 ) => {
   const server: Service<T> = {} as Service<T>;
   for (let key in opt) {
-    server[key] = (params?: any, urlAppendix?: string) => {
+    server[key] = (params?: unknown, urlAppendix?: string) => {
       let url = opt[key].url;
       const requestOptions = opt[key];
       if (urlAppendix) {
@@ -42,8 +42,6 @@ const registerServer = <T extends string>(
   return server;
 };
 
-export default registerServer;
-
 export function registerNextServer<T extends string>(
   requestRecord: Record<
     T,
@@ -53,13 +51,7 @@ export function registerNextServer<T extends string>(
   type Server = Record<
     T,
     (
-      config?:
-        | AxiosRequestConfig<any>
-        | Record<string, any>
-        | string
-        | number
-        | boolean
-        | undefined,
+      config?: Record<string, unknown> | string | number | boolean | undefined,
       useAxiosNativeConfig?: boolean,
     ) => Promise<AxiosResponse<any, any>>
   >;

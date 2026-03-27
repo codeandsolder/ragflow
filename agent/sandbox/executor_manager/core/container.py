@@ -81,18 +81,26 @@ async def _prepare_container(name: str, language: SupportLanguage) -> bool:
 
 async def create_container(name: str, language: SupportLanguage) -> bool:
     """Asynchronously create a container"""
+    return_code, stdout, _ = await async_run_command("docker", "info", "--format", "{{.Runtime}}", timeout=5)
+    if return_code != 0 or "runsc" not in stdout.strip().lower():
+        logger.error(f"gVisor runtime not available. Container {name} will not be created.")
+        return False
+
     create_args = [
         "docker",
         "run",
         "-d",
         "--runtime=runsc",
+        "--network",
+        "none",
+        "--init",
         "--name",
         name,
         "--read-only",
         "--tmpfs",
-        "/workspace:rw,exec,size=100M,uid=65534,gid=65534",
+        "/workspace:rw,size=100M,uid=65534,gid=65534",
         "--tmpfs",
-        "/tmp:rw,exec,size=50M",
+        "/tmp:rw,size=50M",
         "--user",
         "nobody",
         "--workdir",
@@ -155,14 +163,12 @@ async def recreate_container(name: str, language: SupportLanguage) -> bool:
 async def release_container(name: str, language: SupportLanguage):
     """Asynchronously release a container"""
     async with _CONTAINER_LOCK:
-        if await container_is_running(name):
+        logger.info(f"♻️ Recreating container {name} for one-time use policy...")
+        if await recreate_container(name, language):
             _CONTAINER_QUEUES[language].put(name)
-            logger.info(f"🟢 Released container: {name} (remaining available: {_CONTAINER_QUEUES[language].qsize()})")
+            logger.info(f"✅ Container {name} successfully recreated and returned to queue")
         else:
-            logger.warning(f"⚠️ Container {name} has crashed, attempting to recreate...")
-            if await recreate_container(name, language):
-                _CONTAINER_QUEUES[language].put(name)
-                logger.info(f"✅ Container {name} successfully recreated and returned to queue")
+            logger.error(f"❌ Failed to recreate container {name}")
 
 
 async def allocate_container_blocking(language: SupportLanguage, timeout=10) -> str:

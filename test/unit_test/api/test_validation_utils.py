@@ -20,7 +20,7 @@ Unit tests for api.utils.validation_utils module.
 
 import pytest
 from unittest.mock import Mock, AsyncMock
-from uuid import UUID, uuid1
+from uuid import uuid1
 from pydantic import BaseModel, Field, ValidationError
 from werkzeug.exceptions import BadRequest, UnsupportedMediaType
 
@@ -214,12 +214,9 @@ class TestFormatValidationErrorMessage:
         class TestModel(BaseModel):
             text: str
 
-        long_value = "x" * 200
-
         try:
-            TestModel(text=123)  # Wrong type to trigger error
-        except ValidationError as e:
-            # Manually create error with long value
+            TestModel(text=123)
+        except ValidationError:
             pass
 
         # Create a model with max_length constraint

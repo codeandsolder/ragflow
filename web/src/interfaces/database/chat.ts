@@ -98,7 +98,7 @@ export interface Message {
   prompt?: string;
   id?: string;
   audio_binary?: string;
-  data?: any;
+  data?: Record<string, unknown>;
   files?: (File | UploadResponseDataType)[];
   chatBoxId?: string;
   attachment?: IAttachment;
@@ -137,7 +137,7 @@ export interface IAnswer {
   prompt?: string;
   id?: string;
   audio_binary?: string;
-  data?: any;
+  data?: Record<string, unknown>;
   chatBoxId?: string;
 }
 
@@ -167,8 +167,8 @@ export interface IToken {
   create_time: number;
   tenant_id: string;
   token: string;
-  update_date?: any;
-  update_time?: any;
+  update_date?: string;
+  update_time?: number;
   beta: string;
 }
 

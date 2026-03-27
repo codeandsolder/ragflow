@@ -418,9 +418,10 @@ async def doc_infos():
             return get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
     docs = DocumentService.get_by_ids(doc_ids)
     docs_list = list(docs.dicts())
-    # Add meta_fields for each document
+    doc_ids_list = [doc["id"] for doc in docs_list]
+    metadata_map = DocMetadataService.get_metadata_for_documents(doc_ids_list, None) if doc_ids_list else {}
     for doc in docs_list:
-        doc["meta_fields"] = DocMetadataService.get_document_metadata(doc["id"])
+        doc["meta_fields"] = metadata_map.get(doc["id"], {})
     return get_json_result(data=docs_list)
 
 

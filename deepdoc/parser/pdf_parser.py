@@ -15,6 +15,7 @@
 #
 
 import asyncio
+import gc
 import logging
 import math
 import os
@@ -32,8 +33,10 @@ import numpy as np
 import pdfplumber
 import xgboost as xgb
 from huggingface_hub import snapshot_download
+from pdfminer.pdfdocument import PDFEncryptionError, PDFPasswordIncorrect
 from PIL import Image
 from pypdf import PdfReader as pdf2_read
+from pypdf.errors import PdfReadError, PdfStreamError
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 
@@ -1579,6 +1582,23 @@ class RAGFlowPdfParser:
 
                     self.total_page = len(self.pdf.pages)
 
+        except PDFEncryptionError as e:
+            logging.error(f"RAGFlowPdfParser __images__, PDF encryption error: {e}")
+            raise ValueError("PDF is encrypted and cannot be processed") from e
+        except PDFPasswordIncorrect as e:
+            logging.error(f"RAGFlowPdfParser __images__, PDF password protected: {e}")
+            raise ValueError("PDF is password protected and cannot be processed") from e
+        except MemoryError as e:
+            logging.error(f"RAGFlowPdfParser __images__, out of memory: {e}")
+            raise
+        except (IOError, OSError) as e:
+            logging.error(f"RAGFlowPdfParser __images__, file I/O error: {e}")
+        except PdfReadError as e:
+            logging.error(f"RAGFlowPdfParser __images__, PDF read error: {e}")
+            raise ValueError("PDF is corrupted or cannot be read") from e
+        except PdfStreamError as e:
+            logging.error(f"RAGFlowPdfParser __images__, PDF stream error: {e}")
+            raise ValueError("PDF stream is corrupted or truncated") from e
         except Exception as e:
             logging.exception(f"RAGFlowPdfParser __images__, exception: {e}")
         logging.info(f"__images__ dedupe_chars cost {timer() - start}s")
@@ -1693,7 +1713,19 @@ class RAGFlowPdfParser:
         self.page_cum_height = np.cumsum(self.page_cum_height)
         assert len(self.page_cum_height) == len(self.page_images) + 1
         if len(self.boxes) == 0 and zoomin < 9:
-            self.__images__(fnm, zoomin * 3, page_from, page_to, callback)
+            self._process_with_zoom(fnm, zoomin, page_from, page_to, callback)
+
+    def _process_with_zoom(self, fnm, zoomin, page_from, page_to, callback, max_depth=2):
+        """Iterative approach to handle zoom factor recursion."""
+        current_zoomin = zoomin
+        for depth in range(max_depth):
+            self.__images__(fnm, current_zoomin, page_from, page_to, callback)
+            if self.boxes:
+                break
+            current_zoomin *= 3
+            if current_zoomin >= 9:
+                break
+            gc.collect()
 
     def __call__(self, fnm, need_image=True, zoomin=3, return_html=False, auto_rotate_tables=None):
         """
@@ -1713,13 +1745,29 @@ class RAGFlowPdfParser:
             auto_rotate_tables = os.getenv("TABLE_AUTO_ROTATE", "true").lower() in ("true", "1", "yes")
 
         self.__images__(fnm, zoomin)
+        gc.collect()
         self._layouts_rec(zoomin)
         self._table_transformer_job(zoomin, auto_rotate=auto_rotate_tables)
         self._text_merge()
         self._concat_downward()
         self._filter_forpages()
         tbls = self._extract_table_figure(need_image, zoomin, return_html, False)
+        self._release_page_images()
+        gc.collect()
         return self.__filterout_scraps(deepcopy(self.boxes), zoomin), tbls
+
+    def _release_page_images(self):
+        """Release page images to free memory after processing."""
+        if hasattr(self, "page_images"):
+            for img in self.page_images:
+                if img is not None:
+                    try:
+                        img.close()
+                    except Exception:
+                        pass
+            self.page_images = []
+        if hasattr(self, "pdf"):
+            self.pdf = None
 
     def parse_into_bboxes(self, fnm, callback=None, zoomin=3):
         start = timer()

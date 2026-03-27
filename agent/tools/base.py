@@ -52,7 +52,14 @@ class LLMToolPluginCallSession(ToolCallSession):
         self.callback = callback
 
     def tool_call(self, name: str, arguments: dict[str, Any]) -> Any:
-        return asyncio.run(self.tool_call_async(name, arguments))
+        try:
+            loop = asyncio.get_running_loop()
+            return loop.run_until_complete(self.tool_call_async(name, arguments))
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            result = loop.run_until_complete(self.tool_call_async(name, arguments))
+            loop.close()
+            return result
 
     async def tool_call_async(self, name: str, arguments: dict[str, Any]) -> Any:
         assert name in self.tools_map, f"LLM tool {name} does not exist"

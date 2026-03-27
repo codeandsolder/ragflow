@@ -23,8 +23,6 @@ from functools import cmp_to_key
 
 
 from common.file_utils import get_project_base_directory
-from .operators import *  # noqa: F403
-from .operators import preprocess
 from . import operators
 from .ocr import load_model
 

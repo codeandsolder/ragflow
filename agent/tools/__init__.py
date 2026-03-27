@@ -23,6 +23,13 @@ _package_path = os.path.dirname(__file__)
 __all_classes: Dict[str, Type] = {}
 
 
+def _extract_classes_from_module(module: ModuleType) -> None:
+    for name, obj in inspect.getmembers(module):
+        if inspect.isclass(obj) and obj.__module__ == module.__name__ and not name.startswith("_"):
+            __all_classes[name] = obj
+            globals()[name] = obj
+
+
 def _import_submodules() -> None:
     for filename in os.listdir(_package_path):  # noqa: F821
         if filename.startswith("__") or not filename.endswith(".py") or filename.startswith("base"):
@@ -34,13 +41,6 @@ def _import_submodules() -> None:
             _extract_classes_from_module(module)  # noqa: F821
         except ImportError as e:
             print(f"Warning: Failed to import module {module_name}: {str(e)}")
-
-
-def _extract_classes_from_module(module: ModuleType) -> None:
-    for name, obj in inspect.getmembers(module):
-        if inspect.isclass(obj) and obj.__module__ == module.__name__ and not name.startswith("_"):
-            __all_classes[name] = obj
-            globals()[name] = obj
 
 
 _import_submodules()

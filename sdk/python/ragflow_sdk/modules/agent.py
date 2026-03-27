@@ -16,6 +16,7 @@
 
 from .base import Base
 from .session import Session
+from .exceptions import APIError
 
 
 class Agent(Base):
@@ -46,7 +47,7 @@ class Agent(Base):
         res = res.json()
         if res.get("code") == 0:
             return Session(self.rag, res.get("data"))
-        raise Exception(res.get("message"))
+        raise APIError(res.get("message"))
 
     def list_sessions(self, page: int = 1, page_size: int = 30, orderby: str = "create_time", desc: bool = True, id: str = None) -> list[Session]:
         res = self.get(f"/agents/{self.id}/sessions", {"page": page, "page_size": page_size, "orderby": orderby, "desc": desc, "id": id})
@@ -57,7 +58,7 @@ class Agent(Base):
                 temp_agent = Session(self.rag, data)
                 result_list.append(temp_agent)
             return result_list
-        raise Exception(res.get("message"))
+        raise APIError(res.get("message"))
 
     def delete_sessions(self, ids: list[str] | None = None, delete_all: bool = False):
         payload = {"ids": ids}
@@ -66,4 +67,4 @@ class Agent(Base):
         res = self.rm(f"/agents/{self.id}/sessions", payload)
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res.get("message"))
+            raise APIError(res.get("message"))

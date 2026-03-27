@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Modal, ModalType } from '@/components/ui/modal/modal';
+import DOMPurify from 'dompurify';
 import { t } from 'i18next';
 import { IDataSourceBase, IDataSourceInfoMap } from '../interface';
 
@@ -25,14 +26,16 @@ export const delSourceModal = <T extends IDataSourceBase>(
           <div
             className="text-base text-text-primary"
             dangerouslySetInnerHTML={{
-              __html: t('setting.deleteSourceModalContent'),
+              __html: DOMPurify.sanitize(t('setting.deleteSourceModalContent')),
             }}
           ></div>
         ) : (
           <div
             className="text-base text-text-primary"
             dangerouslySetInnerHTML={{
-              __html: t('dataflowParser.unlinkSourceModalContent'),
+              __html: DOMPurify.sanitize(
+                t('dataflowParser.unlinkSourceModalContent'),
+              ),
             }}
           />
         )}

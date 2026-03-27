@@ -55,6 +55,25 @@ def _install_rag_llm_stub():
     llm_pkg.Seq2txtModel = {}
     llm_pkg.TTSModel = {}
     llm_pkg.OcrModel = {}
+    # Provide the constants that chat_model.py imports from rag.llm
+    from strenum import StrEnum
+
+    class SupportedLiteLLMProvider(StrEnum):
+        OpenAI = "OpenAI"
+
+    llm_pkg.SupportedLiteLLMProvider = SupportedLiteLLMProvider
+    llm_pkg.FACTORY_DEFAULT_BASE_URL = {}
+    llm_pkg.LITELLM_PROVIDER_PREFIX = {}
+    llm_pkg.MODULE_MAPPING = {}
+    llm_pkg.__all__ = [
+        "ChatModel",
+        "CvModel",
+        "EmbeddingModel",
+        "RerankModel",
+        "Seq2txtModel",
+        "TTSModel",
+        "OcrModel",
+    ]
     sys.modules["rag.llm"] = llm_pkg
 
 

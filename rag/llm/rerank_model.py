@@ -150,6 +150,7 @@ class NvidiaRerank(Base):
         if not base_url:
             base_url = "https://ai.api.nvidia.com/v1/retrieval/nvidia/"
         self.model_name = model_name
+        self.base_url = base_url
 
         if self.model_name == "nvidia/nv-rerankqa-mistral-4b-v3":
             self.base_url = urljoin(base_url, "nv-rerankqa-mistral-4b-v3/reranking")
@@ -552,3 +553,27 @@ class RAGconRerank(Base):
         rank = Base._normalize_rank(rank)
 
         return rank, token_count
+
+
+RerankModel = {
+    "Jina": JinaRerank,
+    "Xinference": XInferenceRerank,
+    "LocalAI": LocalAIRerank,
+    "NVIDIA": NvidiaRerank,
+    "LM-Studio": LmStudioRerank,
+    "OpenAI-API-Compatible": OpenAI_APIRerank,
+    "Cohere": CoHereRerank,
+    "VLLM": CoHereRerank,
+    "TogetherAI": TogetherAIRerank,
+    "SILICONFLOW": SILICONFLOWRerank,
+    "BaiduYiyan": BaiduYiyanRerank,
+    "Voyage AI": VoyageRerank,
+    "Tongyi-Qianwen": QWenRerank,
+    "HuggingFace": HuggingfaceRerank,
+    "GPUStack": GPUStackRerank,
+    "NovitaAI": NovitaRerank,
+    "GiteeAI": GiteeRerank,
+    "302.AI": Ai302Rerank,
+    "Jiekou.AI": JiekouAIRerank,
+    "RAGcon": RAGconRerank,
+}

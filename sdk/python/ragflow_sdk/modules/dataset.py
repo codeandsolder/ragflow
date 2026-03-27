@@ -16,6 +16,7 @@
 from typing import Any
 from .base import Base
 from .document import Document
+from .exceptions import APIError
 
 
 class DataSet(Base):
@@ -45,7 +46,7 @@ class DataSet(Base):
         res = self.put(f"/datasets/{self.id}", update_message)
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
 
         self._update_from_dict(self.rag, res.get("data", {}))
         return self
@@ -61,7 +62,7 @@ class DataSet(Base):
                 document = Document(self.rag, doc)
                 doc_list.append(document)
             return doc_list
-        raise Exception(res.get("message"))
+        raise APIError(res.get("message"))
 
     def list_documents(
         self,
@@ -93,13 +94,13 @@ class DataSet(Base):
             for document in res["data"].get("docs"):
                 documents.append(Document(self.rag, document))
             return documents
-        raise Exception(res["message"])
+        raise APIError(res["message"])
 
     def delete_documents(self, ids: list[str] | None = None, delete_all: bool = False):
         res = self.rm(f"/datasets/{self.id}/documents", {"ids": ids, "delete_all": delete_all})
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
 
     def _get_documents_status(self, document_ids):
         import time
@@ -135,7 +136,7 @@ class DataSet(Base):
         res = self.post(f"/datasets/{self.id}/chunks", {"document_ids": document_ids})
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res.get("message"))
+            raise APIError(res.get("message"))
 
     def parse_documents(self, document_ids):
         try:
@@ -150,7 +151,7 @@ class DataSet(Base):
         res = self.rm(f"/datasets/{self.id}/chunks", {"document_ids": document_ids})
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res.get("message"))
+            raise APIError(res.get("message"))
 
     def get_auto_metadata(self) -> dict[str, Any]:
         """
@@ -160,7 +161,7 @@ class DataSet(Base):
         res = res.json()
         if res.get("code") == 0:
             return res["data"]
-        raise Exception(res["message"])
+        raise APIError(res["message"])
 
     def update_auto_metadata(self, **config: Any) -> dict[str, Any]:
         """
@@ -170,4 +171,4 @@ class DataSet(Base):
         res = res.json()
         if res.get("code") == 0:
             return res["data"]
-        raise Exception(res["message"])
+        raise APIError(res["message"])

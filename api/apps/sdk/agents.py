@@ -39,6 +39,9 @@ from api.utils.api_utils import get_data_error_result, get_error_data_result, ge
 from api.utils.api_utils import get_result
 from quart import request, Response
 from rag.utils.redis_conn import REDIS_CONN
+from quart import Blueprint
+
+manager = Blueprint("agents", __name__)
 
 
 def _get_user_nickname(user_id: str) -> str:
@@ -48,7 +51,7 @@ def _get_user_nickname(user_id: str) -> str:
     return str(getattr(user, "nickname", "") or user_id)
 
 
-@manager.route("/agents", methods=["GET"])  # noqa: F821
+@manager.route("/agents", methods=["GET"])
 @token_required
 def list_agents(tenant_id):
     id = request.args.get("id")

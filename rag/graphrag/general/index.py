@@ -61,7 +61,7 @@ async def run_graphrag(
     for d in settings.retriever.chunk_list(doc_id, tenant_id, [kb_id], max_count=10000, fields=["content_with_weight", "doc_id"], sort_by_position=True):
         chunks.append(d["content_with_weight"])
 
-    timeout_sec = max(120, len(chunks) * 60 * 10) if enable_timeout_assertion else 10000000000
+    timeout_sec = max(120, len(chunks) * 60 * 10) if enable_timeout_assertion else 3600
 
     try:
         subgraph = await asyncio.wait_for(
@@ -239,7 +239,7 @@ async def run_graphrag_for_kb(
 
         kg_extractor = LightKGExt if ("method" not in kb_parser_config.get("graphrag", {}) or kb_parser_config["graphrag"]["method"] != "general") else GeneralKGExt
 
-        deadline = max(120, len(chunks) * 60 * 10) if enable_timeout_assertion else 10000000000
+        deadline = max(120, len(chunks) * 60 * 10) if enable_timeout_assertion else 3600
 
         async with semaphore:
             try:

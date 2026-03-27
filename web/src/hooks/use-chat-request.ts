@@ -78,7 +78,7 @@ export const useFetchDialogList = () => {
       },
     ],
     initialData: { dialogs: [], total: 0 },
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
     queryFn: async () => {
       const { data } = await chatService.listDialog(
@@ -181,7 +181,7 @@ export const useFetchDialog = () => {
     refetch,
   } = useQuery<IDialog>({
     queryKey: [ChatApiAction.FetchDialog, id],
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     initialData: {} as IDialog,
     enabled: !!id,
     refetchOnWindowFocus: false,
@@ -212,7 +212,7 @@ export const useFetchConversationList = () => {
   } = useQuery<IConversation[]>({
     queryKey: [ChatApiAction.FetchConversationList, id],
     initialData: [],
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
     enabled: !!id,
     select(data) {
@@ -441,7 +441,7 @@ export const useFetchExternalChatInfo = () => {
     refetch,
   } = useQuery<IExternalChatInfo>({
     queryKey: [ChatApiAction.FetchExternalChatInfo, id],
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     initialData: {} as IExternalChatInfo,
     enabled: !!id,
     refetchOnWindowFocus: false,
@@ -466,7 +466,7 @@ export const useFetchMindMap = () => {
     mutateAsync,
   } = useMutation({
     mutationKey: [ChatApiAction.FetchMindMap],
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     mutationFn: async (params: IAskRequestBody) => {
       try {
         const ret = await chatService.getMindMap(params);
@@ -491,7 +491,7 @@ export const useFetchRelatedQuestions = () => {
     mutateAsync,
   } = useMutation({
     mutationKey: [ChatApiAction.FetchRelatedQuestions],
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     mutationFn: async (question: string): Promise<string[]> => {
       const { data } = await chatService.getRelatedQuestions({ question });
 
@@ -530,7 +530,7 @@ export const useFetchNextConversationSSE = () => {
   } = useQuery<IClientConversation>({
     queryKey: [ChatApiAction.FetchConversationSse, sharedId],
     initialData: {} as IClientConversation,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
     queryFn: async () => {
       if (isNew !== 'true' && isConversationIdExist(sharedId || '')) {

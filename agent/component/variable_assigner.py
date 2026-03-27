@@ -36,6 +36,10 @@ class VariableAssignerParam(ComponentParamBase):
         return {"items": {"type": "json", "name": "Items"}}
 
 
+class VariableAssignerError(Exception):
+    pass
+
+
 class VariableAssigner(ComponentBase, ABC):
     component_name = "VariableAssigner"
 
@@ -118,9 +122,9 @@ class VariableAssigner(ComponentBase, ABC):
         if variable is None:
             variable = []
         if not isinstance(variable, list):
-            return "ERROR:VARIABLE_NOT_LIST"
+            raise VariableAssignerError("VARIABLE_NOT_LIST")
         elif len(variable) != 0 and not isinstance(parameter, type(variable[0])):
-            return "ERROR:PARAMETER_NOT_LIST_ELEMENT_TYPE"
+            raise VariableAssignerError("PARAMETER_NOT_LIST_ELEMENT_TYPE")
         else:
             variable.append(parameter)
             return variable
@@ -130,11 +134,11 @@ class VariableAssigner(ComponentBase, ABC):
         if variable is None:
             variable = []
         if not isinstance(variable, list):
-            return "ERROR:VARIABLE_NOT_LIST"
+            raise VariableAssignerError("VARIABLE_NOT_LIST")
         elif not isinstance(parameter, list):
-            return "ERROR:PARAMETER_NOT_LIST"
+            raise VariableAssignerError("PARAMETER_NOT_LIST")
         elif len(variable) != 0 and len(parameter) != 0 and not isinstance(parameter[0], type(variable[0])):
-            return "ERROR:PARAMETER_NOT_LIST_ELEMENT_TYPE"
+            raise VariableAssignerError("PARAMETER_NOT_LIST_ELEMENT_TYPE")
         else:
             return variable + parameter
 
@@ -142,7 +146,7 @@ class VariableAssigner(ComponentBase, ABC):
         if len(variable) == 0:
             return variable
         if not isinstance(variable, list):
-            return "ERROR:VARIABLE_NOT_LIST"
+            raise VariableAssignerError("VARIABLE_NOT_LIST")
         else:
             return variable[1:]
 
@@ -150,7 +154,7 @@ class VariableAssigner(ComponentBase, ABC):
         if len(variable) == 0:
             return variable
         if not isinstance(variable, list):
-            return "ERROR:VARIABLE_NOT_LIST"
+            raise VariableAssignerError("VARIABLE_NOT_LIST")
         else:
             return variable[:-1]
 
@@ -163,28 +167,28 @@ class VariableAssigner(ComponentBase, ABC):
         if self.is_number(variable) and self.is_number(parameter):
             return variable + parameter
         else:
-            return "ERROR:VARIABLE_NOT_NUMBER or PARAMETER_NOT_NUMBER"
+            raise VariableAssignerError("VARIABLE_NOT_NUMBER or PARAMETER_NOT_NUMBER")
 
     def _subtract(self, variable, parameter):
         if self.is_number(variable) and self.is_number(parameter):
             return variable - parameter
         else:
-            return "ERROR:VARIABLE_NOT_NUMBER or PARAMETER_NOT_NUMBER"
+            raise VariableAssignerError("VARIABLE_NOT_NUMBER or PARAMETER_NOT_NUMBER")
 
     def _multiply(self, variable, parameter):
         if self.is_number(variable) and self.is_number(parameter):
             return variable * parameter
         else:
-            return "ERROR:VARIABLE_NOT_NUMBER or PARAMETER_NOT_NUMBER"
+            raise VariableAssignerError("VARIABLE_NOT_NUMBER or PARAMETER_NOT_NUMBER")
 
     def _divide(self, variable, parameter):
         if self.is_number(variable) and self.is_number(parameter):
             if parameter == 0:
-                return "ERROR:DIVIDE_BY_ZERO"
+                raise VariableAssignerError("DIVIDE_BY_ZERO")
             else:
                 return variable / parameter
         else:
-            return "ERROR:VARIABLE_NOT_NUMBER or PARAMETER_NOT_NUMBER"
+            raise VariableAssignerError("VARIABLE_NOT_NUMBER or PARAMETER_NOT_NUMBER")
 
     def thoughts(self) -> str:
         return "Assign variables from canvas."

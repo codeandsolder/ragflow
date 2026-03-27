@@ -16,12 +16,37 @@
 from typing import Optional, Any
 
 import requests
+from requests.exceptions import ConnectionError, Timeout, RequestException
 
+from .exceptions import RAGFlowError, APIError, NetworkError, AuthenticationError
 from .modules.agent import Agent
 from .modules.chat import Chat
 from .modules.chunk import Chunk
 from .modules.dataset import DataSet
 from .modules.memory import Memory
+
+
+def _retry_with_backoff(max_retries=3, backoff_factor=1.0, retry_on_exceptions=(ConnectionError, Timeout, RequestException)):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except retry_on_exceptions as e:
+                    last_exception = e
+                    if attempt < max_retries - 1:
+                        import time
+
+                        sleep_time = backoff_factor * (2**attempt)
+                        time.sleep(sleep_time)
+                    else:
+                        raise NetworkError(f"Request failed after {max_retries} attempts: {str(e)}")
+            raise last_exception
+
+        return wrapper
+
+    return decorator
 
 
 class RAGFlow:
@@ -33,20 +58,68 @@ class RAGFlow:
         self.api_url = f"{base_url}/api/{version}"
         self.authorization_header = {"Authorization": "{} {}".format("Bearer", self.user_key)}
 
+    @_retry_with_backoff(max_retries=3, backoff_factor=1.0)
     def post(self, path, json=None, stream=False, files=None):
         res = requests.post(url=self.api_url + path, json=json, headers=self.authorization_header, stream=stream, files=files)
+        if not (200 <= res.status_code < 300):
+            if res.status_code == 401:
+                raise AuthenticationError("Authentication failed. Please check your API key.", details={"status_code": res.status_code})
+            elif res.status_code >= 500:
+                raise APIError(f"Server error: {res.status_code}", status_code=res.status_code)
+            else:
+                try:
+                    error_body = res.json()
+                    raise APIError(error_body.get("message", f"Request failed with status {res.status_code}"), status_code=res.status_code, details=error_body)
+                except Exception:
+                    raise APIError(f"Request failed with status {res.status_code}", status_code=res.status_code)
         return res
 
+    @_retry_with_backoff(max_retries=3, backoff_factor=1.0)
     def get(self, path, params=None, json=None):
         res = requests.get(url=self.api_url + path, params=params, headers=self.authorization_header, json=json)
+        if not (200 <= res.status_code < 300):
+            if res.status_code == 401:
+                raise AuthenticationError("Authentication failed. Please check your API key.", details={"status_code": res.status_code})
+            elif res.status_code >= 500:
+                raise APIError(f"Server error: {res.status_code}", status_code=res.status_code)
+            else:
+                try:
+                    error_body = res.json()
+                    raise APIError(error_body.get("message", f"Request failed with status {res.status_code}"), status_code=res.status_code, details=error_body)
+                except Exception:
+                    raise APIError(f"Request failed with status {res.status_code}", status_code=res.status_code)
         return res
 
+    @_retry_with_backoff(max_retries=3, backoff_factor=1.0)
     def delete(self, path, json):
         res = requests.delete(url=self.api_url + path, json=json, headers=self.authorization_header)
+        if not (200 <= res.status_code < 300):
+            if res.status_code == 401:
+                raise AuthenticationError("Authentication failed. Please check your API key.", details={"status_code": res.status_code})
+            elif res.status_code >= 500:
+                raise APIError(f"Server error: {res.status_code}", status_code=res.status_code)
+            else:
+                try:
+                    error_body = res.json()
+                    raise APIError(error_body.get("message", f"Request failed with status {res.status_code}"), status_code=res.status_code, details=error_body)
+                except Exception:
+                    raise APIError(f"Request failed with status {res.status_code}", status_code=res.status_code)
         return res
 
+    @_retry_with_backoff(max_retries=3, backoff_factor=1.0)
     def put(self, path, json):
         res = requests.put(url=self.api_url + path, json=json, headers=self.authorization_header)
+        if not (200 <= res.status_code < 300):
+            if res.status_code == 401:
+                raise AuthenticationError("Authentication failed. Please check your API key.", details={"status_code": res.status_code})
+            elif res.status_code >= 500:
+                raise APIError(f"Server error: {res.status_code}", status_code=res.status_code)
+            else:
+                try:
+                    error_body = res.json()
+                    raise APIError(error_body.get("message", f"Request failed with status {res.status_code}"), status_code=res.status_code, details=error_body)
+                except Exception:
+                    raise APIError(f"Request failed with status {res.status_code}", status_code=res.status_code)
         return res
 
     def create_dataset(
@@ -77,19 +150,19 @@ class RAGFlow:
         res = res.json()
         if res.get("code") == 0:
             return DataSet(self, res["data"])
-        raise Exception(res["message"])
+        raise APIError(res["message"])
 
     def delete_datasets(self, ids: list[str] | None = None, delete_all: bool = False):
         res = self.delete("/datasets", {"ids": ids, "delete_all": delete_all})
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
 
     def get_dataset(self, name: str):
         _list = self.list_datasets(name=name)
         if len(_list) > 0:
             return _list[0]
-        raise Exception("Dataset %s not found" % name)
+        raise RAGFlowError("Dataset %s not found" % name)
 
     def list_datasets(self, page: int = 1, page_size: int = 30, orderby: str = "create_time", desc: bool = True, id: str | None = None, name: str | None = None) -> list[DataSet]:
         res = self.get(
@@ -109,7 +182,7 @@ class RAGFlow:
             for data in res["data"]:
                 result_list.append(DataSet(self, data))
             return result_list
-        raise Exception(res["message"])
+        raise APIError(res["message"])
 
     def create_chat(self, name: str, avatar: str = "", dataset_ids=None, llm: Chat.LLM | None = None, prompt: Chat.Prompt | None = None) -> Chat:
         if dataset_ids is None:
@@ -163,13 +236,13 @@ class RAGFlow:
         res = res.json()
         if res.get("code") == 0:
             return Chat(self, res["data"])
-        raise Exception(res["message"])
+        raise APIError(res["message"])
 
     def delete_chats(self, ids: list[str] | None = None, delete_all: bool = False):
         res = self.delete("/chats", {"ids": ids, "delete_all": delete_all})
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
 
     def list_chats(self, page: int = 1, page_size: int = 30, orderby: str = "create_time", desc: bool = True, id: str | None = None, name: str | None = None) -> list[Chat]:
         res = self.get(
@@ -189,7 +262,7 @@ class RAGFlow:
             for data in res["data"]:
                 result_list.append(Chat(self, data))
             return result_list
-        raise Exception(res["message"])
+        raise APIError(res["message"])
 
     def retrieve(
         self,
@@ -235,7 +308,7 @@ class RAGFlow:
                 chunk = Chunk(self, chunk_data)
                 chunks.append(chunk)
             return chunks
-        raise Exception(res.get("message"))
+        raise APIError(res.get("message"))
 
     def list_agents(self, page: int = 1, page_size: int = 30, orderby: str = "update_time", desc: bool = True, id: str | None = None, title: str | None = None) -> list[Agent]:
         res = self.get(
@@ -255,7 +328,7 @@ class RAGFlow:
             for data in res["data"]:
                 result_list.append(Agent(self, data))
             return result_list
-        raise Exception(res["message"])
+        raise APIError(res["message"])
 
     def create_agent(self, title: str, dsl: dict, description: str | None = None) -> None:
         req = {"title": title, "dsl": dsl}
@@ -267,7 +340,7 @@ class RAGFlow:
         res = res.json()
 
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
 
     def update_agent(self, agent_id: str, title: str | None = None, description: str | None = None, dsl: dict | None = None) -> None:
         req = {}
@@ -285,21 +358,21 @@ class RAGFlow:
         res = res.json()
 
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
 
     def delete_agent(self, agent_id: str) -> None:
         res = self.delete(f"/agents/{agent_id}", {})
         res = res.json()
 
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
 
     def create_memory(self, name: str, memory_type: list[str], embd_id: str, llm_id: str):
         payload = {"name": name, "memory_type": memory_type, "embd_id": embd_id, "llm_id": llm_id}
         res = self.post("/memories", payload)
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
         return Memory(self, res["data"])
 
     def list_memory(self, page: int = 1, page_size: int = 50, tenant_id: str | list[str] = None, memory_type: str | list[str] = None, storage_type: str = None, keywords: str = None) -> dict:
@@ -316,7 +389,7 @@ class RAGFlow:
         )
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
         result_list = []
         for data in res["data"]["memory_list"]:
             result_list.append(Memory(self, data))
@@ -326,14 +399,14 @@ class RAGFlow:
         res = self.delete(f"/memories/{memory_id}", {})
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
 
-    def add_message(self, memory_id: list[str], agent_id: str, session_id: str, user_input: str, agent_response: str, user_id: str = "") -> str:
-        payload = {"memory_id": memory_id, "agent_id": agent_id, "session_id": session_id, "user_input": user_input, "agent_response": agent_response, "user_id": user_id}
+    def add_message(self, memory_id: str, agent_id: str, session_id: str, user_input: str, agent_response: str, user_id: str = "") -> str:
+        payload = {"memory_id": [memory_id], "agent_id": agent_id, "session_id": session_id, "user_input": user_input, "agent_response": agent_response, "user_id": user_id}
         res = self.post("/messages", payload)
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
         return res["message"]
 
     def search_message(
@@ -351,7 +424,7 @@ class RAGFlow:
         res = self.get("/messages/search", params)
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
         return res["data"]
 
     def get_recent_messages(self, memory_id: list[str], agent_id: str = None, session_id: str = None, limit: int = 10) -> list[dict]:
@@ -359,5 +432,5 @@ class RAGFlow:
         res = self.get("/messages", params)
         res = res.json()
         if res.get("code") != 0:
-            raise Exception(res["message"])
+            raise APIError(res["message"])
         return res["data"]

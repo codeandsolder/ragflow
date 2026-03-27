@@ -31,31 +31,27 @@ from common import settings
 from common.misc_utils import thread_pool_exec
 
 
+CITATION_SIMILARITY_THRESHOLD = 0.63
+CITATION_SIMILARITY_MIN_THRESHOLD = 0.3
+CITATION_THRESHOLD_DECAY = 0.8
+CITATION_MIN_SCORE = 0.99
+MAX_CITATIONS_PER_SENTENCE = 4
+
+
 def index_name(uid):
     return f"ragflow_{uid}"
 
 
-class Dealer:
-    def __init__(self, dataStore: DocStoreConnection):
-        self.qryr = query.FulltextQueryer()
+class Searcher:
+    def __init__(self, qryr: query.FulltextQueryer, dataStore: DocStoreConnection):
+        self.qryr = qryr
         self.dataStore = dataStore
-
-    @dataclass
-    class SearchResult:
-        total: int
-        ids: list[str]
-        query_vector: list[float] | None = None
-        field: dict | None = None
-        highlight: dict | None = None
-        aggregation: list | dict | None = None
-        keywords: list[str] | None = None
-        group_docs: list[list] | None = None
 
     async def get_vector(self, txt, emb_mdl, topk=10, similarity=0.1):
         qv, _ = await thread_pool_exec(emb_mdl.encode_queries, txt)
         shape = np.array(qv).shape
         if len(shape) > 1:
-            raise Exception(f"Dealer.get_vector returned array's shape {shape} doesn't match expectation(exact one dimension).")
+            raise Exception(f"Searcher.get_vector returned array's shape {shape} doesn't match expectation(exact one dimension).")
         embedding_data = [get_float(v) for v in qv]
         vector_column_name = f"q_{len(embedding_data)}_vec"
         return MatchDenseExpr(vector_column_name, embedding_data, "float", "cosine", topk, {"similarity": similarity})
@@ -65,7 +61,6 @@ class Dealer:
         for key, field in {"kb_ids": "kb_id", "doc_ids": "doc_id"}.items():
             if key in req and req[key] is not None:
                 condition[field] = req[key]
-        # TODO(yzc): `available_int` is nullable however infinity doesn't support nullable columns.
         for key in ["knowledge_graph_kwd", "available_int", "entity_kwd", "from_entity_kwd", "to_entity_kwd", "removed_kwd"]:
             if key in req and req[key] is not None:
                 condition[key] = req[key]
@@ -119,7 +114,7 @@ class Dealer:
                 orderBy.desc("create_timestamp_flt")
             res = self.dataStore.search(src, [], filters, [], orderBy, offset, limit, idx_names, kb_ids)
             total = self.dataStore.get_total(res)
-            logging.debug("Dealer.search TOTAL: {}".format(total))
+            logging.debug("Searcher.search TOTAL: {}".format(total))
         else:
             highlightFields = ["content_ltks", "title_tks"]
             if not highlight:
@@ -131,7 +126,7 @@ class Dealer:
                 matchExprs = [matchText]
                 res = await thread_pool_exec(self.dataStore.search, src, highlightFields, filters, matchExprs, orderBy, offset, limit, idx_names, kb_ids, rank_feature=rank_feature)
                 total = self.dataStore.get_total(res)
-                logging.debug("Dealer.search TOTAL: {}".format(total))
+                logging.debug("Searcher.search TOTAL: {}".format(total))
             else:
                 matchDense = await self.get_vector(qst, emb_mdl, topk, req.get("similarity", 0.1))
                 q_vec = matchDense.embedding_data
@@ -143,9 +138,8 @@ class Dealer:
 
                 res = await thread_pool_exec(self.dataStore.search, src, highlightFields, filters, matchExprs, orderBy, offset, limit, idx_names, kb_ids, rank_feature=rank_feature)
                 total = self.dataStore.get_total(res)
-                logging.debug("Dealer.search TOTAL: {}".format(total))
+                logging.debug("Searcher.search TOTAL: {}".format(total))
 
-                # If result is empty, try again with lower min_match
                 if total == 0:
                     if filters.get("doc_id"):
                         res = await thread_pool_exec(self.dataStore.search, src, [], filters, [], orderBy, offset, limit, idx_names, kb_ids)
@@ -157,7 +151,7 @@ class Dealer:
                             self.dataStore.search, src, highlightFields, filters, [matchText, matchDense, fusionExpr], orderBy, offset, limit, idx_names, kb_ids, rank_feature=rank_feature
                         )
                         total = self.dataStore.get_total(res)
-                    logging.debug("Dealer.search 2 TOTAL: {}".format(total))
+                    logging.debug("Searcher.search 2 TOTAL: {}".format(total))
 
             for k in keywords:
                 kwds.add(k)
@@ -173,11 +167,12 @@ class Dealer:
         keywords = list(kwds)
         highlight = self.dataStore.get_highlight(res, keywords, "content_with_weight")
         aggs = self.dataStore.get_aggregation(res, "docnm_kwd")
-        return self.SearchResult(total=total, ids=ids, query_vector=q_vec, aggregation=aggs, highlight=highlight, field=self.dataStore.get_fields(res, src + ["_score"]), keywords=keywords)
+        return SearchResult(total=total, ids=ids, query_vector=q_vec, aggregation=aggs, highlight=highlight, field=self.dataStore.get_fields(res, src + ["_score"]), keywords=keywords)
 
-    @staticmethod
-    def trans2floats(txt):
-        return [get_float(t) for t in txt.split("\t")]
+
+class CitationInserter:
+    def __init__(self, qryr: query.FulltextQueryer):
+        self.qryr = qryr
 
     def insert_citations(self, answer, chunks, chunk_v, embd_mdl, tkweight=0.1, vtweight=0.9):
         assert len(chunks) == len(chunk_v)
@@ -197,12 +192,10 @@ class Dealer:
                         i += 1
                     pieces_.append("".join(pieces[st:i]) + "\n")
                 else:
-                    # Sentence boundary regex includes Arabic punctuation (، ؛ ؟ ۔)
                     pieces_.extend(re.split(r"([^\|][；。？!！،؛؟۔\n]|[a-z\u0600-\u06FF][.?;!،؛؟][ \n])", pieces[i]))
                     i += 1
             pieces = pieces_
         else:
-            # Sentence boundary regex includes Arabic punctuation (، ؛ ؟ ۔)
             pieces = re.split(r"([^\|][；。？!！،؛؟۔\n]|[a-z\u0600-\u06FF][.?;!،؛؟][ \n])", answer)
         for i in range(1, len(pieces)):
             if re.match(r"([^\|][；。？!！،؛؟۔\n]|[a-z\u0600-\u06FF][.?;!،؛؟][ \n])", pieces[i]):
@@ -229,16 +222,16 @@ class Dealer:
 
         chunks_tks = [rag_tokenizer.tokenize(self.qryr.rmWWW(ck)).split() for ck in chunks]
         cites = {}
-        thr = 0.63
-        while thr > 0.3 and len(cites.keys()) == 0 and pieces_ and chunks_tks:
+        thr = CITATION_SIMILARITY_THRESHOLD
+        while thr > CITATION_SIMILARITY_MIN_THRESHOLD and len(cites.keys()) == 0 and pieces_ and chunks_tks:
             for i, a in enumerate(pieces_):
                 sim, tksim, vtsim = self.qryr.hybrid_similarity(ans_v[i], chunk_v, rag_tokenizer.tokenize(self.qryr.rmWWW(pieces_[i])).split(), chunks_tks, tkweight, vtweight)
-                mx = np.max(sim) * 0.99
+                mx = np.max(sim) * CITATION_MIN_SCORE
                 logging.debug("{} SIM: {}".format(pieces_[i], mx))
                 if mx < thr:
                     continue
-                cites[idx[i]] = list(set([str(ii) for ii in range(len(chunk_v)) if sim[ii] > mx]))[:4]
-            thr *= 0.8
+                cites[idx[i]] = list(set([str(ii) for ii in range(len(chunk_v)) if sim[ii] > mx]))[:MAX_CITATIONS_PER_SENTENCE]
+            thr *= CITATION_THRESHOLD_DECAY
 
         res = ""
         seted = set([])
@@ -258,8 +251,12 @@ class Dealer:
 
         return res, seted
 
+
+class Reranker:
+    def __init__(self, qryr: query.FulltextQueryer):
+        self.qryr = qryr
+
     def _rank_feature_scores(self, query_rfea, search_res):
-        ## For rank feature(tag_fea) scores.
         rank_fea = []
         pageranks = []
         for chunk_id in search_res.ids:
@@ -311,7 +308,6 @@ class Dealer:
             tks = content_ltks + title_tks * 2 + important_kwd * 5 + question_tks * 6
             ins_tw.append(tks)
 
-        ## For rank feature(tag_fea) scores.
         rank_fea = self._rank_feature_scores(rank_feature, sres)
 
         sim, tksim, vtsim = self.qryr.hybrid_similarity(sres.query_vector, ins_embd, keywords, ins_tw, tkweight, vtweight)
@@ -334,13 +330,61 @@ class Dealer:
 
         tksim = self.qryr.token_similarity(keywords, ins_tw)
         vtsim, _ = rerank_mdl.similarity(query, [remove_redundant_spaces(" ".join(tks)) for tks in ins_tw])
-        ## For rank feature(tag_fea) scores.
         rank_fea = self._rank_feature_scores(rank_feature, sres)
 
         return tkweight * np.array(tksim) + vtweight * vtsim + rank_fea, tksim, vtsim
 
     def hybrid_similarity(self, ans_embd, ins_embd, ans, inst):
         return self.qryr.hybrid_similarity(ans_embd, ins_embd, rag_tokenizer.tokenize(ans).split(), rag_tokenizer.tokenize(inst).split())
+
+
+@dataclass
+class SearchResult:
+    total: int
+    ids: list[str]
+    query_vector: list[float] | None = None
+    field: dict | None = None
+    highlight: dict | None = None
+    aggregation: list | dict | None = None
+    keywords: list[str] | None = None
+    group_docs: list[list] | None = None
+
+
+class Dealer:
+    def __init__(self, dataStore: DocStoreConnection):
+        self.qryr = query.FulltextQueryer()
+        self.dataStore = dataStore
+        self.searcher = Searcher(self.qryr, dataStore)
+        self.citation_inserter = CitationInserter(self.qryr)
+        self.reranker = Reranker(self.qryr)
+
+    @staticmethod
+    def trans2floats(txt):
+        return [get_float(t) for t in txt.split("\t")]
+
+    def insert_citations(self, answer, chunks, chunk_v, embd_mdl, tkweight=0.1, vtweight=0.9):
+        return self.citation_inserter.insert_citations(answer, chunks, chunk_v, embd_mdl, tkweight, vtweight)
+
+    def _rank_feature_scores(self, query_rfea, search_res):
+        return self.reranker._rank_feature_scores(query_rfea, search_res)
+
+    def rerank(self, sres, query, tkweight=0.3, vtweight=0.7, cfield="content_ltks", rank_feature: dict | None = None):
+        return self.reranker.rerank(sres, query, tkweight, vtweight, cfield, rank_feature)
+
+    def rerank_by_model(self, rerank_mdl, sres, query, tkweight=0.3, vtweight=0.7, cfield="content_ltks", rank_feature: dict | None = None):
+        return self.reranker.rerank_by_model(rerank_mdl, sres, query, tkweight, vtweight, cfield, rank_feature)
+
+    def hybrid_similarity(self, ans_embd, ins_embd, ans, inst):
+        return self.reranker.hybrid_similarity(ans_embd, ins_embd, ans, inst)
+
+    async def search(self, req, idx_names: str | list[str], kb_ids: list[str], emb_mdl=None, highlight: bool | list | None = None, rank_feature: dict | None = None):
+        return await self.searcher.search(req, idx_names, kb_ids, emb_mdl, highlight, rank_feature)
+
+    async def get_vector(self, txt, emb_mdl, topk=10, similarity=0.1):
+        return await self.searcher.get_vector(txt, emb_mdl, topk, similarity)
+
+    def get_filters(self, req):
+        return self.searcher.get_filters(req)
 
     async def retrieval(
         self,
@@ -363,7 +407,6 @@ class Dealer:
         if not question:
             return ranks
 
-        # Ensure RERANK_LIMIT is multiple of page_size
         RERANK_LIMIT = math.ceil(64 / page_size) * page_size if page_size > 1 else 1
         RERANK_LIMIT = max(30, RERANK_LIMIT)
         req = {
@@ -394,13 +437,11 @@ class Dealer:
             )
         else:
             if settings.DOC_ENGINE_INFINITY:
-                # Don't need rerank here since Infinity normalizes each way score before fusion.
                 sim = [sres.field[id].get("_score", 0.0) for id in sres.ids]
                 sim = [s if s is not None else 0.0 for s in sim]
                 tsim = sim
                 vsim = sim
             else:
-                # ElasticSearch doesn't normalize each way score before fusion.
                 sim, tsim, vsim = self.rerank(
                     sres,
                     question,
@@ -416,11 +457,8 @@ class Dealer:
 
         sorted_idx = np.argsort(sim_np * -1)
 
-        # When vector_similarity_weight is 0, similarity_threshold is not meaningful for term-only scores.
         post_threshold = 0.0 if vector_similarity_weight <= 0 else similarity_threshold
 
-        # When doc_ids is explicitly provided (metadata or document filtering), bypass threshold
-        # User wants those specific documents regardless of their relevance score
         if doc_ids:
             post_threshold = 0.0
 
@@ -575,7 +613,7 @@ class Dealer:
         return {a.replace(".", "_"): max(1, c) for a, c in tag_fea}
 
     async def retrieval_by_toc(self, query: str, chunks: list[dict], tenant_ids: list[str], chat_mdl, topn: int = 6):
-        from rag.prompts.generator import relevant_chunks_with_toc  # moved from the top of the file to avoid circular import
+        from rag.prompts.generator import relevant_chunks_with_toc
 
         if not chunks:
             return []

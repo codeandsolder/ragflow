@@ -3,7 +3,7 @@ import os
 import pytest
 from playwright.sync_api import expect
 
-RESULT_TIMEOUT_MS = 15000
+RESULT_TIMEOUT_MS = int(os.getenv("PLAYWRIGHT_RESULT_TIMEOUT_MS", 15000))
 
 
 def _wait_for_login_complete(page, timeout_ms: int = RESULT_TIMEOUT_MS) -> None:

@@ -19,7 +19,6 @@ import functools
 import inspect
 import json
 import logging
-import os
 import sys
 import time
 from copy import deepcopy
@@ -32,7 +31,7 @@ from quart import (
     request,
     has_app_context,
 )
-from werkzeug.exceptions import BadRequest as WerkzeugBadRequest, Unauthorized as WerkzeugUnauthorized
+from werkzeug.exceptions import BadRequest as WerkzeugBadRequest
 
 try:
     from quart.exceptions import BadRequest as QuartBadRequest
@@ -157,22 +156,51 @@ def validate_request(*args, **kwargs):
     def process_args(input_arguments):
         no_arguments = []
         error_arguments = []
+        type_errors = []
+
         for arg in args:
             if arg not in input_arguments:
                 no_arguments.append(arg)
+                continue
+            val = input_arguments[arg]
+            if val is None:
+                no_arguments.append(arg)
+
         for k, v in kwargs.items():
             config_value = input_arguments.get(k, None)
             if config_value is None:
                 no_arguments.append(k)
+                continue
+
+            if isinstance(v, dict):
+                expected_type = v.get("type")
+                max_length = v.get("max_length")
+                min_length = v.get("min_length")
+                allowed_values = v.get("allowed_values")
+
+                if expected_type is not None:
+                    if not isinstance(config_value, expected_type):
+                        type_errors.append(f"'{k}' must be of type {expected_type.__name__}, got {type(config_value).__name__}")
+                    elif expected_type is str:
+                        if min_length is not None and len(config_value) < min_length:
+                            type_errors.append(f"'{k}' length must be at least {min_length}")
+                        if max_length is not None and len(config_value) > max_length:
+                            type_errors.append(f"'{k}' length must not exceed {max_length}")
+
+                if allowed_values is not None and config_value not in allowed_values:
+                    error_arguments.append((k, allowed_values))
             elif isinstance(v, (tuple, list)):
                 if config_value not in v:
                     error_arguments.append((k, set(v)))
             elif config_value != v:
                 error_arguments.append((k, v))
-        if no_arguments or error_arguments:
+
+        if no_arguments or error_arguments or type_errors:
             error_string = ""
             if no_arguments:
                 error_string += "required argument are missing: {}; ".format(",".join(no_arguments))
+            if type_errors:
+                error_string += "; ".join(type_errors)
             if error_arguments:
                 error_string += "required argument values: {}".format(",".join(["{}={}".format(a[0], a[1]) for a in error_arguments]))
             return error_string
@@ -280,70 +308,13 @@ def build_error_result(code=RetCode.FORBIDDEN, message="success"):
 
 
 def construct_json_result(code: RetCode = RetCode.SUCCESS, message="success", data=None):
-    if data is None:
-        return _safe_jsonify({"code": code, "message": message})
-    return _safe_jsonify({"code": code, "message": message, "data": data})
-
-
-def token_required(func):
-    @wraps(func)
-    async def wrapper(*args, **kwargs):
-        # Validate the token (API Key)
-        if os.environ.get("DISABLE_SDK"):
-            err = WerkzeugUnauthorized(description="`Authorization` can't be empty")
-            err.code = RetCode.SUCCESS
-            raise err
-
-        authorization_str = request.headers.get("Authorization")
-        if not authorization_str:
-            err = WerkzeugUnauthorized(description="`Authorization` can't be empty")
-            err.code = RetCode.SUCCESS
-            raise err
-
-        authorization_list = authorization_str.split()
-        if len(authorization_list) < 2:
-            err = WerkzeugUnauthorized(description="Please check your authorization format.")
-            err.code = RetCode.AUTHENTICATION_ERROR
-            raise err
-
-        token = authorization_list[1]
-        objs = APIToken.query(token=token)
-        if not objs:
-            err = WerkzeugUnauthorized(description="Authentication error: API key is invalid!")
-            err.code = RetCode.AUTHENTICATION_ERROR
-            raise err
-
-        # On success, inject tenant_id into the route function's kwargs
-        kwargs["tenant_id"] = objs[0].tenant_id
-        result = func(*args, **kwargs)
-        if inspect.iscoroutine(result):
-            return await result
-        return result
-
-    return wrapper
+    return get_json_result(code=code, message=message, data=data)
 
 
 def get_result(code=RetCode.SUCCESS, message="", data=None, total=None):
-    """
-    Standard API response format:
-    {
-        "code": 0,
-        "data": [...],        # List or object, backward compatible
-        "total": 47,          # Optional field for pagination
-        "message": "..."      # Error or status message
-    }
-    """
-    response = {"code": code}
-
-    if code == RetCode.SUCCESS:
-        if data is not None:
-            response["data"] = data
-        if total is not None:
-            response["total_datasets"] = total
-    else:
-        response["message"] = message or "Error"
-
-    return _safe_jsonify(response)
+    if total is not None:
+        return get_json_result(code=code, message=message, data={"data": data, "total": total})
+    return get_json_result(code=code, message=message, data=data)
 
 
 def get_error_data_result(

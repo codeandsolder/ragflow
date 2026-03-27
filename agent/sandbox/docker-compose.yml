@@ -5,7 +5,6 @@ services:
       dockerfile: Dockerfile
     image: sandbox-executor-manager:latest
     runtime: runc
-    privileged: true
     ports:
       - "${EXECUTOR_PORT:-9385}:9385"
     volumes:

@@ -24,7 +24,6 @@ from huggingface_hub import snapshot_download
 from common.file_utils import get_project_base_directory
 from common.misc_utils import pip_install_torch
 from common import settings
-from .operators import *  # noqa: F403
 from . import operators
 import math
 import numpy as np
@@ -34,6 +33,25 @@ import onnxruntime as ort
 from .postprocess import build_post_process
 
 loaded_models = {}
+
+CLEAR_LOADED_MODELS = os.environ.get("CLEAR_LOADED_MODELS", "true").lower() in ("true", "1", "yes")
+
+
+def clear_loaded_models():
+    """Clear the loaded models cache to free memory."""
+    global loaded_models
+    for key in list(loaded_models.keys()):
+        model_tuple = loaded_models[key]
+        if model_tuple and len(model_tuple) >= 1:
+            sess = model_tuple[0]
+            if hasattr(sess, "get_session_options"):
+                sess_options = sess.get_session_options()
+                if sess_options:
+                    pass
+        del loaded_models[key]
+    loaded_models.clear()
+    gc.collect()
+    logging.info("Cleared loaded_models cache")
 
 
 def transform(data, ops=None):
@@ -88,8 +106,9 @@ def load_model(model_dir, nm, device_id: int | None = None):
             target_id = 0 if device_id is None else device_id
             if torch.cuda.is_available() and torch.cuda.device_count() > target_id:
                 return True
-        except Exception:
-            return False
+            logging.info("CUDA not available: torch.cuda.is_available()=%s, device_count=%s", torch.cuda.is_available(), torch.cuda.device_count() if "torch" in dir() else 0)
+        except Exception as e:
+            logging.warning("Failed to check CUDA availability: %s", e)
         return False
 
     options = ort.SessionOptions()
@@ -360,20 +379,22 @@ class TextRecognizer:
             norm_img_batch = np.concatenate(norm_img_batch)
             norm_img_batch = norm_img_batch.copy()
 
-            input_dict = {}
-            input_dict[self.input_tensor.name] = norm_img_batch
-            for i in range(100000):
-                try:
-                    outputs = self.predictor.run(None, input_dict, self.run_options)
-                    break
-                except Exception as e:
-                    if i >= 3:
-                        raise e
-                    time.sleep(5)
-            preds = outputs[0]
-            rec_result = self.postprocess_op(preds)
-            for rno in range(len(rec_result)):
-                rec_res[indices[beg_img_no + rno]] = rec_result[rno]
+        input_dict = {}
+        input_dict[self.input_tensor.name] = norm_img_batch
+        for attempt in range(4):
+            try:
+                outputs = self.predictor.run(None, input_dict, self.run_options)
+                break
+            except Exception as e:
+                if attempt >= 3:
+                    logging.error("TextRecognizer inference failed after 4 attempts: %s", e)
+                    raise e
+                logging.warning("TextRecognizer inference attempt %d failed, retrying in %ds: %s", attempt + 1, 2**attempt, e)
+                time.sleep(2**attempt)
+        preds = outputs[0]
+        rec_result = self.postprocess_op(preds)
+        for rno in range(len(rec_result)):
+            rec_res[indices[beg_img_no + rno]] = rec_result[rno]
 
         return rec_res, time.time() - st
 
@@ -471,14 +492,16 @@ class TextDetector:
         img = img.copy()
         input_dict = {}
         input_dict[self.input_tensor.name] = img
-        for i in range(100000):
+        for attempt in range(4):
             try:
                 outputs = self.predictor.run(None, input_dict, self.run_options)
                 break
             except Exception as e:
-                if i >= 3:
+                if attempt >= 3:
+                    logging.error("TextDetector inference failed after 4 attempts: %s", e)
                     raise e
-                time.sleep(5)
+                logging.warning("TextDetector inference attempt %d failed, retrying in %ds: %s", attempt + 1, 2**attempt, e)
+                time.sleep(2**attempt)
 
         post_result = self.postprocess_op({"maps": outputs[0]}, shape_list)
         dt_boxes = post_result[0]["points"]

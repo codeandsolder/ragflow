@@ -24,6 +24,7 @@ from common import (
     bulk_upload_documents,
     delete_chunks,
     delete_dialogs,
+    delete_document,
     list_chunks,
     list_documents,
     list_datasets,
@@ -146,12 +147,12 @@ def add_dataset_func(request: FixtureRequest, WebApiAuth: RAGFlowWebApiAuth) -> 
 
 @pytest.fixture(scope="class")
 def add_document(request, WebApiAuth, add_dataset, ragflow_tmp_dir):
-    #     def cleanup():
-    #         res = list_documents(WebApiAuth, {"kb_id": dataset_id})
-    #         for doc in res["data"]["docs"]:
-    #             delete_document(WebApiAuth, {"doc_id": doc["id"]})
+    def cleanup():
+        res = list_documents(WebApiAuth, {"kb_id": dataset_id})
+        for doc in res["data"]["docs"]:
+            delete_document(WebApiAuth, {"doc_id": doc["id"]})
 
-    #     request.addfinalizer(cleanup)
+    request.addfinalizer(cleanup)
 
     dataset_id = add_dataset
     return dataset_id, bulk_upload_documents(WebApiAuth, dataset_id, 1, ragflow_tmp_dir)[0]

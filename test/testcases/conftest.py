@@ -15,6 +15,7 @@
 #
 
 import importlib
+import os
 import sys
 import types
 
@@ -91,9 +92,23 @@ def _install_scholarly_stub():
 _install_rag_llm_stubs()
 _install_scholarly_stub()
 
+
+ragflow_sdk_path = os.path.join(os.path.dirname(__file__), "..", "sdk", "python")
+if ragflow_sdk_path not in sys.path:
+    sys.path.insert(0, ragflow_sdk_path)
+
+testcases_path = os.path.dirname(__file__)
+if testcases_path not in sys.path:
+    sys.path.insert(0, testcases_path)
+
+import os
+
 import pytest
 import requests
 from configs import EMAIL, HOST_ADDRESS, PASSWORD, VERSION, ZHIPU_AI_API_KEY
+
+DEFAULT_LLM_ID = os.getenv("TEST_LLM_ID", "glm-4-flash@ZHIPU-AI")
+DEFAULT_EMBD_ID = os.getenv("TEST_EMBD_ID", "BAAI/bge-small-en-v1.5@Builtin")
 
 MARKER_EXPRESSIONS = {
     "p1": "p1",
@@ -219,8 +234,8 @@ def set_tenant_info(auth):
     authorization = {"Authorization": auth}
     tenant_info = {
         "tenant_id": tenant_id,
-        "llm_id": "glm-4-flash@ZHIPU-AI",
-        "embd_id": "BAAI/bge-small-en-v1.5@Builtin",
+        "llm_id": os.getenv("TEST_LLM_ID", DEFAULT_LLM_ID),
+        "embd_id": os.getenv("TEST_EMBD_ID", DEFAULT_EMBD_ID),
         "img2txt_id": "",
         "asr_id": "",
         "tts_id": None,
