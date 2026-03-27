@@ -64,8 +64,8 @@ def _install_xgboost_stub_if_unavailable():
 _install_cv2_stub_if_unavailable()
 _install_xgboost_stub_if_unavailable()
 
-from api.db.services import file_service as file_service_module  # noqa: E402
-from api.db.services.file_service import FileService  # noqa: E402
+import api.db.services.file_service as file_service_module
+from api.db.services.file_service import FileService
 
 
 class _DummyUploadFile:

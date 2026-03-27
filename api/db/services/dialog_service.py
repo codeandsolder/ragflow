@@ -46,6 +46,7 @@ from common.token_utils import num_tokens_from_string
 from rag.utils.tavily_conn import Tavily
 from common.string_utils import remove_redundant_spaces
 from common import settings
+from common.sql_validation import validate_text_to_sql, SQLValidationError
 
 
 class DialogService(CommonService):
@@ -167,16 +168,18 @@ class DialogService(CommonService):
     def get_all_dialogs_by_tenant_id(cls, tenant_id):
         fields = [cls.model.id]
         dialogs = cls.model.select(*fields).where(cls.model.tenant_id == tenant_id)
-        dialogs.order_by(cls.model.create_time.asc())
-        offset, limit = 0, 100
+        limit = 100
         res = []
+        last_id = None
         while True:
-            d_batch = dialogs.offset(offset).limit(limit)
-            _temp = list(d_batch.dicts())
-            if not _temp:
+            query = dialogs.limit(limit).order_by(cls.model.id.asc())
+            if last_id:
+                query = query.where(cls.model.id > last_id)
+            d_batch = list(query.dicts())
+            if not d_batch:
                 break
-            res.extend(_temp)
-            offset += limit
+            res.extend(d_batch)
+            last_id = d_batch[-1]["id"]
         return res
 
     @classmethod
@@ -918,6 +921,16 @@ Write SQL using exact field names above. Include doc_id, docnm_kwd for data quer
 
         logging.debug(f"{question} get SQL(refined): {sql}")
         tried_times += 1
+
+        allowed_tables = {table_name.lower()}
+        allowed_columns = {k.lower() for k in field_map.keys()}
+        allowed_columns.update({"doc_id", "docnm_kwd", "docnm", "kb_id", "id", "chunk_data", "content", "content_with_weight", "page_num", "position"})
+        try:
+            validate_text_to_sql(sql, allowed_tables, allowed_columns)
+        except SQLValidationError as e:
+            logging.warning(f"use_sql: SQL validation failed: {e}. SQL: {sql}")
+            raise
+
         logging.debug(f"use_sql: Executing SQL retrieval (attempt {tried_times})")
         tbl = settings.retriever.sql_retrieval(sql, format="json")
         if tbl is None:

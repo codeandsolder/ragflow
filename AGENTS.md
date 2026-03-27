@@ -204,7 +204,43 @@ npm run lint:fix    # ESLint with auto-fix
 - `pyproject.toml` - Python dependencies (uses uv)
 - `web/package.json` - Frontend dependencies and scripts
 
-## 9. Common Development Tasks
+## 9. Environment Variables
+
+### LOCAL_DEPLOYMENT
+
+The `LOCAL_DEPLOYMENT` environment variable controls security-sensitive behaviors that are theoretically unsafe but practically acceptable in controlled environments.
+
+**Values**: `true`, `1`, `yes` (case-insensitive) to enable; any other value disables.
+
+**Default**: `false`
+
+**Effects when enabled**:
+
+- **Container reuse in sandbox**: The code execution sandbox will reuse containers instead of recreating them after each execution. This improves performance but means:
+  - State persists between executions (files, environment variables)
+  - Potentially malicious code could leave artifacts for subsequent executions
+  - Only safe in trusted, isolated environments (e.g., local development, air-gapped deployments)
+
+**When to enable**:
+- Local development where all code is trusted
+- Air-gapped/on-premise deployments with trusted users
+- CI/CD pipelines with isolated execution environments
+
+**When to disable (default)**:
+- Production deployments with untrusted user code
+- Multi-tenant environments
+- Any scenario where code isolation between executions is critical
+
+**Example**:
+```bash
+# Enable for local development
+export LOCAL_DEPLOYMENT=true
+
+# Or in docker/.env
+LOCAL_DEPLOYMENT=true
+```
+
+## 10. Common Development Tasks
 
 ### Adding a New API Endpoint
 
@@ -226,7 +262,7 @@ npm run lint:fix    # ESLint with auto-fix
 2. Add migration if needed (check existing migration patterns)
 3. Update service layer in `api/db/services/`
 
-## 10. Development Environment Requirements
+## 11. Development Environment Requirements
 
 - Python 3.10-3.12
 - Node.js >=18.20.4

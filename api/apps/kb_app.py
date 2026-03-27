@@ -44,11 +44,12 @@ from rag.utils.redis_conn import REDIS_CONN
 from common.constants import RetCode, PipelineTaskType, VALID_TASK_STATUS, LLMType
 from common import settings
 from common.doc_store.doc_store_base import OrderByExpr
-from api.apps import login_required, current_user
+from api.apps import login_required, current_user, resource_owner_required
 
 
 @manager.route("/update_metadata_setting", methods=["post"])  # noqa: F821
 @login_required
+@resource_owner_required
 @validate_request("kb_id", "metadata")
 async def update_metadata_setting():
     req = await get_request_json()
@@ -64,15 +65,10 @@ async def update_metadata_setting():
 
 @manager.route("/detail", methods=["GET"])  # noqa: F821
 @login_required
+@resource_owner_required
 def detail():
     kb_id = request.args["kb_id"]
     try:
-        tenants = UserTenantService.query(user_id=current_user.id)
-        for tenant in tenants:
-            if KnowledgebaseService.query(tenant_id=tenant.tenant_id, id=kb_id):
-                break
-        else:
-            return get_json_result(data=False, message="Only owner of dataset authorized for this operation.", code=RetCode.OPERATING_ERROR)
         kb = KnowledgebaseService.get_detail(kb_id)
         if not kb:
             return get_data_error_result(message="Can't find this dataset!")
@@ -91,10 +87,8 @@ def detail():
 
 @manager.route("/<kb_id>/tags", methods=["GET"])  # noqa: F821
 @login_required
+@resource_owner_required
 def list_tags(kb_id):
-    if not KnowledgebaseService.accessible(kb_id, current_user.id):
-        return get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
-
     tenants = UserTenantService.get_tenants_by_user_id(current_user.id)
     tags = []
     for tenant in tenants:
@@ -104,12 +98,9 @@ def list_tags(kb_id):
 
 @manager.route("/tags", methods=["GET"])  # noqa: F821
 @login_required
+@resource_owner_required
 def list_tags_from_kbs():
     kb_ids = request.args.get("kb_ids", "").split(",")
-    for kb_id in kb_ids:
-        if not KnowledgebaseService.accessible(kb_id, current_user.id):
-            return get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
-
     tenants = UserTenantService.get_tenants_by_user_id(current_user.id)
     tags = []
     for tenant in tenants:
@@ -119,10 +110,9 @@ def list_tags_from_kbs():
 
 @manager.route("/<kb_id>/rm_tags", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 async def rm_tags(kb_id):
     req = await get_request_json()
-    if not KnowledgebaseService.accessible(kb_id, current_user.id):
-        return get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
     e, kb = KnowledgebaseService.get_by_id(kb_id)
 
     for t in req["tags"]:
@@ -132,10 +122,9 @@ async def rm_tags(kb_id):
 
 @manager.route("/<kb_id>/rename_tag", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 async def rename_tags(kb_id):
     req = await get_request_json()
-    if not KnowledgebaseService.accessible(kb_id, current_user.id):
-        return get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
     e, kb = KnowledgebaseService.get_by_id(kb_id)
 
     settings.docStoreConn.update(
@@ -204,21 +193,17 @@ def delete_knowledge_graph(kb_id):
 
 @manager.route("/get_meta", methods=["GET"])  # noqa: F821
 @login_required
+@resource_owner_required
 def get_meta():
     kb_ids = request.args.get("kb_ids", "").split(",")
-    for kb_id in kb_ids:
-        if not KnowledgebaseService.accessible(kb_id, current_user.id):
-            return get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
     return get_json_result(data=DocMetadataService.get_flatted_meta_by_kbs(kb_ids))
 
 
 @manager.route("/basic_info", methods=["GET"])  # noqa: F821
 @login_required
+@resource_owner_required
 def get_basic_info():
     kb_id = request.args.get("kb_id", "")
-    if not KnowledgebaseService.accessible(kb_id, current_user.id):
-        return get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
-
     basic_info = DocumentService.knowledgebase_basic_info(kb_id)
 
     return get_json_result(data=basic_info)
@@ -226,6 +211,7 @@ def get_basic_info():
 
 @manager.route("/list_pipeline_logs", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 async def list_pipeline_logs():
     kb_id = request.args.get("kb_id")
     if not kb_id:
@@ -270,6 +256,7 @@ async def list_pipeline_logs():
 
 @manager.route("/list_pipeline_dataset_logs", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 async def list_pipeline_dataset_logs():
     kb_id = request.args.get("kb_id")
     if not kb_id:
@@ -304,6 +291,7 @@ async def list_pipeline_dataset_logs():
 
 @manager.route("/delete_pipeline_logs", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 async def delete_pipeline_logs():
     kb_id = request.args.get("kb_id")
     if not kb_id:
@@ -319,6 +307,7 @@ async def delete_pipeline_logs():
 
 @manager.route("/pipeline_log_detail", methods=["GET"])  # noqa: F821
 @login_required
+@resource_owner_required
 def pipeline_log_detail():
     log_id = request.args.get("log_id")
     if not log_id:
@@ -474,6 +463,7 @@ def trace_raptor():
 
 @manager.route("/run_mindmap", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 async def run_mindmap():
     req = await get_request_json()
 
@@ -521,6 +511,7 @@ async def run_mindmap():
 
 @manager.route("/trace_mindmap", methods=["GET"])  # noqa: F821
 @login_required
+@resource_owner_required
 def trace_mindmap():
     kb_id = request.args.get("kb_id", "")
     if not kb_id:
@@ -543,6 +534,7 @@ def trace_mindmap():
 
 @manager.route("/unbind_task", methods=["DELETE"])  # noqa: F821
 @login_required
+@resource_owner_required
 def delete_kb_task():
     kb_id = request.args.get("kb_id", "")
     if not kb_id:
@@ -590,6 +582,7 @@ def delete_kb_task():
 
 @manager.route("/check_embedding", methods=["post"])  # noqa: F821
 @login_required
+@resource_owner_required
 async def check_embedding():
 
     def _guess_vec_field(src: dict) -> str | None:

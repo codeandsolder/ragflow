@@ -52,16 +52,18 @@ class UserCanvasVersionService(CommonService):
     def get_all_canvas_version_by_canvas_ids(cls, canvas_ids):
         fields = [cls.model.id]
         versions = cls.model.select(*fields).where(cls.model.user_canvas_id.in_(canvas_ids))
-        versions.order_by(cls.model.create_time.asc())
-        offset, limit = 0, 100
+        limit = 100
         res = []
+        last_id = None
         while True:
-            version_batch = versions.offset(offset).limit(limit)
-            _temp = list(version_batch.dicts())
-            if not _temp:
+            query = versions.limit(limit).order_by(cls.model.id.asc())
+            if last_id:
+                query = query.where(cls.model.id > last_id)
+            version_batch = list(query.dicts())
+            if not version_batch:
                 break
-            res.extend(_temp)
-            offset += limit
+            res.extend(version_batch)
+            last_id = version_batch[-1]["id"]
         return res
 
     @classmethod

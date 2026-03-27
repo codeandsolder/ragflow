@@ -52,16 +52,18 @@ class ConversationService(CommonService):
     @DB.connection_context()
     def get_all_conversation_by_dialog_ids(cls, dialog_ids):
         sessions = cls.model.select().where(cls.model.dialog_id.in_(dialog_ids))
-        sessions.order_by(cls.model.create_time.asc())
-        offset, limit = 0, 100
+        limit = 100
         res = []
+        last_id = None
         while True:
-            s_batch = sessions.offset(offset).limit(limit)
-            _temp = list(s_batch.dicts())
-            if not _temp:
+            query = sessions.limit(limit).order_by(cls.model.id.asc())
+            if last_id:
+                query = query.where(cls.model.id > last_id)
+            s_batch = list(query.dicts())
+            if not s_batch:
                 break
-            res.extend(_temp)
-            offset += limit
+            res.extend(s_batch)
+            last_id = s_batch[-1]["id"]
         return res
 
 

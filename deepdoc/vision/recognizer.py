@@ -274,7 +274,7 @@ class Recognizer:
                 preprocess_ops.append(getattr(operators, op_type)(**new_op_info))
 
             for im_path in image_list:
-                im, im_info = preprocess(im_path, preprocess_ops)
+                im, im_info = operators.preprocess(im_path, preprocess_ops)
                 inputs.append({"image": np.array((im,)).astype("float32"), "scale_factor": np.array((im_info["scale_factor"],)).astype("float32")})
         else:
             hh, ww = self.input_shape
@@ -396,10 +396,20 @@ class Recognizer:
             start_index = i * batch_size
             end_index = min((i + 1) * batch_size, len(images))
             batch_image_list = images[start_index:end_index]
-            inputs = self.preprocess(batch_image_list)
-            logging.debug("preprocess")
-            for ins in inputs:
-                bb = self.postprocess(self.ort_sess.run(None, {k: v for k, v in ins.items() if k in self.input_names}, self.run_options)[0], ins, thr)
+            inputs_list = self.preprocess(batch_image_list)
+
+            # Combine individual inputs into a single batched input
+            batched_inputs = {}
+            for name in self.input_names:
+                if name in inputs_list[0]:
+                    batched_inputs[name] = np.concatenate([inp[name] for inp in inputs_list], axis=0)
+
+            # Run inference for the whole batch
+            outputs = self.ort_sess.run(None, {k: v for k, v in batched_inputs.items() if k in self.input_names}, self.run_options)
+
+            # Postprocess each image in batch
+            for j in range(len(inputs_list)):
+                bb = self.postprocess(outputs[0][j], inputs_list[j], thr)
                 res.append(bb)
 
         # seeit.save_results(image_list, res, self.label_list, threshold=thr)

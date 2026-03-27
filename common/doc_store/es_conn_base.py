@@ -28,6 +28,7 @@ from elasticsearch.client import IndicesClient
 from common.file_utils import get_project_base_directory
 from common.misc_utils import convert_bytes
 from common.doc_store.doc_store_base import DocStoreConnection, OrderByExpr, MatchExpr
+from common.sql_validation import validate_text_to_sql, SQLValidationError
 from rag.nlp import is_english, rag_tokenizer
 from common import settings
 
@@ -287,6 +288,38 @@ class ESConnectionBase(DocStoreConnection):
     """
 
     def sql(self, sql: str, fetch_size: int, format: str):
+        # Extract index name from SQL for validation
+        table_match = re.search(r"FROM\s+([a-zA-Z0-9_]+)", sql, re.IGNORECASE)
+        table_name = table_match.group(1).lower() if table_match else ""
+
+        # Build allowed columns - common ES fields
+        allowed_columns = {
+            "doc_id",
+            "docnm_kwd",
+            "docnm",
+            "kb_id",
+            "id",
+            "content",
+            "content_with_weight",
+            "page_num",
+            "position",
+            "title",
+            "title_tks",
+            "title_sm_tks",
+            "content_ltks",
+            "content_kwd",
+            "tag_kwd",
+            "important_kwd",
+            "_score",
+        }
+
+        # Validate SQL before execution
+        try:
+            validate_text_to_sql(sql, {table_name}, allowed_columns)
+        except SQLValidationError as e:
+            self.logger.warning(f"ESConnection.sql validation failed: {e}")
+            raise
+
         self.logger.debug(f"ESConnection.sql get sql: {sql}")
         sql = re.sub(r"[ `]+", " ", sql)
         sql = sql.replace("%", "")

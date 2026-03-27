@@ -181,7 +181,7 @@ export const useFetchFileList = () => {
       },
     ],
     initialData: { files: [], parent_folder: {} as IFolder, total: 0 },
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await fileManagerService.listFile({
         parent_id: id,
@@ -312,7 +312,7 @@ export const useConnectToKnowledge = () => {
 export const useFetchPureFileList = () => {
   const { mutateAsync, isPending: loading } = useMutation({
     mutationKey: [FileApiAction.FetchPureFileList],
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
 
     mutationFn: async (parentId: string) => {
       const { data } = await fileManagerService.listFile({

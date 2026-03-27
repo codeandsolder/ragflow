@@ -18,7 +18,7 @@ import logging
 import random
 from collections import Counter, defaultdict
 
-from common.token_utils import num_tokens_from_string
+from common.token_utils import num_tokens_from_string, encoder
 import re
 import copy
 import roman_numbers as r
@@ -1175,7 +1175,10 @@ def naive_merge(sections: str | list, chunk_token_num=128, delimiter="\n。；�
         if cks[-1] == "" or tk_nums[-1] > chunk_token_num * (100 - overlapped_percent) / 100.0:
             if cks:
                 overlapped = RAGFlowPdfParser.remove_tag(cks[-1])
-                t = overlapped[int(len(overlapped) * (100 - overlapped_percent) / 100.0) :] + t
+                codes = encoder.encode(overlapped)
+                overlap_size = int(len(codes) * overlapped_percent / 100.0)
+                if overlap_size > 0:
+                    t = encoder.decode(codes[-overlap_size:]) + t
             if t.find(pos) < 0:
                 t += pos
             cks.append(t)
@@ -1232,7 +1235,10 @@ def naive_merge_with_images(texts, images, chunk_token_num=128, delimiter="\n。
         if cks[-1] == "" or tk_nums[-1] > chunk_token_num * (100 - overlapped_percent) / 100.0:
             if cks:
                 overlapped = RAGFlowPdfParser.remove_tag(cks[-1])
-                t = overlapped[int(len(overlapped) * (100 - overlapped_percent) / 100.0) :] + t
+                codes = encoder.encode(overlapped)
+                overlap_size = int(len(codes) * overlapped_percent / 100.0)
+                if overlap_size > 0:
+                    t = encoder.decode(codes[-overlap_size:]) + t
             if t.find(pos) < 0:
                 t += pos
             cks.append(t)

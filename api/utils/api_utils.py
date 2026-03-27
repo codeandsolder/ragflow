@@ -286,7 +286,12 @@ def get_json_result(code: RetCode = RetCode.SUCCESS, message="success", data=Non
 def apikey_required(func):
     @wraps(func)
     async def decorated_function(*args, **kwargs):
-        token = request.headers.get("Authorization").split()[1]
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return build_error_result(message="API-KEY is required!", code=RetCode.FORBIDDEN)
+        token = auth_header.split()[1] if len(auth_header.split()) > 1 else None
+        if not token:
+            return build_error_result(message="API-KEY is invalid!", code=RetCode.FORBIDDEN)
         objs = APIToken.query(token=token)
         if not objs:
             return build_error_result(message="API-KEY is invalid!", code=RetCode.FORBIDDEN)

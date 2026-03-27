@@ -14,25 +14,15 @@
 #  limitations under the License.
 #
 
-"""Unit tests for api.utils.file_utils (filename_type, thumbnail_img, sanitize_path, read_potential_broken_pdf)."""
+"""Unit tests for api.utils.file_utils (file_utils.filename_type, file_utils.file_utils.thumbnail_img, file_utils.sanitize_path, file_utils.read_potential_broken_pdf)."""
 
 import pytest
 from api.db import FileType
-from api.utils.file_utils import (
-    MAX_BLOB_SIZE_PDF,
-    MAX_BLOB_SIZE_THUMBNAIL,
-    GHOSTSCRIPT_TIMEOUT_SEC,
-    filename_type,
-    thumbnail_img,
-    thumbnail,
-    sanitize_path,
-    read_potential_broken_pdf,
-    repair_pdf_with_ghostscript,
-)
+from api.utils import file_utils
 
 
 class TestFilenameType:
-    """Edge cases and robustness for filename_type."""
+    """Edge cases and robustness for file_utils.filename_type."""
 
     @pytest.mark.parametrize(
         "filename,expected",
@@ -49,7 +39,7 @@ class TestFilenameType:
         ],
     )
     def test_valid_filenames(self, filename, expected):
-        assert filename_type(filename) == expected
+        assert file_utils.filename_type(filename) == expected
 
     @pytest.mark.parametrize(
         "filename",
@@ -62,14 +52,14 @@ class TestFilenameType:
         ],
     )
     def test_invalid_or_empty_returns_other(self, filename):
-        assert filename_type(filename) == FileType.OTHER.value
+        assert file_utils.filename_type(filename) == FileType.OTHER.value
 
     def test_path_with_basename_uses_extension(self):
-        assert filename_type("folder/subfolder/document.pdf") == FileType.PDF.value
+        assert file_utils.filename_type("folder/subfolder/document.pdf") == FileType.PDF.value
 
 
 class TestSanitizePath:
-    """Edge cases for sanitize_path."""
+    """Edge cases for file_utils.sanitize_path."""
 
     @pytest.mark.parametrize(
         "raw,expected",
@@ -85,56 +75,56 @@ class TestSanitizePath:
         ],
     )
     def test_sanitize_cases(self, raw, expected):
-        assert sanitize_path(raw) == expected
+        assert file_utils.sanitize_path(raw) == expected
 
 
 class TestReadPotentialBrokenPdf:
-    """Edge cases and robustness for read_potential_broken_pdf."""
+    """Edge cases and robustness for file_utils.read_potential_broken_pdf."""
 
     def test_none_returns_empty_bytes(self):
-        assert read_potential_broken_pdf(None) == b""
+        assert file_utils.read_potential_broken_pdf(None) == b""
 
     def test_empty_bytes_returns_as_is(self):
-        assert read_potential_broken_pdf(b"") == b""
+        assert file_utils.read_potential_broken_pdf(b"") == b""
 
     def test_non_len_raises_or_returns_empty(self):
         class NoLen:
             pass
 
-        result = read_potential_broken_pdf(NoLen())
+        result = file_utils.read_potential_broken_pdf(NoLen())
         assert result == b""
 
 
 class TestThumbnailImg:
-    """Edge cases for thumbnail_img."""
+    """Edge cases for file_utils.file_utils.thumbnail_img."""
 
     def test_none_blob_returns_none(self):
-        assert thumbnail_img("x.pdf", None) is None
+        assert file_utils.file_utils.thumbnail_img("x.pdf", None) is None
 
     def test_none_filename_returns_none(self):
-        assert thumbnail_img(None, b"fake pdf content") is None
+        assert file_utils.file_utils.thumbnail_img(None, b"fake pdf content") is None
 
     def test_empty_blob_returns_none(self):
-        assert thumbnail_img("x.pdf", b"") is None
+        assert file_utils.file_utils.thumbnail_img("x.pdf", b"") is None
 
     def test_empty_filename_returns_none(self):
-        assert thumbnail_img("", b"x") is None
+        assert file_utils.file_utils.thumbnail_img("", b"x") is None
 
     def test_oversized_blob_returns_none(self):
-        huge = b"x" * (MAX_BLOB_SIZE_THUMBNAIL + 1)
-        assert thumbnail_img("x.pdf", huge) is None
+        huge = b"x" * (file_utils.MAX_BLOB_SIZE_THUMBNAIL + 1)
+        assert file_utils.file_utils.thumbnail_img("x.pdf", huge) is None
 
 
 class TestThumbnail:
-    """thumbnail() wraps thumbnail_img and returns base64 or empty string."""
+    """file_utils.thumbnail() wraps file_utils.file_utils.thumbnail_img and returns base64 or empty string."""
 
     def test_none_img_returns_empty_string(self):
-        assert thumbnail("x.xyz", b"garbage") == ""
+        assert file_utils.thumbnail("x.xyz", b"garbage") == ""
 
     def test_valid_img_returns_base64_prefix(self):
         from api.constants import IMG_BASE64_PREFIX
 
-        result = thumbnail(
+        result = file_utils.thumbnail(
             "x.png",
             b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82",
         )
@@ -142,28 +132,28 @@ class TestThumbnail:
 
 
 class TestRepairPdfWithGhostscript:
-    """repair_pdf_with_ghostscript edge cases."""
+    """file_utils.repair_pdf_with_ghostscript edge cases."""
 
     def test_none_returns_empty_bytes(self):
-        assert repair_pdf_with_ghostscript(None) == b""
+        assert file_utils.repair_pdf_with_ghostscript(None) == b""
 
     def test_empty_bytes_returns_empty(self):
-        assert repair_pdf_with_ghostscript(b"") == b""
+        assert file_utils.repair_pdf_with_ghostscript(b"") == b""
 
     def test_oversized_returns_original_without_calling_gs(self):
-        huge = b"%" * (MAX_BLOB_SIZE_PDF + 1)
-        result = repair_pdf_with_ghostscript(huge)
+        huge = b"%" * (file_utils.MAX_BLOB_SIZE_PDF + 1)
+        result = file_utils.repair_pdf_with_ghostscript(huge)
         assert result == huge
 
 
 class TestConstants:
     """Resource limit constants are positive and reasonable."""
 
-    def test_thumbnail_limit_positive(self):
-        assert MAX_BLOB_SIZE_THUMBNAIL > 0
+    def test_file_utils.thumbnail_limit_positive(self):
+        assert file_utils.MAX_BLOB_SIZE_THUMBNAIL > 0
 
     def test_pdf_limit_positive(self):
-        assert MAX_BLOB_SIZE_PDF > 0
+        assert file_utils.MAX_BLOB_SIZE_PDF > 0
 
     def test_gs_timeout_positive(self):
-        assert GHOSTSCRIPT_TIMEOUT_SEC > 0
+        assert file_utils.GHOSTSCRIPT_TIMEOUT_SEC > 0

@@ -191,7 +191,45 @@ def __get_pdf_from_html(path: str, timeout: int, install_driver: bool, print_opt
 def is_private_ip(ip: str) -> bool:
     try:
         ip_obj = ipaddress.ip_address(ip)
-        return ip_obj.is_private
+        return any(
+            [
+                ip_obj.is_private,
+                ip_obj.is_loopback,
+                ip_obj.is_link_local,
+                ip_obj.is_multicast,
+                ip_obj.is_reserved,
+                ip_obj.is_unspecified,
+            ]
+        )
+    except ValueError:
+        return False
+
+
+def is_reserved_ip(ip: str) -> bool:
+    """Check if IP is in reserved ranges that should be blocked for SSRF protection."""
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+
+        # Specific private ranges to block
+        private_ranges = [
+            ipaddress.IPv4Network("127.0.0.0/8"),  # Loopback
+            ipaddress.IPv4Network("10.0.0.0/8"),  # Private
+            ipaddress.IPv4Network("172.16.0.0/12"),  # Private
+            ipaddress.IPv4Network("192.168.0.0/16"),  # Private
+            ipaddress.IPv4Network("169.254.0.0/16"),  # Link-local
+            ipaddress.IPv4Network("0.0.0.0/8"),  # Current network
+            ipaddress.IPv4Network("::1/128"),  # IPv6 loopback
+            ipaddress.IPv4Network("fe80::/10"),  # IPv6 link-local
+            ipaddress.IPv4Network("fc00::/7"),  # IPv6 unique local
+            ipaddress.IPv4Network("fd00::/8"),  # IPv6 unique local
+            ipaddress.IPv4Network("255.255.255.255/32"),  # Broadcast
+        ]
+
+        for network in private_ranges:
+            if ip_obj in network:
+                return True
+
+        return False
     except ValueError:
         return False
 
@@ -204,12 +242,57 @@ def is_valid_url(url: str) -> bool:
 
     if not hostname:
         return False
+
+    hostname_lower = hostname.lower()
+
+    if hostname_lower in ("localhost", "0.0.0.0", "::1", "::", "[::1]", "[::]"):
+        return False
+
+    if hostname_lower.endswith(".local") or hostname_lower.endswith(".localhost") or hostname_lower.endswith(".internal"):
+        return False
+
+    if hostname_lower.startswith(
+        (
+            "192.168.",
+            "10.",
+            "172.16.",
+            "172.17.",
+            "172.18.",
+            "172.19.",
+            "172.20.",
+            "172.21.",
+            "172.22.",
+            "172.23.",
+            "172.24.",
+            "172.25.",
+            "172.26.",
+            "172.27.",
+            "172.28.",
+            "172.29.",
+            "172.30.",
+            "172.31.",
+            "127.",
+            "169.254.",
+        )
+    ):
+        return False
+
     try:
-        ip = socket.gethostbyname(hostname)
-        if is_private_ip(ip):
+        ip_obj = ipaddress.ip_address(hostname_lower.strip("[]"))
+        if is_reserved_ip(str(ip_obj)):
             return False
+    except ValueError:
+        pass
+
+    try:
+        for _, _, _, _, addrinfo in socket.getaddrinfo(hostname, None):
+            ip = addrinfo[0]
+            if is_reserved_ip(ip):
+                return False
+            break
     except socket.gaierror:
         return False
+
     return True
 
 

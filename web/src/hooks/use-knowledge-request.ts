@@ -160,7 +160,7 @@ export const useFetchNextKnowledgeListByPage = () => {
       kbs: [],
       total_datasets: 0,
     },
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await listDataset({
         page_size: pagination.pageSize,
@@ -402,7 +402,7 @@ export const useFetchKnowledgeBaseConfiguration = (props?: {
   const { data, isFetching: loading } = useQuery<IKnowledge>({
     queryKey,
     initialData: {} as IKnowledge,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       if (isEdit) {
         const { data } = await kbService.get_kb_detail({
@@ -425,7 +425,7 @@ export function useFetchKnowledgeGraph() {
     queryKey: [KnowledgeApiAction.FetchKnowledgeGraph, knowledgeBaseId],
     initialData: { graph: {}, mind_map: {} } as IKnowledgeGraph,
     enabled: !!knowledgeBaseId,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await getKnowledgeGraph(knowledgeBaseId);
       return data?.data;
@@ -442,7 +442,7 @@ export function useFetchKnowledgeMetadata(kbIds: string[] = []) {
     queryKey: [KnowledgeApiAction.FetchMetadata, kbIds],
     initialData: {},
     enabled: kbIds.length > 0,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await kbService.getMeta({ kb_ids: kbIds.join(',') });
       return data?.data ?? {};
@@ -486,7 +486,7 @@ export const useFetchKnowledgeList = (
   const { data, isFetching: loading } = useQuery({
     queryKey: [KnowledgeApiAction.FetchKnowledgeList],
     initialData: [],
-    gcTime: 0, // https://tanstack.com/query/latest/docs/framework/react/guides/caching?from=reactQueryV3
+    gcTime: 5 * 60 * 1000, // https://tanstack.com/query/latest/docs/framework/react/guides/caching?from=reactQueryV3
     queryFn: async () => {
       const { data } = await listDataset();
       const list = data?.data ?? [];
@@ -547,7 +547,7 @@ export const useFetchTagListByKnowledgeIds = () => {
     queryKey: ['fetchTagListByKnowledgeIds'],
     enabled: knowledgeIds.length > 0,
     initialData: [],
-    gcTime: 0, // https://tanstack.com/query/latest/docs/framework/react/guides/caching?from=reactQueryV3
+    gcTime: 5 * 60 * 1000, // https://tanstack.com/query/latest/docs/framework/react/guides/caching?from=reactQueryV3
     queryFn: async () => {
       const { data } = await kbService.listTagByKnowledgeIds({
         kb_ids: knowledgeIds.join(','),
@@ -566,7 +566,7 @@ export const useFetchTagList = () => {
   const { data, isFetching: loading } = useQuery<Array<[string, number]>>({
     queryKey: ['fetchTagList'],
     initialData: [],
-    gcTime: 0, // https://tanstack.com/query/latest/docs/framework/react/guides/caching?from=reactQueryV3
+    gcTime: 5 * 60 * 1000, // https://tanstack.com/query/latest/docs/framework/react/guides/caching?from=reactQueryV3
     queryFn: async () => {
       const { data } = await listTag(knowledgeBaseId);
       const list = data?.data || [];
@@ -618,7 +618,7 @@ export const useTestChunkRetrieval = (): ResponsePostType<ITestingResult> & {
     mutateAsync,
   } = useMutation({
     mutationKey: ['testChunk'], // This method is invalid
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     mutationFn: async (values: any) => {
       const { data } = await kbService.retrieval_test({
         ...values,
@@ -662,7 +662,7 @@ export const useTestChunkAllRetrieval = (): ResponsePostType<ITestingResult> & {
     mutateAsync,
   } = useMutation({
     mutationKey: ['testChunkAll'], // This method is invalid
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     mutationFn: async (values: any) => {
       const { data } = await kbService.retrieval_test({
         ...values,

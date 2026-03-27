@@ -5,7 +5,7 @@ import { BeginQuery } from '@/pages/agent/interface';
 import api from '@/utils/api';
 import { getAuthorization } from '@/utils/authorization-util';
 import { EventSourceParserStream } from 'eventsource-parser/stream';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export enum MessageEventType {
   WorkflowStarted = 'workflow_started',
@@ -94,6 +94,12 @@ export const useSendMessageBySSE = (url: string = api.completeConversation) => {
 
   const initializeSseRef = useCallback(() => {
     sseRef.current = new AbortController();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      sseRef.current?.abort();
+    };
   }, []);
 
   const resetAnswerList = useCallback(() => {

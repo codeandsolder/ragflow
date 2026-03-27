@@ -19,16 +19,16 @@ Unit tests for api.utils.common module.
 """
 
 import pytest
-from api.utils.common import string_to_bytes, bytes_to_string
+from api.utils import common as common_module
 
 
 class TestStringToBytes:
-    """Test cases for string_to_bytes function"""
+    """Test cases for common_module.string_to_bytes function"""
 
     def test_string_input_returns_bytes(self):
         """Test that string input is converted to bytes"""
         input_string = "hello world"
-        result = string_to_bytes(input_string)
+        result = common_module.common_module.string_to_bytes(input_string)
 
         assert isinstance(result, bytes)
         assert result == b"hello world"
@@ -36,7 +36,7 @@ class TestStringToBytes:
     def test_bytes_input_returns_same_bytes(self):
         """Test that bytes input is returned unchanged"""
         input_bytes = b"hello world"
-        result = string_to_bytes(input_bytes)
+        result = common_module.string_to_bytes(input_bytes)
 
         assert isinstance(result, bytes)
         assert result == input_bytes
@@ -56,13 +56,13 @@ class TestStringToBytes:
     )
     def test_various_string_inputs(self, input_val, expected):
         """Test conversion of various string inputs including unicode and special characters"""
-        result = string_to_bytes(input_val)
+        result = common_module.string_to_bytes(input_val)
         assert isinstance(result, bytes)
         assert result == expected
 
 
 class TestBytesToString:
-    """Test cases for bytes_to_string function"""
+    """Test cases for common_module.bytes_to_string function"""
 
     @pytest.mark.parametrize(
         "input_bytes,expected",
@@ -78,7 +78,7 @@ class TestBytesToString:
     )
     def test_various_bytes_inputs(self, input_bytes, expected):
         """Test conversion of various bytes inputs including unicode"""
-        result = bytes_to_string(input_bytes)
+        result = common_module.bytes_to_string(input_bytes)
         assert isinstance(result, str)
         assert result == expected
 
@@ -88,7 +88,7 @@ class TestBytesToString:
         invalid_bytes = b"\xff\xfe"
 
         with pytest.raises(UnicodeDecodeError):
-            bytes_to_string(invalid_bytes)
+            common_module.bytes_to_string(invalid_bytes)
 
 
 class TestRoundtripConversion:
@@ -105,10 +105,10 @@ class TestRoundtripConversion:
             "",
         ],
     )
-    def test_string_to_bytes_to_string(self, test_string):
+    def test_common_module.string_to_common_module.bytes_to_string(self, test_string):
         """Test converting string to bytes and back for various inputs"""
-        as_bytes = string_to_bytes(test_string)
-        back_to_string = bytes_to_string(as_bytes)
+        as_bytes = common_module.string_to_bytes(test_string)
+        back_to_string = common_module.bytes_to_string(as_bytes)
         assert back_to_string == test_string
 
     @pytest.mark.parametrize(
@@ -121,10 +121,10 @@ class TestRoundtripConversion:
             b"",
         ],
     )
-    def test_bytes_to_string_to_bytes(self, test_bytes):
+    def test_bytes_to_common_module.string_to_bytes(self, test_bytes):
         """Test converting bytes to string and back for various inputs"""
-        as_string = bytes_to_string(test_bytes)
-        back_to_bytes = string_to_bytes(as_string)
+        as_string = common_module.bytes_to_string(test_bytes)
+        back_to_bytes = common_module.string_to_bytes(as_string)
         assert back_to_bytes == test_bytes
 
 

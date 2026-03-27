@@ -16,6 +16,7 @@
 import asyncio
 import logging
 import time
+import threading
 from enum import Enum
 
 
@@ -35,6 +36,7 @@ class CircuitBreaker:
         self._state = CircuitState.CLOSED
         self._last_failure_time = 0
         self._lock = asyncio.Lock()
+        self._sync_lock = threading.Lock()
 
     @property
     def state(self):
@@ -60,6 +62,20 @@ class CircuitBreaker:
                 await self._on_failure()
                 raise
 
+    def call_sync(self, func, *args, **kwargs):
+        state = self.state
+        if state == CircuitState.OPEN:
+            raise CircuitBreakerError("Circuit is OPEN. Service unavailable.")
+
+        with self._sync_lock:
+            try:
+                result = func(*args, **kwargs)
+                self._on_success_sync()
+                return result
+            except self._expected_exceptions:
+                self._on_failure_sync()
+                raise
+
     async def _on_success(self):
         self._success_count += 1
         if self._state == CircuitState.HALF_OPEN:
@@ -67,7 +83,21 @@ class CircuitBreaker:
             self._failure_count = 0
             logging.info("Circuit breaker: CLOSED - service recovered")
 
+    def _on_success_sync(self):
+        self._success_count += 1
+        if self._state == CircuitState.HALF_OPEN:
+            self._state = CircuitState.CLOSED
+            self._failure_count = 0
+            logging.info("Circuit breaker: CLOSED - service recovered")
+
     async def _on_failure(self):
+        self._failure_count += 1
+        self._last_failure_time = time.time()
+        if self._failure_count >= self._failure_threshold:
+            self._state = CircuitState.OPEN
+            logging.warning(f"Circuit breaker: OPEN - {self._failure_count} failures reached threshold")
+
+    def _on_failure_sync(self):
         self._failure_count += 1
         self._last_failure_time = time.time()
         if self._failure_count >= self._failure_threshold:

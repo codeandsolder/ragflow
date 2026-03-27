@@ -174,16 +174,18 @@ class FileService(CommonService):
     def get_all_file_ids_by_tenant_id(cls, tenant_id):
         fields = [cls.model.id]
         files = cls.model.select(*fields).where(cls.model.tenant_id == tenant_id)
-        files.order_by(cls.model.create_time.asc())
-        offset, limit = 0, 100
+        limit = 100
         res = []
+        last_id = None
         while True:
-            file_batch = files.offset(offset).limit(limit)
-            _temp = list(file_batch.dicts())
-            if not _temp:
+            query = files.limit(limit).order_by(cls.model.id.asc())
+            if last_id:
+                query = query.where(cls.model.id > last_id)
+            file_batch = list(query.dicts())
+            if not file_batch:
                 break
-            res.extend(_temp)
-            offset += limit
+            res.extend(file_batch)
+            last_id = file_batch[-1]["id"]
         return res
 
     @classmethod
@@ -382,8 +384,7 @@ class FileService(CommonService):
     @classmethod
     @DB.connection_context()
     def get_file_count(cls, tenant_id):
-        files = cls.model.select(cls.model.id).where(cls.model.tenant_id == tenant_id)
-        return len(files)
+        return cls.model.select(cls.model.id).where(cls.model.tenant_id == tenant_id).count()
 
     @classmethod
     @DB.connection_context()

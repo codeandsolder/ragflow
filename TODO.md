@@ -15,10 +15,6 @@ Generated from comprehensive code review of all major modules.
 ## 1. api/ - Backend API Server
 
 ### Security
-- [🔴 **CRITICAL**] CORS allows `*` (any origin) - `apps/__init__.py:61`
-  - Use environment-based allowed origins
-- [🔴 **HIGH**] Password check with decrypted value comparison - `user_app.py:545`
-  - Use hash comparison only
 - [🟠 **MEDIUM**] API key in token_required not validated for None - `apps/__init__.py:261`
   - Add explicit None check
 - [🟡 **MEDIUM**] Broad exception catching leaks info - `api_utils.py:138-153`
@@ -64,10 +60,6 @@ Generated from comprehensive code review of all major modules.
 - [🟡 **MEDIUM**] Magic threshold `0.63` with no explanation - `search.py:232-241`
 - [🟡 **MEDIUM**] Hardcoded fusion weights `0.05,0.95` - `search.py:141`
 
-### Reliability
-- [🟠 **HIGH**] `time.sleep()` blocks event loop - `chat_model.py:319`
-  - Use `asyncio.sleep()` instead
-
 ### Configuration
 - [🟡 **MEDIUM**] No config validation throughout
 - [🟡 **MEDIUM**] Hardcoded 500 char truncation in rerank - `rerank_model.py:533-534`
@@ -78,8 +70,6 @@ Generated from comprehensive code review of all major modules.
 ## 3. deepdoc/ - Document Parsing & OCR
 
 ### Critical Bugs
-- [🔴 **CRITICAL**] Infinite retry loop - `ocr.py:365-372, 474-481`
-  - Cap at 3-5 retries with backoff
 - [🔴 **CRITICAL**] No streaming for large documents - entire PDF loaded
   - Implement page-by-page processing
 - [🔴 **CRITICAL**] Page images at full resolution `72*zoomin` DPI - `pdf_parser.py:1545`
@@ -87,8 +77,6 @@ Generated from comprehensive code review of all major modules.
 - [🟠 **HIGH**] No explicit memory cleanup after processing each page
 
 ### Error Handling
-- [🔴 **CRITICAL**] Bare `except Exception` suppresses all errors - `pdf_parser.py:1582-1583`
-  - Add specific exception handling
 - [🟠 **HIGH**] No PDF validation or file size limits
   - Malformed PDFs could cause indefinite blocking
 - [🟠 **HIGH**] No timeouts on PDF/image operations
@@ -112,22 +100,7 @@ Generated from comprehensive code review of all major modules.
 
 ## 4. agent/ - Canvas Workflow Engine
 
-### Security
-- [🔴 **CRITICAL**] SQL injection in `exesql.py` - `tools/exesql.py:58-115`
-  - Only checks specific password values, doesn't sanitize
-  - Multiple statements via `split(";")` not validated
-
-### Async/Await Bugs
-- [🔴 **CRITICAL**] Nested `asyncio.run()` calls - `component/message.py:77-78`
-  - Will fail in async context
-- [🔴 **CRITICAL**] `await` in non-async function - `message.py:150-151`
-  - Inside `_stream()` sync function
-- [🔴 **CRITICAL**] Blocking `asyncio.run()` - `tools/base.py:54-55`
-  - Creates new event loop in sync context
-
 ### Error Handling
-- [🔴 **CRITICAL**] String error returns instead of exceptions - `variable_assigner.py:121-186`
-  - `"ERROR:VARIABLE_NOT_LIST"` becomes variable value
 - [🟠 **HIGH**] Exception handler bypasses normal flow - `canvas.py:578-587`
   - Goto can skip components that should execute
 
@@ -145,8 +118,6 @@ Generated from comprehensive code review of all major modules.
 ## 5. web/ - React Frontend
 
 ### Security
-- [🔴 **CRITICAL**] `dangerouslySetInnerHTML` without DOMPurify - `delete-source-modal.tsx:27,34`
-  - XSS vulnerability
 - [🟡 **MEDIUM**] `(newConfig as any).skipToken` bypasses type safety - `next-request.ts:96-97`
 - [🟡 **MEDIUM**] No CSRF token handling
 
@@ -157,8 +128,6 @@ Generated from comprehensive code review of all major modules.
 - [🟡 **MEDIUM**] `Service<T>` uses `any` extensively - `register-server.ts:10`
 
 ### Performance
-- [🟠 **HIGH**] `gcTime: 0` disables garbage collection - `use-chat-request.ts:81`
-  - Memory leak risk
 - [🟡 **MEDIUM**] Large Zustand store (659 lines) - `agent/store.ts:122-656`
 - [🟡 **MEDIUM**] Large `useSelectDerivedMessages` hook (200 lines) - `logic-hooks.ts:447-644`
 - [🟡 **MEDIUM**] No `React.memo()` on list item components
@@ -178,9 +147,6 @@ Generated from comprehensive code review of all major modules.
 ## 6. docker/ - Docker Deployment
 
 ### Security
-- [🔴 **CRITICAL**] Hardcoded default passwords - `.env:42,52,111,138,146`
-  - All identical: `infini_rag_flow`
-  - Generate: `openssl rand -hex 32`
 - [🔴 **CRITICAL**] Passwords in health check commands visible in process list
   - `docker-compose-base.yml:115,140`
 - [🔴 **CRITICAL**] Exposed management ports (MySQL, Redis, MinIO)
@@ -197,8 +163,6 @@ Generated from comprehensive code review of all major modules.
 - [🟠 **HIGH**] `eval` usage in entrypoint.sh - `entrypoint.sh:161-172`
 
 ### Nginx
-- [🟠 **HIGH**] Missing security headers
-  - X-Frame-Options, X-Content-Type-Options, X-XSS-Protection
 - [🟠 **HIGH**] No rate limiting configured
 - [🟡 **MEDIUM**] Worker connections too low (1024)
 
@@ -212,8 +176,6 @@ Generated from comprehensive code review of all major modules.
 ## 7. sdk/ - Python SDK
 
 ### Error Handling
-- [🔴 **CRITICAL**] No retry logic anywhere in the SDK
-  - Network failures propagate unhandled
 - [🔴 **CRITICAL**] Generic `Exception` only - no custom exception hierarchy
   - Callers can't distinguish error types
 - [🔴 **CRITICAL**] No HTTP status code validation
@@ -281,28 +243,10 @@ Generated from comprehensive code review of all major modules.
 
 ## Quick Wins (High Impact, Low Effort)
 
-1. Generate random passwords in `.env`:
-```bash
-openssl rand -hex 32
-```
-
-2. Add DOMPurify to `dangerouslySetInnerHTML` in `web/`
-
-3. Fix infinite retry loops in `deepdoc/vision/ocr.py`:
-```python
-# Change from 100000 to 3-5
-for i in range(5):
-```
-
-4. Remove dead code in `api/apps/kb_app.py:49-324`
-
-5. Add resource limits to RAGFlow services in `docker-compose.yml`
-
-6. Implement `__enter__`/`__exit__` on `RAGFlow` client class
-
-7. Fix nested `asyncio.run()` calls in `agent/component/message.py`
-
-8. Create custom exception hierarchy in `sdk/ragflow_sdk/`
+1. Remove dead code in `api/apps/kb_app.py:49-324`
+2. Add resource limits to RAGFlow services in `docker-compose.yml`
+3. Implement `__enter__`/`__exit__` on `RAGFlow` client class
+4. Create custom exception hierarchy in `sdk/ragflow_sdk/`
 
 ---
 

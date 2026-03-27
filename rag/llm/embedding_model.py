@@ -31,16 +31,13 @@ from common.token_utils import num_tokens_from_string, truncate, total_token_cou
 from common import settings
 import logging
 import base64
+from rag.llm.remote_model_base import RemoteModelBase
 
 
-class Base(ABC):
+class Base(RemoteModelBase, ABC):
     def __init__(self, key, model_name, **kwargs):
-        """
-        Constructor for abstract base class.
-        Parameters are accepted for interface consistency but are not stored.
-        Subclasses should implement their own initialization as needed.
-        """
-        pass
+        super().__init__(**kwargs)
+        self.model_name = model_name
 
     def encode(self, texts: list):
         raise NotImplementedError("Please implement encode method!")
@@ -100,17 +97,12 @@ class OpenAIEmbed(Base):
         # OpenAI requires batch size <=16
         batch_size = 16
         texts = [truncate(t, 8191) for t in texts]
-        ress = []
-        total_tokens = 0
-        for i in range(0, len(texts), batch_size):
-            res = self.client.embeddings.create(input=texts[i : i + batch_size], model=self.model_name, encoding_format="float", extra_body={"drop_params": True})
-            try:
-                ress.extend([d.embedding for d in res.data])
-                total_tokens += total_token_count_from_response(res)
-            except Exception as _e:
-                log_exception(_e, res)
-                raise Exception(f"Error: {res}")
-        return np.array(ress), total_tokens
+
+        def encode_batch(batch):
+            res = self.client.embeddings.create(input=batch, model=self.model_name, encoding_format="float", extra_body={"drop_params": True})
+            return [d.embedding for d in res.data], total_token_count_from_response(res)
+
+        return self._run_in_batches(texts, batch_size, encode_batch)
 
     def encode_queries(self, text):
         res = self.client.embeddings.create(input=[truncate(text, 8191)], model=self.model_name, encoding_format="float", extra_body={"drop_params": True})
@@ -178,37 +170,20 @@ class QWenEmbed(Base):
         self.model_name = model_name
 
     def encode(self, texts: list):
-        import time
-
         import dashscope
 
         batch_size = 4
-        res = []
-        token_count = 0
         texts = [truncate(t, 2048) for t in texts]
-        for i in range(0, len(texts), batch_size):
-            retry_max = 5
-            resp = dashscope.TextEmbedding.call(model=self.model_name, input=texts[i : i + batch_size], api_key=self.key, text_type="document")
-            while (resp["output"] is None or resp["output"].get("embeddings") is None) and retry_max > 0:
-                time.sleep(10)
-                resp = dashscope.TextEmbedding.call(model=self.model_name, input=texts[i : i + batch_size], api_key=self.key, text_type="document")
-                retry_max -= 1
-            if retry_max == 0 and (resp["output"] is None or resp["output"].get("embeddings") is None):
+
+        def encode_batch(batch):
+            resp = dashscope.TextEmbedding.call(model=self.model_name, input=batch, api_key=self.key, text_type="document")
+            if resp["output"] is None or resp["output"].get("embeddings") is None:
                 if resp.get("message"):
-                    log_exception(ValueError(f"Retry_max reached, calling embedding model failed: {resp['message']}"))
-                else:
-                    log_exception(ValueError("Retry_max reached, calling embedding model failed"))
-                raise
-            try:
-                embds = [[] for _ in range(len(resp["output"]["embeddings"]))]
-                for e in resp["output"]["embeddings"]:
-                    embds[e["text_index"]] = e["embedding"]
-                res.extend(embds)
-                token_count += total_token_count_from_response(resp)
-            except Exception as _e:
-                log_exception(_e, resp)
-                raise
-        return np.array(res), token_count
+                    raise ValueError(f"Calling embedding model failed: {resp['message']}")
+                raise ValueError("Calling embedding model failed")
+            return [d["embedding"] for d in resp["output"]["embeddings"]], total_token_count_from_response(resp)
+
+        return self._run_in_batches(texts, batch_size, encode_batch)
 
     def encode_queries(self, text):
         resp = dashscope.TextEmbedding.call(model=self.model_name, input=text[:2048], api_key=self.key, text_type="query")

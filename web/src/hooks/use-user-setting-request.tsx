@@ -53,7 +53,7 @@ export const useFetchUserInfo = (): ResponseGetType<IUserInfo> => {
   const { data, isFetching: loading } = useQuery({
     queryKey: [UserSettingApiAction.UserInfo],
     initialData: {},
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await userService.user_info();
 
@@ -86,7 +86,7 @@ export const useFetchTenantInfo = (
   const { data, isFetching: loading } = useQuery({
     queryKey: [UserSettingApiAction.TenantInfo, showEmptyModelWarn],
     initialData: {},
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data: res } = await userService.get_tenant_info();
       if (res.code === 0) {
@@ -274,7 +274,7 @@ export const useFetchSystemTokenList = () => {
   } = useQuery<IToken[]>({
     queryKey: [UserSettingApiAction.FetchSystemTokenList],
     initialData: [],
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await userService.listToken();
 
@@ -343,7 +343,7 @@ export const useListTenantUser = () => {
   } = useQuery<ITenantUser[]>({
     queryKey: [UserSettingApiAction.ListTenantUser, tenantId],
     initialData: [],
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     enabled: !!tenantId,
     queryFn: async () => {
       const { data } = await listTenantUser(tenantId);
@@ -426,7 +426,7 @@ export const useListTenant = () => {
   } = useQuery<ITenant[]>({
     queryKey: [UserSettingApiAction.ListTenant, tenantId],
     initialData: [],
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     enabled: !!tenantId,
     queryFn: async () => {
       const { data } = await listTenant();
@@ -506,7 +506,7 @@ export const useDeleteLangfuseConfig = () => {
 export const useFetchLangfuseConfig = () => {
   const { data, isFetching: loading } = useQuery<ILangfuseConfig>({
     queryKey: [UserSettingApiAction.FetchLangfuseConfig],
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await userService.getLangfuseConfig();
 

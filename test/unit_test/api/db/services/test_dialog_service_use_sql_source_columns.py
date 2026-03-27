@@ -67,7 +67,7 @@ def _install_cv2_stub_if_unavailable():
 
 _install_cv2_stub_if_unavailable()
 
-from api.db.services import dialog_service
+import api.db.services.dialog_service as dialog_service
 
 
 class _StubChatModel:

@@ -21,7 +21,7 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from quart import make_response, request
 
-from api.apps import current_user, login_required
+from api.apps import current_user, login_required, resource_owner_required
 from api.common.check_team_permission import check_kb_team_permission
 from api.constants import FILE_NAME_LEN_LIMIT, IMG_BASE64_PREFIX
 from api.db import VALID_FILE_TYPES, FileType
@@ -66,8 +66,10 @@ def _is_safe_download_filename(name: str) -> bool:
 
 @manager.route("/upload", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 @validate_request("kb_id")
 async def upload():
+
     form = await request.form
     kb_id = form.get("kb_id")
     if not kb_id:
@@ -116,6 +118,7 @@ async def upload():
 
 @manager.route("/web_crawl", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 @validate_request("kb_id", "name", "url")
 async def web_crawl():
     form = await request.form
@@ -129,8 +132,6 @@ async def web_crawl():
     e, kb = KnowledgebaseService.get_by_id(kb_id)
     if not e:
         raise LookupError("Can't find this dataset!")
-    if not check_kb_team_permission(kb, current_user.id):
-        return get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
 
     blob = html2pdf(url)
     if not blob:
@@ -182,6 +183,7 @@ async def web_crawl():
 
 @manager.route("/create", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 @validate_request("name", "kb_id")
 async def create():
     req = await get_request_json()
@@ -199,10 +201,8 @@ async def create():
         e, kb = KnowledgebaseService.get_by_id(kb_id)
         if not e:
             return get_data_error_result(message="Can't find this dataset!")
-
         if DocumentService.query(name=req["name"], kb_id=kb_id):
             return get_data_error_result(message="Duplicated document name in the same dataset.")
-
         kb_root_folder = FileService.get_kb_folder(kb.tenant_id)
         if not kb_root_folder:
             return get_data_error_result(message="Cannot find the root folder.")
@@ -213,7 +213,6 @@ async def create():
         )
         if not kb_folder:
             return get_data_error_result(message="Cannot find the kb folder for this file.")
-
         doc = DocumentService.insert(
             {
                 "id": get_uuid(),
@@ -229,9 +228,7 @@ async def create():
                 "size": 0,
             }
         )
-
         FileService.add_file_from_kb(doc.to_dict(), kb_folder["id"], kb.tenant_id)
-
         return get_json_result(data=doc.to_json())
     except Exception as e:
         return server_error_response(e)
@@ -250,7 +247,6 @@ async def list_docs():
     else:
         return get_json_result(data=False, message="Only owner of dataset authorized for this operation.", code=RetCode.OPERATING_ERROR)
     keywords = request.args.get("keywords", "")
-
     page_number = int(request.args.get("page", 0))
     items_per_page = int(request.args.get("page_size", 0))
     orderby = request.args.get("orderby", "create_time")
@@ -260,25 +256,20 @@ async def list_docs():
         desc = True
     create_time_from = int(request.args.get("create_time_from", 0))
     create_time_to = int(request.args.get("create_time_to", 0))
-
     req = await get_request_json()
-
     return_empty_metadata = req.get("return_empty_metadata", False)
     if isinstance(return_empty_metadata, str):
         return_empty_metadata = return_empty_metadata.lower() == "true"
-
     run_status = req.get("run_status", [])
     if run_status:
         invalid_status = {s for s in run_status if s not in VALID_TASK_STATUS}
         if invalid_status:
             return get_data_error_result(message=f"Invalid filter run status conditions: {', '.join(invalid_status)}")
-
     types = req.get("types", [])
     if types:
         invalid_types = {t for t in types if t not in VALID_FILE_TYPES}
         if invalid_types:
             return get_data_error_result(message=f"Invalid filter conditions: {', '.join(invalid_types)} type{'s' if len(invalid_types) > 1 else ''}")
-
     suffix = req.get("suffix", [])
     metadata_condition = req.get("metadata_condition", {}) or {}
     metadata = req.get("metadata", {}) or {}
@@ -293,17 +284,14 @@ async def list_docs():
             return get_data_error_result(message="metadata_condition must be an object.")
         if metadata and not isinstance(metadata, dict):
             return get_data_error_result(message="metadata must be an object.")
-
     doc_ids_filter = None
     metas = None
     if metadata_condition or metadata:
         metas = DocMetadataService.get_flatted_meta_by_kbs([kb_id])
-
     if metadata_condition:
         doc_ids_filter = set(meta_filter(metas, convert_conditions(metadata_condition), metadata_condition.get("logic", "and")))
         if metadata_condition.get("conditions") and not doc_ids_filter:
             return get_json_result(data={"total": 0, "docs": []})
-
     if metadata:
         metadata_doc_ids = None
         for key, values in metadata.items():
@@ -330,10 +318,8 @@ async def list_docs():
                 doc_ids_filter &= metadata_doc_ids
             if not doc_ids_filter:
                 return get_json_result(data={"total": 0, "docs": []})
-
     if doc_ids_filter is not None:
         doc_ids_filter = list(doc_ids_filter)
-
     try:
         docs, tol = DocumentService.get_by_kb_id(
             kb_id,
@@ -348,7 +334,6 @@ async def list_docs():
             doc_ids_filter,
             return_empty_metadata=return_empty_metadata,
         )
-
         if create_time_from or create_time_to:
             filtered_docs = []
             for doc in docs:
@@ -356,7 +341,6 @@ async def list_docs():
                 if (create_time_from == 0 or doc_create_time >= create_time_from) and (create_time_to == 0 or doc_create_time <= create_time_to):
                     filtered_docs.append(doc)
             docs = filtered_docs
-
         for doc_item in docs:
             if doc_item["thumbnail"] and not doc_item["thumbnail"].startswith(IMG_BASE64_PREFIX):
                 doc_item["thumbnail"] = f"/v1/document/image/{kb_id}-{doc_item['thumbnail']}"
@@ -364,7 +348,6 @@ async def list_docs():
                 doc_item["source_type"] = doc_item["source_type"].split("/")[0]
             if doc_item["parser_config"].get("metadata"):
                 doc_item["parser_config"]["metadata"] = turn2jsonschema(doc_item["parser_config"]["metadata"])
-
         return get_json_result(data={"total": tol, "docs": docs})
     except Exception as e:
         return server_error_response(e)
@@ -374,7 +357,6 @@ async def list_docs():
 @login_required
 async def get_filter():
     req = await get_request_json()
-
     kb_id = req.get("kb_id")
     if not kb_id:
         return get_json_result(data=False, message='Lack of "KB ID"', code=RetCode.ARGUMENT_ERROR)
@@ -384,23 +366,18 @@ async def get_filter():
             break
     else:
         return get_json_result(data=False, message="Only owner of dataset authorized for this operation.", code=RetCode.OPERATING_ERROR)
-
     keywords = req.get("keywords", "")
-
     suffix = req.get("suffix", [])
-
     run_status = req.get("run_status", [])
     if run_status:
         invalid_status = {s for s in run_status if s not in VALID_TASK_STATUS}
         if invalid_status:
             return get_data_error_result(message=f"Invalid filter run status conditions: {', '.join(invalid_status)}")
-
     types = req.get("types", [])
     if types:
         invalid_types = {t for t in types if t not in VALID_FILE_TYPES}
         if invalid_types:
             return get_data_error_result(message=f"Invalid filter conditions: {', '.join(invalid_types)} type{'s' if len(invalid_types) > 1 else ''}")
-
     try:
         filter, total = DocumentService.get_filter_by_kb_id(kb_id, keywords, run_status, types, suffix)
         return get_json_result(data={"total": total, "filter": filter})
@@ -427,6 +404,7 @@ async def doc_infos():
 
 @manager.route("/metadata/summary", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 async def metadata_summary():
     req = await get_request_json()
     kb_id = req.get("kb_id")
@@ -450,6 +428,7 @@ async def metadata_summary():
 
 @manager.route("/metadata/update", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 @validate_request("doc_ids")
 async def metadata_update():
     req = await get_request_json()
@@ -496,7 +475,7 @@ async def update_metadata_setting():
 
 
 @manager.route("/thumbnails", methods=["GET"])  # noqa: F821
-# @login_required
+@login_required
 def thumbnails():
     doc_ids = request.args.getlist("doc_ids")
     if not doc_ids:
@@ -516,6 +495,7 @@ def thumbnails():
 
 @manager.route("/change_status", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 @validate_request("doc_ids", "status")
 async def change_status():
     req = await get_request_json()
@@ -607,6 +587,7 @@ async def rm():
 
 @manager.route("/run", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 @validate_request("doc_ids", "run")
 async def run():
     req = await get_request_json()
@@ -670,6 +651,7 @@ async def run():
 
 @manager.route("/rename", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 @validate_request("doc_id", "name")
 async def rename():
     req = await get_request_json()
@@ -724,6 +706,7 @@ async def rename():
 
 @manager.route("/get/<doc_id>", methods=["GET"])  # noqa: F821
 @login_required
+@resource_owner_required
 async def get(doc_id):
     try:
         e, doc = DocumentService.get_by_id(doc_id)
@@ -764,6 +747,7 @@ async def download_attachment(attachment_id):
 
 @manager.route("/change_parser", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 @validate_request("doc_id")
 async def change_parser():
     req = await get_request_json()
@@ -817,7 +801,7 @@ async def change_parser():
 
 
 @manager.route("/image/<image_id>", methods=["GET"])  # noqa: F821
-# @login_required
+@login_required
 async def get_image(image_id):
     try:
         arr = image_id.split("-")
@@ -872,6 +856,7 @@ async def get_artifact(filename):
 
 @manager.route("/upload_and_parse", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 @validate_request("conversation_id")
 async def upload_and_parse():
     files = await request.files
@@ -890,6 +875,7 @@ async def upload_and_parse():
 
 @manager.route("/parse", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 async def parse():
     req = await get_request_json()
     url = req.get("url", "")
@@ -949,6 +935,7 @@ async def parse():
 
 @manager.route("/set_meta", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 @validate_request("doc_id", "meta")
 async def set_meta():
     req = await get_request_json()
@@ -984,6 +971,7 @@ async def set_meta():
 
 @manager.route("/upload_info", methods=["POST"])  # noqa: F821
 @login_required
+@resource_owner_required
 async def upload_info():
     files = await request.files
     file_objs = files.getlist("file") if files and files.get("file") else []

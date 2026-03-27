@@ -93,7 +93,7 @@ export const useFetchChunk = (chunkId?: string): ResponseType<any> => {
     queryKey: ['fetchChunk'],
     enabled: !!chunkId,
     initialData: {},
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const data = await kbService.get_chunk({
         chunk_id: chunkId,
@@ -135,7 +135,7 @@ export const useFetchNextChunkList = (
     ],
     placeholderData: (previousData: any) =>
       previousData ?? { data: [], total: 0, documentInfo: {} }, // https://github.com/TanStack/query/issues/8183
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     enabled,
     queryFn: async () => {
       const { data } = await kbService.chunk_list({

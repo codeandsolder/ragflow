@@ -118,10 +118,20 @@ class Splitter(ProcessBase):
                 if ck.get("image") is True:
                     del ck["image"]
 
-        sections, section_images = [], []
+        sections = []
+        tasks = []
+        loop = asyncio.get_running_loop()
         for o in json_result:
             sections.append((o.get("text", ""), o.get("position_tag", "")))
-            section_images.append(id2image(o.get("img_id"), partial(settings.STORAGE_IMPL.get, tenant_id=self._canvas._tenant_id)))
+            tasks.append(
+                loop.run_in_executor(
+                    self._canvas._thread_pool,
+                    id2image,
+                    o.get("img_id"),
+                    partial(settings.STORAGE_IMPL.get, tenant_id=self._canvas._tenant_id),
+                )
+            )
+        section_images = await asyncio.gather(*tasks)
 
         chunks, images = naive_merge_with_images(
             sections,

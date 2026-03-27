@@ -379,22 +379,22 @@ class TextRecognizer:
             norm_img_batch = np.concatenate(norm_img_batch)
             norm_img_batch = norm_img_batch.copy()
 
-        input_dict = {}
-        input_dict[self.input_tensor.name] = norm_img_batch
-        for attempt in range(4):
-            try:
-                outputs = self.predictor.run(None, input_dict, self.run_options)
-                break
-            except Exception as e:
-                if attempt >= 3:
-                    logging.error("TextRecognizer inference failed after 4 attempts: %s", e)
-                    raise e
-                logging.warning("TextRecognizer inference attempt %d failed, retrying in %ds: %s", attempt + 1, 2**attempt, e)
-                time.sleep(2**attempt)
-        preds = outputs[0]
-        rec_result = self.postprocess_op(preds)
-        for rno in range(len(rec_result)):
-            rec_res[indices[beg_img_no + rno]] = rec_result[rno]
+            input_dict = {}
+            input_dict[self.input_tensor.name] = norm_img_batch
+            for attempt in range(4):
+                try:
+                    outputs = self.predictor.run(None, input_dict, self.run_options)
+                    break
+                except Exception as e:
+                    if attempt >= 3:
+                        logging.error("TextRecognizer inference failed after 4 attempts: %s", e)
+                        raise e
+                    logging.warning("TextRecognizer inference attempt %d failed, retrying in %ds: %s", attempt + 1, 2**attempt, e)
+                    time.sleep(2**attempt)
+            preds = outputs[0]
+            rec_result = self.postprocess_op(preds)
+            for rno in range(len(rec_result)):
+                rec_res[indices[beg_img_no + rno]] = rec_result[rno]
 
         return rec_res, time.time() - st
 

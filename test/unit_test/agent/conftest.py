@@ -1,45 +1,39 @@
+# Copyright 2025 The InfiniFlow Authors. All Rights Reserved.
 #
-#  Copyright 2025 The InfiniFlow Authors. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-#  http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-#
-
-"""
-conftest.py for agent tools tests.
-
-Sets up mocks for heavy dependencies to allow tests to run quickly without
-loading the full application stack.
-"""
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import sys
 import types
 import enum
+from unittest.mock import MagicMock
+
+
+def create_stub(name, attrs=None):
+    """Create a stub module and add it to sys.modules."""
+    parts = name.split(".")
+    for i in range(1, len(parts) + 1):
+        mod_name = ".".join(parts[:i])
+        if mod_name not in sys.modules:
+            stub = types.ModuleType(mod_name)
+            sys.modules[mod_name] = stub
+
+    if attrs:
+        for k, v in attrs.items():
+            setattr(sys.modules[name], k, v)
 
 
 def _setup_mocks():
     """Set up mock modules before importing the real modules."""
-
-    def create_stub(name, attrs=None):
-        parts = name.split(".")
-        for i in range(1, len(parts) + 1):
-            mod_name = ".".join(parts[:i])
-            if mod_name not in sys.modules:
-                stub = types.ModuleType(mod_name)
-                sys.modules[mod_name] = stub
-
-        if attrs:
-            for k, v in attrs.items():
-                setattr(sys.modules[name], k, v)
 
     # Create common stubs
     create_stub("common")
@@ -142,7 +136,7 @@ def _setup_mocks():
     sys.modules["agent.component.base"].ComponentParamBase = ComponentParamBase
     sys.modules["agent.component.base"].ComponentBase = ComponentBase
 
-    # Create agent.tools.base stubs (needed before code_exec imports)
+    # Create agent.tools.base stubs
     create_stub("agent.tools")
     create_stub("agent.tools.base")
 
@@ -222,3 +216,14 @@ _spec = importlib.util.spec_from_file_location("agent.tools.code_exec", _code_ex
 _code_exec = importlib.util.module_from_spec(_spec)
 sys.modules["agent.tools.code_exec"] = _code_exec
 _spec.loader.exec_module(_code_exec)
+
+# Create mock modules that were causing hangs
+create_stub("agent.tools.retrieval")
+
+
+# Add mock classes for component system
+class MockRetrieval:
+    pass
+
+
+sys.modules["agent.tools.retrieval"].Retrieval = MockRetrieval

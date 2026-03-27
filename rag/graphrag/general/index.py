@@ -108,17 +108,7 @@ async def run_graphrag(
         if with_resolution:
             await graphrag_task_lock.spin_acquire()
             callback(msg=f"run_graphrag {doc_id} graphrag_task_lock acquired")
-            await resolve_entities(
-                new_graph,
-                subgraph_nodes,
-                tenant_id,
-                kb_id,
-                doc_id,
-                chat_model,
-                embedding_model,
-                callback,
-                task_id=row["id"],
-            )
+            await resolve_entities(new_graph, subgraph_nodes, tenant_id, kb_id, doc_id, chat_model, embedding_model, callback, task_id=row["id"], affected_doc_ids=[doc_id])
         if with_community:
             await graphrag_task_lock.spin_acquire()
             callback(msg=f"run_graphrag {doc_id} graphrag_task_lock acquired")
@@ -355,17 +345,7 @@ async def run_graphrag_for_kb(
             subgraph_nodes.update(set(sg.nodes()))
 
         if with_resolution:
-            await resolve_entities(
-                final_graph,
-                subgraph_nodes,
-                tenant_id,
-                kb_id,
-                None,
-                chat_model,
-                embedding_model,
-                callback,
-                task_id=row["id"],
-            )
+            await resolve_entities(final_graph, subgraph_nodes, tenant_id, kb_id, None, chat_model, embedding_model, callback, task_id=row["id"], affected_doc_ids=ok_docs)
 
         if with_community:
             await extract_community(
@@ -502,7 +482,7 @@ async def merge_subgraph(
     for node_name, pagerank in pr.items():
         new_graph.nodes[node_name]["pagerank"] = pagerank
 
-    await set_graph(tenant_id, kb_id, embedding_model, new_graph, change, callback)
+    await set_graph(tenant_id, kb_id, embedding_model, new_graph, change, callback, affected_doc_ids=[doc_id])
     now = asyncio.get_running_loop().time()
     callback(msg=f"merging subgraph for doc {doc_id} into the global graph done in {now - start:.2f} seconds.")
     return new_graph
@@ -519,6 +499,7 @@ async def resolve_entities(
     embed_bdl,
     callback,
     task_id: str = "",
+    affected_doc_ids: list[str] | None = None,
 ):
     # Check if task has been canceled before resolution
     if task_id and has_canceled(task_id):
@@ -539,7 +520,7 @@ async def resolve_entities(
         callback(msg=f"Task {task_id} cancelled after entity resolution.")
         raise TaskCanceledException(f"Task {task_id} was cancelled")
 
-    await set_graph(tenant_id, kb_id, embed_bdl, graph, change, callback)
+    await set_graph(tenant_id, kb_id, embed_bdl, graph, change, callback, affected_doc_ids=affected_doc_ids)
     now = asyncio.get_running_loop().time()
     callback(msg=f"Graph resolution done in {now - start:.2f}s.")
 

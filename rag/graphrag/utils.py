@@ -430,11 +430,18 @@ async def get_graph(tenant_id, kb_id, exclude_rebuild=None):
     return result
 
 
-async def set_graph(tenant_id: str, kb_id: str, embd_mdl, graph: nx.Graph, change: GraphChange, callback):
+async def set_graph(tenant_id: str, kb_id: str, embd_mdl, graph: nx.Graph, change: GraphChange, callback, affected_doc_ids=None):
     limiter = get_chat_limiter()
     start = asyncio.get_running_loop().time()
 
-    await thread_pool_exec(settings.docStoreConn.delete, {"knowledge_graph_kwd": ["graph", "subgraph"]}, search.index_name(tenant_id), kb_id)
+    await thread_pool_exec(settings.docStoreConn.delete, {"knowledge_graph_kwd": ["graph"]}, search.index_name(tenant_id), kb_id)
+    if affected_doc_ids:
+        # Incremental: only delete subgraphs of affected documents
+        for doc_id in affected_doc_ids:
+            await thread_pool_exec(settings.docStoreConn.delete, {"knowledge_graph_kwd": ["subgraph"], "source_id": doc_id}, search.index_name(tenant_id), kb_id)
+    else:
+        # Full: delete all subgraphs
+        await thread_pool_exec(settings.docStoreConn.delete, {"knowledge_graph_kwd": ["subgraph"]}, search.index_name(tenant_id), kb_id)
 
     if change.removed_nodes:
         await thread_pool_exec(settings.docStoreConn.delete, {"knowledge_graph_kwd": ["entity"], "entity_kwd": sorted(change.removed_nodes)}, search.index_name(tenant_id), kb_id)
@@ -476,8 +483,11 @@ async def set_graph(tenant_id: str, kb_id: str, embd_mdl, graph: nx.Graph, chang
     ]
 
     # generate updated subgraphs
-    for source in graph.graph["source_id"]:
+    doc_ids_to_update = affected_doc_ids if affected_doc_ids is not None else graph.graph.get("source_id", [])
+    for source in doc_ids_to_update:
         subgraph = graph.subgraph([n for n in graph.nodes if source in graph.nodes[n]["source_id"]]).copy()
+        if len(subgraph.nodes) == 0:
+            continue
         subgraph.graph["source_id"] = [source]
         for n in subgraph.nodes:
             subgraph.nodes[n]["source_id"] = [source]
@@ -533,8 +543,8 @@ async def set_graph(tenant_id: str, kb_id: str, embd_mdl, graph: nx.Graph, chang
     enable_timeout_assertion = os.environ.get("ENABLE_TIMEOUT_ASSERTION")
     es_bulk_size = 4
     for b in range(0, len(chunks), es_bulk_size):
-        timeout = 3 if enable_timeout_assertion else 30000000
-        doc_store_result = await asyncio.wait_for(thread_pool_exec(settings.docStoreConn.insert, chunks[b : b + es_bulk_size], search.index_name(tenant_id), kb_id), timeout=timeout)
+        timeout_val = 3 if enable_timeout_assertion else 30000000
+        doc_store_result = await asyncio.wait_for(thread_pool_exec(settings.docStoreConn.insert, chunks[b : b + es_bulk_size], search.index_name(tenant_id), kb_id), timeout=timeout_val)
         if b % 100 == es_bulk_size and callback:
             callback(msg=f"Insert chunks: {b}/{len(chunks)}")
         if doc_store_result:

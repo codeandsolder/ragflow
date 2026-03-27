@@ -58,9 +58,11 @@ def _unauthorized_message(error):
 
 
 app = Quart(__name__)
-allowed_origins_str = os.environ.get("ALLOWED_ORIGINS", "")
+allowed_origins_str = os.environ.get("CORS_ALLOWED_ORIGINS", os.environ.get("ALLOWED_ORIGINS", ""))
 allowed_origins = [o.strip() for o in allowed_origins_str.split(",") if o.strip()] if allowed_origins_str else []
-app = cors(app, allow_origin=allowed_origins if allowed_origins else "*")
+if not allowed_origins:
+    raise ValueError("CORS_ALLOWED_ORIGINS environment variable must be set. Configure specific origins (e.g., 'https://example.com') or restrict via other security measures.")
+app = cors(app, allow_origin=allowed_origins)
 
 # openapi supported
 QuartSchema(app)
@@ -178,6 +180,50 @@ def login_required(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]
             )
         if not user:  # or not session.get("_user_id"):
             raise QuartAuthUnauthorized()
+        return await current_app.ensure_async(func)(*args, **kwargs)
+
+    return wrapper
+
+
+def resource_owner_required(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        from api.db.services.knowledgebase_service import KnowledgebaseService
+        from api.db.services.document_service import DocumentService
+        from api.utils.api_utils import get_request_json
+
+        req = await get_request_json() if request.method in ["POST", "PUT"] else {}
+
+        kb_id = kwargs.get("kb_id") or req.get("kb_id") or request.args.get("kb_id")
+        kb_ids = req.get("kb_ids") or request.args.get("kb_ids")
+        if kb_ids:
+            if isinstance(kb_ids, str):
+                kb_ids = kb_ids.split(",")
+        else:
+            kb_ids = [kb_id] if kb_id else []
+
+        for kid in kb_ids:
+            if kid and not KnowledgebaseService.accessible(kid, current_user.id):
+                return get_json_result(data=False, message="No authorization for dataset.", code=RetCode.AUTHENTICATION_ERROR)
+
+        doc_id = kwargs.get("doc_id") or req.get("doc_id") or request.args.get("doc_id")
+        doc_ids = req.get("doc_ids") or request.args.get("doc_ids")
+        if doc_ids:
+            if isinstance(doc_ids, str):
+                doc_ids = doc_ids.split(",")
+        else:
+            doc_ids = [doc_id] if doc_id else []
+
+        for did in doc_ids:
+            if did and not DocumentService.accessible(did, current_user.id):
+                return get_json_result(data=False, message="No authorization for document.", code=RetCode.AUTHENTICATION_ERROR)
+
+        image_id = kwargs.get("image_id")
+        if image_id and "-" in image_id:
+            kb_id = image_id.split("-")[0]
+            if kb_id and not KnowledgebaseService.accessible(kb_id, current_user.id):
+                return get_json_result(data=False, message="No authorization for image.", code=RetCode.AUTHENTICATION_ERROR)
+
         return await current_app.ensure_async(func)(*args, **kwargs)
 
     return wrapper

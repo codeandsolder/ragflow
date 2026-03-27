@@ -162,13 +162,27 @@ async def recreate_container(name: str, language: SupportLanguage) -> bool:
 
 async def release_container(name: str, language: SupportLanguage):
     """Asynchronously release a container"""
+    local_deployment = os.getenv("LOCAL_DEPLOYMENT", "false").lower() in ("true", "1", "yes")
+
     async with _CONTAINER_LOCK:
-        logger.info(f"♻️ Recreating container {name} for one-time use policy...")
-        if await recreate_container(name, language):
-            _CONTAINER_QUEUES[language].put(name)
-            logger.info(f"✅ Container {name} successfully recreated and returned to queue")
+        if await container_is_running(name):
+            if local_deployment:
+                _CONTAINER_QUEUES[language].put(name)
+                logger.info(f"♻️ Reusing container {name} (LOCAL_DEPLOYMENT mode, remaining: {_CONTAINER_QUEUES[language].qsize()})")
+            else:
+                logger.info(f"♻️ Recreating container {name} for one-time use policy...")
+                if await recreate_container(name, language):
+                    _CONTAINER_QUEUES[language].put(name)
+                    logger.info(f"✅ Container {name} successfully recreated and returned to queue")
+                else:
+                    logger.error(f"❌ Failed to recreate container {name}")
         else:
-            logger.error(f"❌ Failed to recreate container {name}")
+            logger.warning(f"⚠️ Container {name} has crashed, attempting to recreate...")
+            if await recreate_container(name, language):
+                _CONTAINER_QUEUES[language].put(name)
+                logger.info(f"✅ Container {name} successfully recreated and returned to queue")
+            else:
+                logger.error(f"❌ Failed to recreate container {name}")
 
 
 async def allocate_container_blocking(language: SupportLanguage, timeout=10) -> str:

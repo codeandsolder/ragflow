@@ -24,15 +24,13 @@ from yarl import URL
 
 from common.log_utils import log_exception
 from common.token_utils import num_tokens_from_string, truncate, total_token_count_from_response
+from rag.llm.remote_model_base import RemoteModelBase
 
 
-class Base(ABC):
+class Base(RemoteModelBase, ABC):
     def __init__(self, key, model_name, **kwargs):
-        """
-        Abstract base class constructor.
-        Parameters are not stored; initialization is left to subclasses.
-        """
-        pass
+        super().__init__(**kwargs)
+        self.model_name = model_name
 
     def similarity(self, query: str, texts: list):
         raise NotImplementedError("Please implement encode method!")
@@ -65,7 +63,13 @@ class JinaRerank(Base):
     def similarity(self, query: str, texts: list):
         texts = [truncate(t, 8196) for t in texts]
         data = {"model": self.model_name, "query": query, "documents": texts, "top_n": len(texts)}
-        res = requests.post(self.base_url, headers=self.headers, json=data).json()
+
+        def call_jina():
+            resp = requests.post(self.base_url, headers=self.headers, json=data)
+            resp.raise_for_status()
+            return resp.json()
+
+        res = self._run_with_retry(call_jina)
         rank = np.zeros(len(texts), dtype=float)
         try:
             for d in res["results"]:

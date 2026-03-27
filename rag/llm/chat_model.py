@@ -37,22 +37,7 @@ from rag.llm import FACTORY_DEFAULT_BASE_URL, LITELLM_PROVIDER_PREFIX, Supported
 from rag.nlp import is_chinese, is_english
 
 from common.misc_utils import thread_pool_exec
-from rag.utils.circuit_breaker import LLMCircuitBreaker
-
-
-class LLMErrorCode(StrEnum):
-    ERROR_RATE_LIMIT = "RATE_LIMIT_EXCEEDED"
-    ERROR_AUTHENTICATION = "AUTH_ERROR"
-    ERROR_INVALID_REQUEST = "INVALID_REQUEST"
-    ERROR_SERVER = "SERVER_ERROR"
-    ERROR_TIMEOUT = "TIMEOUT"
-    ERROR_CONNECTION = "CONNECTION_ERROR"
-    ERROR_MODEL = "MODEL_ERROR"
-    ERROR_MAX_ROUNDS = "ERROR_MAX_ROUNDS"
-    ERROR_CONTENT_FILTER = "CONTENT_FILTERED"
-    ERROR_QUOTA = "QUOTA_EXCEEDED"
-    ERROR_MAX_RETRIES = "MAX_RETRIES_EXCEEDED"
-    ERROR_GENERIC = "GENERIC_ERROR"
+from rag.llm.remote_model_base import RemoteModelBase, LLMErrorCode
 
 
 class ReActMode(StrEnum):
@@ -153,14 +138,13 @@ def _apply_vision_images(history, images):
         return
 
 
-class Base(ABC):
+class Base(RemoteModelBase, ABC):
     def __init__(self, key, model_name, base_url, **kwargs):
+        super().__init__(**kwargs)
         timeout = int(os.environ.get("LLM_TIMEOUT_SECONDS", 600))
         self.client = OpenAI(api_key=key, base_url=base_url, timeout=timeout)
         self.async_client = AsyncOpenAI(api_key=key, base_url=base_url, timeout=timeout)
         self.model_name = model_name
-        self.max_retries = kwargs.get("max_retries", int(os.environ.get("LLM_MAX_RETRIES", 5)))
-        self.base_delay = kwargs.get("retry_interval", float(os.environ.get("LLM_BASE_DELAY", 2.0)))
         self.max_rounds = kwargs.get("max_rounds", 5)
         self.is_tools = False
         self.tools = []
@@ -178,40 +162,8 @@ class Base(ABC):
         return OpenAI(api_key="empty", base_url=base_url), base_url, model_name.split("___")[0]
 
     @property
-    def circuit_breaker(self):
-        return LLMCircuitBreaker.get_breaker(
-            self._FACTORY_NAME if hasattr(self, "_FACTORY_NAME") else "default",
-            failure_threshold=5,
-            recovery_timeout=30,
-        )
-
-    @property
     def circuit_state(self):
         return self.circuit_breaker.state
-
-    def _get_delay(self):
-        return self.base_delay * random.uniform(10, 150)
-
-    def _classify_error(self, error):
-        error_str = str(error).lower()
-
-        keywords_mapping = [
-            (["quota", "capacity", "credit", "billing", "balance", "欠费"], LLMErrorCode.ERROR_QUOTA),
-            (["rate limit", "429", "tpm limit", "too many requests", "requests per minute"], LLMErrorCode.ERROR_RATE_LIMIT),
-            (["auth", "key", "apikey", "401", "forbidden", "permission"], LLMErrorCode.ERROR_AUTHENTICATION),
-            (["invalid", "bad request", "400", "format", "malformed", "parameter"], LLMErrorCode.ERROR_INVALID_REQUEST),
-            (["server", "503", "502", "504", "500", "unavailable"], LLMErrorCode.ERROR_SERVER),
-            (["timeout", "timed out"], LLMErrorCode.ERROR_TIMEOUT),
-            (["connect", "network", "unreachable", "dns"], LLMErrorCode.ERROR_CONNECTION),
-            (["filter", "content", "policy", "blocked", "safety", "inappropriate"], LLMErrorCode.ERROR_CONTENT_FILTER),
-            (["model", "not found", "does not exist", "not available"], LLMErrorCode.ERROR_MODEL),
-            (["max rounds"], LLMErrorCode.ERROR_MODEL),
-        ]
-        for words, code in keywords_mapping:
-            if re.search("({})".format("|".join(words)), error_str):
-                return code
-
-        return LLMErrorCode.ERROR_GENERIC
 
     def _clean_conf(self, gen_conf):
         model_name_lower = (self.model_name or "").lower()
@@ -356,7 +308,7 @@ class Base(ABC):
         if self._should_retry(error_code):
             delay = self._get_delay()
             logging.warning(f"Error: {error_code}. Retrying in {delay:.2f} seconds... (Attempt {attempt + 1}/{self.max_retries})")
-            time.sleep(delay)
+            await asyncio.sleep(delay)
             return None
 
         msg = f"{ERROR_PREFIX}: {error_code} - {str(e)}"
@@ -1535,7 +1487,7 @@ class LiteLLMBase(ABC):
         if self._should_retry(error_code):
             delay = self._get_delay()
             logging.warning(f"Error: {error_code}. Retrying in {delay:.2f} seconds... (Attempt {attempt + 1}/{self.max_retries})")
-            time.sleep(delay)
+            await asyncio.sleep(delay)
             return None
         msg = f"{ERROR_PREFIX}: {error_code} - {str(e)}"
         logging.error(f"async_chat_streamly giving up: {msg}")

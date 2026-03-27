@@ -189,7 +189,7 @@ export const useFetchLlmFactoryList = (): ResponseGetType<IFactory[]> => {
   const { data, isFetching: loading } = useQuery({
     queryKey: [LLMApiAction.FactoryList],
     initialData: [],
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await userService.factories_list();
 
@@ -208,7 +208,7 @@ export const useFetchMyLlmList = (): ResponseGetType<
   const { data, isFetching: loading } = useQuery({
     queryKey: [LLMApiAction.MyLlmList],
     initialData: {},
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await userService.my_llm();
 
@@ -225,7 +225,7 @@ export const useFetchMyLlmListDetailed = (): ResponseGetType<
   const { data, isFetching: loading } = useQuery({
     queryKey: [LLMApiAction.MyLlmListDetailed],
     initialData: {},
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await userService.my_llm({ include_details: true });
 

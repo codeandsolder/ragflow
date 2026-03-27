@@ -129,7 +129,7 @@ export const useFetchAgentListByPage = () => {
       }
       return previousData;
     },
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await agentService.listCanvas(
         {
@@ -250,7 +250,7 @@ export const useFetchAgent = (): {
     refetchOnReconnect: false,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await agentService.fetchCanvas(sharedId || id);
 
@@ -438,7 +438,7 @@ export const useFetchMessageTrace = (canvasId?: string) => {
     refetchOnReconnect: false,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     enabled: !!queryId && !!messageId,
     refetchInterval: !isStopFetchTrace ? 3000 : false,
     queryFn: async () => {
@@ -535,7 +535,7 @@ export const useFetchVersionList = () => {
   >({
     queryKey: [AgentApiAction.FetchVersionList],
     initialData: [],
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await agentService.fetchVersionList(id);
 
@@ -555,7 +555,7 @@ export const useFetchVersion = (
   const { data, isFetching: loading } = useQuery({
     queryKey: [AgentApiAction.FetchVersion, version_id],
     initialData: undefined,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     enabled: !!version_id, // Only call API when both values are provided
     queryFn: async () => {
       if (!version_id) return undefined;
@@ -586,7 +586,7 @@ export const useFetchAgentAvatar = (): {
     refetchOnReconnect: false,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       if (!sharedId) return {};
       const { data } = await agentService.fetchAgentAvatar(sharedId);
@@ -603,7 +603,7 @@ export const useFetchAgentLog = (searchParams: IAgentLogsRequest) => {
   const { data, isFetching: loading } = useQuery<IAgentLogsResponse>({
     queryKey: [AgentApiAction.FetchAgentLog, id, searchParams],
     initialData: {} as IAgentLogsResponse,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await fetchAgentLogsByCanvasId(id as string, {
         ...searchParams,
@@ -623,7 +623,7 @@ export const useFetchSessionsByCanvasId = () => {
   const { data, isFetching: loading } = useQuery<IAgentLogsResponse>({
     queryKey: [AgentApiAction.FetchSessionsByCanvasId, canvasId],
     initialData: { total: 0, sessions: [] } as IAgentLogsResponse,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     enabled: !!canvasId && !isEmpty(tenantInfo),
     queryFn: async () => {
       if (!canvasId) {
@@ -660,7 +660,7 @@ export const useFetchExternalAgentInputs = () => {
     refetchOnReconnect: false,
     // refetchOnMount: false,
     refetchOnWindowFocus: false,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     enabled: !!sharedId,
     queryFn: async () => {
       const { data } = await agentService.fetchExternalAgentInputs(sharedId!);
@@ -709,7 +709,7 @@ export const useFetchPrompt = () => {
     refetchOnReconnect: false,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await agentService.fetchPrompt();
 
@@ -729,7 +729,7 @@ export const useFetchAgentList = ({
   }>({
     queryKey: [AgentApiAction.FetchAgentList],
     initialData: { canvas: [], total: 0 },
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await fetchPipeLineList({ canvas_category });
 
@@ -765,7 +765,7 @@ export const useCancelDataflow = () => {
 //   const { data, isFetching: loading } = useQuery<IFlow[]>({
 //     queryKey: [AgentApiAction.FetchAgentList],
 //     initialData: [],
-//     gcTime: 0, // https://tanstack.com/query/latest/docs/framework/react/guides/caching?from=reactQueryV3
+//     gcTime: 5 * 60 * 1000, // https://tanstack.com/query/latest/docs/framework/react/guides/caching?from=reactQueryV3
 //     queryFn: async () => {
 //       const { data } = await agentService.listCanvas();
 
@@ -810,7 +810,7 @@ export const useFetchFlowSSE = (): {
     refetchOnReconnect: false,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       if (!sharedId) return {};
       const { data } = await agentService.getCanvasSSE(sharedId);
@@ -843,7 +843,7 @@ export const useFetchWebhookTrace = (autoStart: boolean = true) => {
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchIntervalInBackground: false,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     enabled: !!id && shouldPoll,
     queryFn: async () => {
       if (!id) return {};

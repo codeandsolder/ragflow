@@ -22,11 +22,11 @@ import pytest
 import pickle
 import base64
 from unittest.mock import patch
-from api.utils.configs import serialize_b64, deserialize_b64, restricted_loads, safe_module
+from api.utils import configs
 
 
 class TestSerializeB64:
-    """Test cases for serialize_b64 function"""
+    """Test cases for configs.serialize_b64 function"""
 
     @pytest.mark.parametrize(
         "test_data",
@@ -43,7 +43,7 @@ class TestSerializeB64:
     )
     def test_serialize_returns_bytes(self, test_data):
         """Test serialization of various data types returns bytes"""
-        result = serialize_b64(test_data, to_str=False)
+        result = configs.serialize_b64(test_data, to_str=False)
 
         assert isinstance(result, bytes)
         # Should be valid base64
@@ -53,7 +53,7 @@ class TestSerializeB64:
     def test_serialize_with_to_str_true(self):
         """Test serialization with to_str=True returns string"""
         test_data = {"test": "data"}
-        result = serialize_b64(test_data, to_str=True)
+        result = configs.serialize_b64(test_data, to_str=True)
 
         assert isinstance(result, str)
         # Should be valid base64 string
@@ -61,41 +61,41 @@ class TestSerializeB64:
 
 
 class TestDeserializeB64:
-    """Test cases for deserialize_b64 function"""
+    """Test cases for configs.deserialize_b64 function"""
 
     @pytest.mark.parametrize("to_str", [True, False])
     def test_deserialize_string_and_bytes_input(self, to_str):
         """Test deserialization with both string and bytes input"""
         test_data = {"key": "value"}
-        serialized = serialize_b64(test_data, to_str=to_str)
+        serialized = configs.serialize_b64(test_data, to_str=to_str)
 
-        result = deserialize_b64(serialized)
+        result = configs.deserialize_b64(serialized)
 
         assert result == test_data
 
     @patch("api.utils.configs.get_base_config")
-    def test_deserialize_with_safe_module_disabled(self, mock_config):
+    def test_deserialize_with_configs.safe_module_disabled(self, mock_config):
         """Test deserialization with safe module checking disabled"""
         mock_config.return_value = False
 
         test_data = {"test": "data"}
-        serialized = serialize_b64(test_data, to_str=True)
+        serialized = configs.serialize_b64(test_data, to_str=True)
 
-        result = deserialize_b64(serialized)
+        result = configs.deserialize_b64(serialized)
 
         assert result == test_data
-        mock_config.assert_called_once_with("use_deserialize_safe_module", False)
+        mock_config.assert_called_once_with("use_deserialize_configs.safe_module", False)
 
     @patch("api.utils.configs.get_base_config")
-    def test_deserialize_with_safe_module_enabled(self, mock_config):
+    def test_deserialize_with_configs.safe_module_enabled(self, mock_config):
         """Test deserialization with safe module checking enabled"""
         mock_config.return_value = True
 
         # Simple data that doesn't require unsafe modules
         test_data = {"test": "data", "number": 42}
-        serialized = serialize_b64(test_data, to_str=True)
+        serialized = configs.serialize_b64(test_data, to_str=True)
 
-        result = deserialize_b64(serialized)
+        result = configs.deserialize_b64(serialized)
 
         assert result == test_data
 
@@ -114,8 +114,8 @@ class TestDeserializeB64:
     )
     def test_roundtrip_various_data_types(self, test_data):
         """Test roundtrip serialization and deserialization for various data types"""
-        serialized = serialize_b64(test_data)
-        deserialized = deserialize_b64(serialized)
+        serialized = configs.serialize_b64(test_data)
+        deserialized = configs.deserialize_b64(serialized)
 
         assert deserialized == test_data
 
@@ -133,16 +133,16 @@ class TestRestrictedUnpickler:
             "simple string",
         ],
     )
-    def test_restricted_loads_with_safe_data(self, test_data):
-        """Test restricted_loads with various safe data types"""
+    def test_configs.restricted_loads_with_safe_data(self, test_data):
+        """Test configs.restricted_loads with various safe data types"""
         pickled = pickle.dumps(test_data)
 
-        result = restricted_loads(pickled)
+        result = configs.restricted_loads(pickled)
 
         assert result == test_data
 
     @patch("api.utils.configs.get_base_config")
-    def test_blocks_unsafe_modules(self, mock_config):
+    def test_blocks_unconfigs.safe_modules(self, mock_config):
         """Test that unsafe modules are blocked"""
         mock_config.return_value = True
 
@@ -159,15 +159,15 @@ class TestRestrictedUnpickler:
             pickled = pickle.dumps(unsafe_obj)
 
             with pytest.raises(pickle.UnpicklingError):
-                restricted_loads(pickled)
+                configs.restricted_loads(pickled)
         except Exception:
             # If we can't create the unsafe pickle, skip this test
             pytest.skip("Unable to create unsafe pickle for testing")
 
-    def test_safe_module_set_contains_expected_modules(self):
-        """Test that safe_module set contains expected modules"""
-        assert "numpy" in safe_module
-        assert "rag_flow" in safe_module
+    def test_configs.safe_module_set_contains_expected_modules(self):
+        """Test that configs.safe_module set contains expected modules"""
+        assert "numpy" in configs.safe_module
+        assert "rag_flow" in configs.safe_module
 
 
 class TestIntegrationScenarios:
@@ -185,7 +185,7 @@ class TestIntegrationScenarios:
     def test_serialize_deserialize_workflow(self, to_str, original_data):
         """Test complete workflow of serialize and deserialize with various data"""
         # Serialize
-        serialized = serialize_b64(original_data, to_str=to_str)
+        serialized = configs.serialize_b64(original_data, to_str=to_str)
 
         if to_str:
             assert isinstance(serialized, str)
@@ -193,7 +193,7 @@ class TestIntegrationScenarios:
             assert isinstance(serialized, bytes)
 
         # Deserialize back
-        deserialized = deserialize_b64(serialized)
+        deserialized = configs.deserialize_b64(serialized)
         assert deserialized == original_data
 
     @patch("api.utils.configs.get_base_config")
@@ -202,9 +202,9 @@ class TestIntegrationScenarios:
         mock_config.return_value = True
 
         test_data = {"safe": "data"}
-        serialized = serialize_b64(test_data, to_str=True)
+        serialized = configs.serialize_b64(test_data, to_str=True)
 
-        result = deserialize_b64(serialized)
+        result = configs.deserialize_b64(serialized)
 
         assert result == test_data
 

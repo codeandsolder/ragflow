@@ -24,70 +24,57 @@ from uuid import uuid1
 from pydantic import BaseModel, Field, ValidationError
 from werkzeug.exceptions import BadRequest, UnsupportedMediaType
 
-from api.utils.validation_utils import (
-    validate_and_parse_json_request,
-    validate_and_parse_request_args,
-    format_validation_error_message,
-    normalize_str,
-    validate_uuid1_hex,
-    CreateDatasetReq,
-    UpdateDatasetReq,
-    DeleteDatasetReq,
-    ListDatasetReq,
-    ParserConfig,
-    RaptorConfig,
-    GraphragConfig,
-)
+from api.utils import validation_utils
 
 
 class TestNormalizeStr:
-    """Test cases for normalize_str function"""
+    """Test cases for validation_utils.normalize_str function"""
 
-    def test_normalize_string_with_whitespace(self):
+    def test_validation_utils.normalize_string_with_whitespace(self):
         """Test normalization of string with leading/trailing whitespace"""
-        result = normalize_str("  Admin  ")
+        result = validation_utils.normalize_str("  Admin  ")
         assert result == "admin"
 
-    def test_normalize_string_uppercase(self):
+    def test_validation_utils.normalize_string_uppercase(self):
         """Test normalization converts to lowercase"""
-        result = normalize_str("UPPERCASE")
+        result = validation_utils.normalize_str("UPPERCASE")
         assert result == "uppercase"
 
     def test_normalize_mixed_case(self):
         """Test normalization of mixed case string"""
-        result = normalize_str("  MiXeD CaSe  ")
+        result = validation_utils.normalize_str("  MiXeD CaSe  ")
         assert result == "mixed case"
 
     def test_normalize_empty_string(self):
         """Test normalization of empty string"""
-        result = normalize_str("")
+        result = validation_utils.normalize_str("")
         assert result == ""
 
     def test_normalize_whitespace_only(self):
         """Test normalization of whitespace-only string"""
-        result = normalize_str("   ")
+        result = validation_utils.normalize_str("   ")
         assert result == ""
 
     def test_preserve_non_string_integer(self):
         """Test that integers are preserved"""
-        result = normalize_str(42)
+        result = validation_utils.normalize_str(42)
         assert result == 42
 
     def test_preserve_non_string_none(self):
         """Test that None is preserved"""
-        result = normalize_str(None)
+        result = validation_utils.normalize_str(None)
         assert result is None
 
     def test_preserve_non_string_list(self):
         """Test that lists are preserved"""
         input_list = ["User", "Admin"]
-        result = normalize_str(input_list)
+        result = validation_utils.normalize_str(input_list)
         assert result == input_list
 
     def test_preserve_non_string_dict(self):
         """Test that dicts are preserved"""
         input_dict = {"role": "Admin"}
-        result = normalize_str(input_dict)
+        result = validation_utils.normalize_str(input_dict)
         assert result == input_dict
 
     @pytest.mark.parametrize(
@@ -104,19 +91,19 @@ class TestNormalizeStr:
     )
     def test_various_inputs(self, input_val, expected):
         """Test various input types"""
-        result = normalize_str(input_val)
+        result = validation_utils.normalize_str(input_val)
         assert result == expected
 
 
 class TestValidateUuid1Hex:
-    """Test cases for validate_uuid1_hex function"""
+    """Test cases for validation_utils.validate_uuid1_hex function"""
 
     def test_valid_uuid1_string(self):
         """Test validation of valid UUID1 string"""
         uuid1_obj = uuid1()
         uuid1_str = str(uuid1_obj)
 
-        result = validate_uuid1_hex(uuid1_str)
+        result = validation_utils.validate_uuid1_hex(uuid1_str)
 
         assert isinstance(result, str)
         assert len(result) == 32
@@ -126,7 +113,7 @@ class TestValidateUuid1Hex:
         """Test validation of valid UUID1 object"""
         uuid1_obj = uuid1()
 
-        result = validate_uuid1_hex(uuid1_obj)
+        result = validation_utils.validate_uuid1_hex(uuid1_obj)
 
         assert isinstance(result, str)
         assert result == uuid1_obj.hex
@@ -134,7 +121,7 @@ class TestValidateUuid1Hex:
     def test_uuid1_hex_no_hyphens(self):
         """Test that result has no hyphens"""
         uuid1_obj = uuid1()
-        result = validate_uuid1_hex(uuid1_obj)
+        result = validation_utils.validate_uuid1_hex(uuid1_obj)
 
         assert "-" not in result
 
@@ -143,7 +130,7 @@ class TestValidateUuid1Hex:
         from pydantic_core import PydanticCustomError
 
         with pytest.raises(PydanticCustomError) as exc_info:
-            validate_uuid1_hex("not-a-uuid")
+            validation_utils.validate_uuid1_hex("not-a-uuid")
 
         assert exc_info.value.type == "invalid_UUID1_format"
 
@@ -155,7 +142,7 @@ class TestValidateUuid1Hex:
         uuid4_obj = uuid4()
 
         with pytest.raises(PydanticCustomError) as exc_info:
-            validate_uuid1_hex(uuid4_obj)
+            validation_utils.validate_uuid1_hex(uuid4_obj)
 
         assert exc_info.value.type == "invalid_UUID1_format"
 
@@ -164,18 +151,18 @@ class TestValidateUuid1Hex:
         from pydantic_core import PydanticCustomError
 
         with pytest.raises(PydanticCustomError):
-            validate_uuid1_hex(12345)
+            validation_utils.validate_uuid1_hex(12345)
 
     def test_none_input_raises_error(self):
         """Test that None input raises error"""
         from pydantic_core import PydanticCustomError
 
         with pytest.raises(PydanticCustomError):
-            validate_uuid1_hex(None)
+            validation_utils.validate_uuid1_hex(None)
 
 
 class TestFormatValidationErrorMessage:
-    """Test cases for format_validation_error_message function"""
+    """Test cases for validation_utils.format_validation_error_message function"""
 
     def test_single_validation_error(self):
         """Test formatting of single validation error"""
@@ -186,7 +173,7 @@ class TestFormatValidationErrorMessage:
         try:
             TestModel(name=123)
         except ValidationError as e:
-            result = format_validation_error_message(e)
+            result = validation_utils.format_validation_error_message(e)
 
             assert "Field: <name>" in result
             assert "Message:" in result
@@ -202,7 +189,7 @@ class TestFormatValidationErrorMessage:
         try:
             TestModel(name=123, age="not_an_int")
         except ValidationError as e:
-            result = format_validation_error_message(e)
+            result = validation_utils.format_validation_error_message(e)
 
             assert "Field: <name>" in result
             assert "Field: <age>" in result
@@ -226,7 +213,7 @@ class TestFormatValidationErrorMessage:
         try:
             TestModel2(text="x" * 200)
         except ValidationError as e:
-            result = format_validation_error_message(e)
+            result = validation_utils.format_validation_error_message(e)
 
             # Check that value is truncated
             assert "..." in result or len(result) < 500
@@ -243,13 +230,13 @@ class TestFormatValidationErrorMessage:
         try:
             ParentModel(nested={"value": "not_an_int"})
         except ValidationError as e:
-            result = format_validation_error_message(e)
+            result = validation_utils.format_validation_error_message(e)
 
             assert "nested.value" in result
 
 
 class TestValidateAndParseRequestArgs:
-    """Test cases for validate_and_parse_request_args function"""
+    """Test cases for validation_utils.validate_and_parse_request_args function"""
 
     def test_valid_request_args(self):
         """Test validation of valid request arguments"""
@@ -261,7 +248,7 @@ class TestValidateAndParseRequestArgs:
         mock_request = Mock()
         mock_request.args.to_dict.return_value = {"param1": "value", "param2": "20"}
 
-        result, error = validate_and_parse_request_args(mock_request, TestValidator)
+        result, error = validation_utils.validate_and_parse_request_args(mock_request, TestValidator)
 
         assert error is None
         assert result is not None
@@ -277,7 +264,7 @@ class TestValidateAndParseRequestArgs:
         mock_request = Mock()
         mock_request.args.to_dict.return_value = {}
 
-        result, error = validate_and_parse_request_args(mock_request, TestValidator)
+        result, error = validation_utils.validate_and_parse_request_args(mock_request, TestValidator)
 
         assert result is None
         assert error is not None
@@ -293,7 +280,7 @@ class TestValidateAndParseRequestArgs:
         mock_request = Mock()
         mock_request.args.to_dict.return_value = {"param1": "value"}
 
-        result, error = validate_and_parse_request_args(mock_request, TestValidator, extras={"internal_id": 123})
+        result, error = validation_utils.validate_and_parse_request_args(mock_request, TestValidator, extras={"internal_id": 123})
 
         assert error is None
         assert result is not None
@@ -309,7 +296,7 @@ class TestValidateAndParseRequestArgs:
         mock_request = Mock()
         mock_request.args.to_dict.return_value = {"number": "42"}
 
-        result, error = validate_and_parse_request_args(mock_request, TestValidator)
+        result, error = validation_utils.validate_and_parse_request_args(mock_request, TestValidator)
 
         assert error is None
         assert result["number"] == 42
@@ -317,7 +304,7 @@ class TestValidateAndParseRequestArgs:
 
 
 class TestValidateAndParseJsonRequest:
-    """Test cases for validate_and_parse_json_request function"""
+    """Test cases for validation_utils.validate_and_parse_json_request function"""
 
     @pytest.mark.anyio
     async def test_valid_json_request(self):
@@ -330,7 +317,7 @@ class TestValidateAndParseJsonRequest:
         mock_request = AsyncMock()
         mock_request.get_json = AsyncMock(return_value={"name": "test", "value": 42})
 
-        result, error = await validate_and_parse_json_request(mock_request, TestValidator)
+        result, error = await validation_utils.validate_and_parse_json_request(mock_request, TestValidator)
 
         assert error is None
         assert result is not None
@@ -348,7 +335,7 @@ class TestValidateAndParseJsonRequest:
         mock_request.get_json = AsyncMock(side_effect=UnsupportedMediaType())
         mock_request.content_type = "text/xml"
 
-        result, error = await validate_and_parse_json_request(mock_request, TestValidator)
+        result, error = await validation_utils.validate_and_parse_json_request(mock_request, TestValidator)
 
         assert result is None
         assert error is not None
@@ -365,7 +352,7 @@ class TestValidateAndParseJsonRequest:
         mock_request = AsyncMock()
         mock_request.get_json = AsyncMock(side_effect=BadRequest())
 
-        result, error = await validate_and_parse_json_request(mock_request, TestValidator)
+        result, error = await validation_utils.validate_and_parse_json_request(mock_request, TestValidator)
 
         assert result is None
         assert error is not None
@@ -381,7 +368,7 @@ class TestValidateAndParseJsonRequest:
         mock_request = AsyncMock()
         mock_request.get_json = AsyncMock(return_value=["not", "a", "dict"])
 
-        result, error = await validate_and_parse_json_request(mock_request, TestValidator)
+        result, error = await validation_utils.validate_and_parse_json_request(mock_request, TestValidator)
 
         assert result is None
         assert error is not None
@@ -399,7 +386,7 @@ class TestValidateAndParseJsonRequest:
         mock_request = AsyncMock()
         mock_request.get_json = AsyncMock(return_value={"name": 123, "age": "not_int"})
 
-        result, error = await validate_and_parse_json_request(mock_request, TestValidator)
+        result, error = await validation_utils.validate_and_parse_json_request(mock_request, TestValidator)
 
         assert result is None
         assert error is not None
@@ -416,7 +403,7 @@ class TestValidateAndParseJsonRequest:
         mock_request = AsyncMock()
         mock_request.get_json = AsyncMock(return_value={"name": "test"})
 
-        result, error = await validate_and_parse_json_request(mock_request, TestValidator, extras={"user_id": "user_123"})
+        result, error = await validation_utils.validate_and_parse_json_request(mock_request, TestValidator, extras={"user_id": "user_123"})
 
         assert error is None
         assert result is not None
@@ -434,7 +421,7 @@ class TestValidateAndParseJsonRequest:
         mock_request = AsyncMock()
         mock_request.get_json = AsyncMock(return_value={"name": "test"})
 
-        result, error = await validate_and_parse_json_request(mock_request, TestValidator, exclude_unset=True)
+        result, error = await validation_utils.validate_and_parse_json_request(mock_request, TestValidator, exclude_unset=True)
 
         assert error is None
         assert result is not None
@@ -442,14 +429,14 @@ class TestValidateAndParseJsonRequest:
         assert "optional" not in result  # Not set, should be excluded
 
 
-class TestCreateDatasetReq:
-    """Test cases for CreateDatasetReq validation"""
+class Testvalidation_utils.CreateDatasetReq:
+    """Test cases for validation_utils.CreateDatasetReq validation"""
 
     def test_valid_dataset_creation(self):
         """Test valid dataset creation request"""
         data = {"name": "Test Dataset", "embedding_model": "text-embedding-3-large@openai"}
 
-        dataset = CreateDatasetReq(**data)
+        dataset = validation_utils.CreateDatasetReq(**data)
 
         assert dataset.name == "Test Dataset"
         assert dataset.embedding_model == "text-embedding-3-large@openai"
@@ -458,48 +445,48 @@ class TestCreateDatasetReq:
         """Test that name whitespace is stripped"""
         data = {"name": "  Test Dataset  "}
 
-        dataset = CreateDatasetReq(**data)
+        dataset = validation_utils.CreateDatasetReq(**data)
 
         assert dataset.name == "Test Dataset"
 
     def test_empty_name_raises_error(self):
         """Test that empty name raises error"""
         with pytest.raises(ValidationError):
-            CreateDatasetReq(name="")
+            validation_utils.CreateDatasetReq(name="")
 
     def test_invalid_embedding_model_format(self):
         """Test that invalid embedding model format raises error"""
         with pytest.raises(ValidationError) as exc_info:
-            CreateDatasetReq(name="Test", embedding_model="invalid_model")
+            validation_utils.CreateDatasetReq(name="Test", embedding_model="invalid_model")
 
         assert "format_invalid" in str(exc_info.value)
 
     def test_embedding_model_without_provider(self):
         """Test embedding model without provider raises error"""
         with pytest.raises(ValidationError):
-            CreateDatasetReq(name="Test", embedding_model="model_name@")
+            validation_utils.CreateDatasetReq(name="Test", embedding_model="model_name@")
 
     def test_valid_avatar_base64(self):
         """Test valid base64 avatar"""
         data = {"name": "Test", "avatar": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="}
 
-        dataset = CreateDatasetReq(**data)
+        dataset = validation_utils.CreateDatasetReq(**data)
 
         assert dataset.avatar.startswith("data:image/png")
 
     def test_invalid_avatar_mime_type(self):
         """Test invalid avatar MIME type raises error"""
         with pytest.raises(ValidationError):
-            CreateDatasetReq(name="Test", avatar="data:video/mp4;base64,abc123")
+            validation_utils.CreateDatasetReq(name="Test", avatar="data:video/mp4;base64,abc123")
 
     def test_avatar_missing_data_prefix(self):
         """Test avatar missing data: prefix raises error"""
         with pytest.raises(ValidationError):
-            CreateDatasetReq(name="Test", avatar="image/png;base64,abc123")
+            validation_utils.CreateDatasetReq(name="Test", avatar="image/png;base64,abc123")
 
     def test_default_chunk_method(self):
         """Test default chunk_method is set to 'naive'"""
-        dataset = CreateDatasetReq(name="Test")
+        dataset = validation_utils.CreateDatasetReq(name="Test")
 
         assert dataset.chunk_method == "naive"
 
@@ -508,24 +495,24 @@ class TestCreateDatasetReq:
         valid_methods = ["naive", "book", "email", "laws", "manual", "one", "paper", "picture", "presentation", "qa", "table", "tag"]
 
         for method in valid_methods:
-            dataset = CreateDatasetReq(name="Test", chunk_method=method)
+            dataset = validation_utils.CreateDatasetReq(name="Test", chunk_method=method)
             assert dataset.chunk_method == method
 
     def test_invalid_chunk_method(self):
         """Test invalid chunk method raises error"""
         with pytest.raises(ValidationError):
-            CreateDatasetReq(name="Test", chunk_method="invalid_method")
+            validation_utils.CreateDatasetReq(name="Test", chunk_method="invalid_method")
 
     def test_pipeline_id_validation(self):
         """Test pipeline_id validation"""
         # Valid 32-char hex
-        dataset = CreateDatasetReq(name="Test", parse_type=1, pipeline_id="a" * 32)
+        dataset = validation_utils.CreateDatasetReq(name="Test", parse_type=1, pipeline_id="a" * 32)
         assert dataset.pipeline_id == "a" * 32
 
     def test_pipeline_id_wrong_length(self):
         """Test pipeline_id with wrong length raises error"""
         with pytest.raises(ValidationError):
-            CreateDatasetReq(
+            validation_utils.CreateDatasetReq(
                 name="Test",
                 parse_type=1,
                 pipeline_id="abc",  # Too short
@@ -534,15 +521,15 @@ class TestCreateDatasetReq:
     def test_pipeline_id_non_hex(self):
         """Test pipeline_id with non-hex characters raises error"""
         with pytest.raises(ValidationError):
-            CreateDatasetReq(
+            validation_utils.CreateDatasetReq(
                 name="Test",
                 parse_type=1,
                 pipeline_id="g" * 32,  # 'g' is not hex
             )
 
 
-class TestUpdateDatasetReq:
-    """Test cases for UpdateDatasetReq validation"""
+class Testvalidation_utils.UpdateDatasetReq:
+    """Test cases for validation_utils.UpdateDatasetReq validation"""
 
     def test_valid_update_request(self):
         """Test valid dataset update request"""
@@ -550,7 +537,7 @@ class TestUpdateDatasetReq:
 
         data = {"dataset_id": str(uuid1_obj), "name": "Updated Dataset"}
 
-        dataset = UpdateDatasetReq(**data)
+        dataset = validation_utils.UpdateDatasetReq(**data)
 
         assert dataset.dataset_id == uuid1_obj.hex
         assert dataset.name == "Updated Dataset"
@@ -560,13 +547,13 @@ class TestUpdateDatasetReq:
         from uuid import uuid4
 
         with pytest.raises(ValidationError):
-            UpdateDatasetReq(dataset_id=str(uuid4()), name="Test")
+            validation_utils.UpdateDatasetReq(dataset_id=str(uuid4()), name="Test")
 
     def test_pagerank_validation(self):
         """Test pagerank field validation"""
         uuid1_obj = uuid1()
 
-        dataset = UpdateDatasetReq(dataset_id=str(uuid1_obj), name="Test", pagerank=50)
+        dataset = validation_utils.UpdateDatasetReq(dataset_id=str(uuid1_obj), name="Test", pagerank=50)
 
         assert dataset.pagerank == 50
 
@@ -575,22 +562,22 @@ class TestUpdateDatasetReq:
         uuid1_obj = uuid1()
 
         with pytest.raises(ValidationError):
-            UpdateDatasetReq(
+            validation_utils.UpdateDatasetReq(
                 dataset_id=str(uuid1_obj),
                 name="Test",
                 pagerank=101,  # Max is 100
             )
 
 
-class TestDeleteDatasetReq:
-    """Test cases for DeleteDatasetReq validation"""
+class Testvalidation_utils.DeleteDatasetReq:
+    """Test cases for validation_utils.DeleteDatasetReq validation"""
 
     def test_valid_delete_request(self):
         """Test valid delete request"""
         uuid1_obj1 = uuid1()
         uuid1_obj2 = uuid1()
 
-        req = DeleteDatasetReq(ids=[str(uuid1_obj1), str(uuid1_obj2)])
+        req = validation_utils.DeleteDatasetReq(ids=[str(uuid1_obj1), str(uuid1_obj2)])
 
         assert len(req.ids) == 2
         assert uuid1_obj1.hex in req.ids
@@ -601,29 +588,29 @@ class TestDeleteDatasetReq:
         uuid1_obj = uuid1()
 
         with pytest.raises(ValidationError) as exc_info:
-            DeleteDatasetReq(ids=[str(uuid1_obj), str(uuid1_obj)])
+            validation_utils.DeleteDatasetReq(ids=[str(uuid1_obj), str(uuid1_obj)])
 
         assert "duplicate" in str(exc_info.value).lower()
 
     def test_empty_ids_list(self):
         """Test empty IDs list"""
-        req = DeleteDatasetReq(ids=[])
+        req = validation_utils.DeleteDatasetReq(ids=[])
 
         assert req.ids == []
 
     def test_none_ids(self):
         """Test None IDs"""
-        req = DeleteDatasetReq(ids=None)
+        req = validation_utils.DeleteDatasetReq(ids=None)
 
         assert req.ids is None
 
 
-class TestListDatasetReq:
-    """Test cases for ListDatasetReq validation"""
+class Testvalidation_utils.ListDatasetReq:
+    """Test cases for validation_utils.ListDatasetReq validation"""
 
     def test_default_values(self):
         """Test default values for list request"""
-        req = ListDatasetReq()
+        req = validation_utils.ListDatasetReq()
 
         assert req.page == 1
         assert req.page_size == 30
@@ -632,7 +619,7 @@ class TestListDatasetReq:
 
     def test_custom_pagination(self):
         """Test custom pagination values"""
-        req = ListDatasetReq(page=2, page_size=50)
+        req = validation_utils.ListDatasetReq(page=2, page_size=50)
 
         assert req.page == 2
         assert req.page_size == 50
@@ -640,12 +627,12 @@ class TestListDatasetReq:
     def test_page_minimum_value(self):
         """Test page minimum value validation"""
         with pytest.raises(ValidationError):
-            ListDatasetReq(page=0)
+            validation_utils.ListDatasetReq(page=0)
 
     def test_valid_orderby_values(self):
         """Test valid orderby values"""
-        req1 = ListDatasetReq(orderby="create_time")
-        req2 = ListDatasetReq(orderby="update_time")
+        req1 = validation_utils.ListDatasetReq(orderby="create_time")
+        req2 = validation_utils.ListDatasetReq(orderby="update_time")
 
         assert req1.orderby == "create_time"
         assert req2.orderby == "update_time"
@@ -653,15 +640,15 @@ class TestListDatasetReq:
     def test_invalid_orderby_value(self):
         """Test invalid orderby value raises error"""
         with pytest.raises(ValidationError):
-            ListDatasetReq(orderby="invalid_field")
+            validation_utils.ListDatasetReq(orderby="invalid_field")
 
 
-class TestParserConfig:
-    """Test cases for ParserConfig validation"""
+class Testvalidation_utils.ParserConfig:
+    """Test cases for validation_utils.ParserConfig validation"""
 
     def test_default_parser_config(self):
         """Test default parser configuration"""
-        config = ParserConfig()
+        config = validation_utils.ParserConfig()
 
         assert config.chunk_token_num == 512
         assert config.auto_keywords == 0
@@ -669,7 +656,7 @@ class TestParserConfig:
 
     def test_custom_parser_config(self):
         """Test custom parser configuration"""
-        config = ParserConfig(chunk_token_num=1024, auto_keywords=5, auto_questions=3)
+        config = validation_utils.ParserConfig(chunk_token_num=1024, auto_keywords=5, auto_questions=3)
 
         assert config.chunk_token_num == 1024
         assert config.auto_keywords == 5
@@ -678,22 +665,22 @@ class TestParserConfig:
     def test_chunk_token_num_range(self):
         """Test chunk_token_num range validation"""
         with pytest.raises(ValidationError):
-            ParserConfig(chunk_token_num=3000)  # Max is 2048
+            validation_utils.ParserConfig(chunk_token_num=3000)  # Max is 2048
 
     def test_raptor_config_integration(self):
         """Test raptor config integration"""
-        config = ParserConfig(raptor=RaptorConfig(use_raptor=True, max_token=512))
+        config = validation_utils.ParserConfig(raptor=validation_utils.RaptorConfig(use_raptor=True, max_token=512))
 
         assert config.raptor.use_raptor is True
         assert config.raptor.max_token == 512
 
 
-class TestRaptorConfig:
-    """Test cases for RaptorConfig validation"""
+class Testvalidation_utils.RaptorConfig:
+    """Test cases for validation_utils.RaptorConfig validation"""
 
     def test_default_raptor_config(self):
         """Test default raptor configuration"""
-        config = RaptorConfig()
+        config = validation_utils.RaptorConfig()
 
         assert config.use_raptor is False
         assert config.max_token == 256
@@ -701,7 +688,7 @@ class TestRaptorConfig:
 
     def test_custom_raptor_config(self):
         """Test custom raptor configuration"""
-        config = RaptorConfig(use_raptor=True, max_token=512, threshold=0.2)
+        config = validation_utils.RaptorConfig(use_raptor=True, max_token=512, threshold=0.2)
 
         assert config.use_raptor is True
         assert config.max_token == 512
@@ -710,15 +697,15 @@ class TestRaptorConfig:
     def test_threshold_range(self):
         """Test threshold range validation"""
         with pytest.raises(ValidationError):
-            RaptorConfig(threshold=1.5)  # Max is 1.0
+            validation_utils.RaptorConfig(threshold=1.5)  # Max is 1.0
 
 
-class TestGraphragConfig:
-    """Test cases for GraphragConfig validation"""
+class Testvalidation_utils.GraphragConfig:
+    """Test cases for validation_utils.GraphragConfig validation"""
 
     def test_default_graphrag_config(self):
         """Test default graphrag configuration"""
-        config = GraphragConfig()
+        config = validation_utils.GraphragConfig()
 
         assert config.use_graphrag is False
         assert config.method == "light"
@@ -726,7 +713,7 @@ class TestGraphragConfig:
 
     def test_custom_graphrag_config(self):
         """Test custom graphrag configuration"""
-        config = GraphragConfig(use_graphrag=True, method="general", entity_types=["person", "location"])
+        config = validation_utils.GraphragConfig(use_graphrag=True, method="general", entity_types=["person", "location"])
 
         assert config.use_graphrag is True
         assert config.method == "general"
@@ -735,7 +722,7 @@ class TestGraphragConfig:
     def test_invalid_method(self):
         """Test invalid method raises error"""
         with pytest.raises(ValidationError):
-            GraphragConfig(method="invalid")
+            validation_utils.GraphragConfig(method="invalid")
 
 
 if __name__ == "__main__":

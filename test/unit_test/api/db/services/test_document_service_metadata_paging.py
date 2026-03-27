@@ -29,7 +29,7 @@ warnings.filterwarnings(
     category=UserWarning,
 )
 
-from api.db.services import document_service
+import api.db.services.document_service as document_service
 
 
 class _FakeOrderField:

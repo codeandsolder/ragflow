@@ -22,16 +22,16 @@ import pytest
 import json
 import datetime
 from enum import Enum, IntEnum
-from api.utils.json_encode import BaseType, CustomJSONEncoder, json_dumps, json_loads
+from api.utils import json_encode
 
 
-class TestBaseTypeToDict:
-    """Test cases for BaseType.to_dict method"""
+class Testjson_encode.BaseTypeToDict:
+    """Test cases for json_encode.BaseType.to_dict method"""
 
     def test_simple_object_to_dict(self):
         """Test converting simple object to dictionary"""
 
-        class SimpleType(BaseType):
+        class SimpleType(json_encode.BaseType):
             def __init__(self):
                 self.name = "test"
                 self.value = 42
@@ -45,7 +45,7 @@ class TestBaseTypeToDict:
     def test_private_attributes_excluded(self):
         """Test that private attributes (starting with _) are stripped"""
 
-        class PrivateType(BaseType):
+        class PrivateType(json_encode.BaseType):
             def __init__(self):
                 self._private = "hidden"
                 self._another = "also hidden"
@@ -65,7 +65,7 @@ class TestBaseTypeToDict:
     def test_empty_object(self):
         """Test converting empty object to dictionary"""
 
-        class EmptyType(BaseType):
+        class EmptyType(json_encode.BaseType):
             pass
 
         obj = EmptyType()
@@ -77,7 +77,7 @@ class TestBaseTypeToDict:
     def test_nested_object_to_dict(self):
         """Test converting object with nested values"""
 
-        class NestedType(BaseType):
+        class NestedType(json_encode.BaseType):
             def __init__(self):
                 self.data = {"key": "value"}
                 self.items = [1, 2, 3]
@@ -91,13 +91,13 @@ class TestBaseTypeToDict:
         assert result["text"] == "test"
 
 
-class TestBaseTypeToDictWithType:
-    """Test cases for BaseType.to_dict_with_type method"""
+class Testjson_encode.BaseTypeToDictWithType:
+    """Test cases for json_encode.BaseType.to_dict_with_type method"""
 
     def test_includes_type_information(self):
         """Test that type information is included"""
 
-        class TypedObject(BaseType):
+        class TypedObject(json_encode.BaseType):
             def __init__(self):
                 self.value = "test"
 
@@ -111,7 +111,7 @@ class TestBaseTypeToDictWithType:
     def test_includes_module_information(self):
         """Test that module information is included"""
 
-        class ModuleObject(BaseType):
+        class ModuleObject(json_encode.BaseType):
             def __init__(self):
                 self.value = "test"
 
@@ -122,13 +122,13 @@ class TestBaseTypeToDictWithType:
         assert result["module"] is not None
 
     def test_nested_objects_with_types(self):
-        """Test nested BaseType objects include type info"""
+        """Test nested json_encode.BaseType objects include type info"""
 
-        class InnerType(BaseType):
+        class InnerType(json_encode.BaseType):
             def __init__(self):
                 self.inner_value = "inner"
 
-        class OuterType(BaseType):
+        class OuterType(json_encode.BaseType):
             def __init__(self):
                 self.nested = InnerType()
                 self.value = "outer"
@@ -144,7 +144,7 @@ class TestBaseTypeToDictWithType:
     def test_list_handling(self):
         """Test handling of lists in to_dict_with_type"""
 
-        class ListType(BaseType):
+        class ListType(json_encode.BaseType):
             def __init__(self):
                 self.items = [1, 2, 3]
 
@@ -159,7 +159,7 @@ class TestBaseTypeToDictWithType:
     def test_dict_handling(self):
         """Test handling of dictionaries in to_dict_with_type"""
 
-        class DictType(BaseType):
+        class DictType(json_encode.BaseType):
             def __init__(self):
                 self.config = {"key": "value"}
 
@@ -171,27 +171,27 @@ class TestBaseTypeToDictWithType:
         assert config_data["type"] == "dict"
 
 
-class TestCustomJSONEncoder:
-    """Test cases for CustomJSONEncoder class"""
+class Testjson_encode.CustomJSONEncoder:
+    """Test cases for json_encode.CustomJSONEncoder class"""
 
     def test_encode_datetime(self):
         """Test encoding of datetime objects"""
         dt = datetime.datetime(2025, 12, 3, 14, 30, 45)
-        result = json.dumps(dt, cls=CustomJSONEncoder)
+        result = json.dumps(dt, cls=json_encode.CustomJSONEncoder)
 
         assert result == '"2025-12-03 14:30:45"'
 
     def test_encode_date(self):
         """Test encoding of date objects"""
         d = datetime.date(2025, 12, 3)
-        result = json.dumps(d, cls=CustomJSONEncoder)
+        result = json.dumps(d, cls=json_encode.CustomJSONEncoder)
 
         assert result == '"2025-12-03"'
 
     def test_encode_timedelta(self):
         """Test encoding of timedelta objects"""
         td = datetime.timedelta(days=1, hours=2, minutes=30)
-        result = json.dumps(td, cls=CustomJSONEncoder)
+        result = json.dumps(td, cls=json_encode.CustomJSONEncoder)
 
         assert isinstance(json.loads(result), str)
         assert "1 day" in json.loads(result)
@@ -204,7 +204,7 @@ class TestCustomJSONEncoder:
             GREEN = "green"
             BLUE = "blue"
 
-        result = json.dumps(Color.RED, cls=CustomJSONEncoder)
+        result = json.dumps(Color.RED, cls=json_encode.CustomJSONEncoder)
 
         assert result == '"red"'
 
@@ -216,14 +216,14 @@ class TestCustomJSONEncoder:
             MEDIUM = 2
             HIGH = 3
 
-        result = json.dumps(Priority.HIGH, cls=CustomJSONEncoder)
+        result = json.dumps(Priority.HIGH, cls=json_encode.CustomJSONEncoder)
 
         assert result == "3"
 
     def test_encode_set(self):
         """Test encoding of set objects"""
         test_set = {1, 2, 3, 4, 5}
-        result = json.dumps(test_set, cls=CustomJSONEncoder)
+        result = json.dumps(test_set, cls=json_encode.CustomJSONEncoder)
 
         # Set should be converted to list
         decoded = json.loads(result)
@@ -231,29 +231,29 @@ class TestCustomJSONEncoder:
         assert set(decoded) == test_set
 
     def test_encode_basetype_object(self):
-        """Test encoding of BaseType objects"""
+        """Test encoding of json_encode.BaseType objects"""
 
-        class TestType(BaseType):
+        class TestType(json_encode.BaseType):
             def __init__(self):
                 self.name = "test"
                 self.value = 42
 
         obj = TestType()
-        result = json.dumps(obj, cls=CustomJSONEncoder)
+        result = json.dumps(obj, cls=json_encode.CustomJSONEncoder)
 
         decoded = json.loads(result)
         assert decoded["name"] == "test"
         assert decoded["value"] == 42
 
     def test_encode_basetype_with_type_flag(self):
-        """Test encoding BaseType with with_type flag"""
+        """Test encoding json_encode.BaseType with with_type flag"""
 
-        class TestType(BaseType):
+        class TestType(json_encode.BaseType):
             def __init__(self):
                 self.value = "test"
 
         obj = TestType()
-        result = json.dumps(obj, cls=CustomJSONEncoder, with_type=True)
+        result = json.dumps(obj, cls=json_encode.CustomJSONEncoder, with_type=True)
 
         decoded = json.loads(result)
         assert "type" in decoded
@@ -261,20 +261,20 @@ class TestCustomJSONEncoder:
 
     def test_encode_type_object(self):
         """Test encoding of type objects"""
-        result = json.dumps(str, cls=CustomJSONEncoder)
+        result = json.dumps(str, cls=json_encode.CustomJSONEncoder)
 
         assert result == '"str"'
 
     def test_encode_nested_structures(self):
         """Test encoding of nested structures with various types"""
 
-        class TestType(BaseType):
+        class TestType(json_encode.BaseType):
             def __init__(self):
                 self.name = "test"
 
         data = {"datetime": datetime.datetime(2025, 12, 3, 12, 0, 0), "date": datetime.date(2025, 12, 3), "set": {1, 2, 3}, "object": TestType(), "list": [1, 2, 3]}
 
-        result = json.dumps(data, cls=CustomJSONEncoder)
+        result = json.dumps(data, cls=json_encode.CustomJSONEncoder)
         decoded = json.loads(result)
 
         assert decoded["datetime"] == "2025-12-03 12:00:00"
@@ -284,97 +284,97 @@ class TestCustomJSONEncoder:
 
 
 class TestJsonDumps:
-    """Test cases for json_dumps function"""
+    """Test cases for json_encode.json_dumps function"""
 
-    def test_json_dumps_basic(self):
-        """Test basic json_dumps functionality"""
+    def test_json_encode.json_dumps_basic(self):
+        """Test basic json_encode.json_dumps functionality"""
         data = {"key": "value", "number": 42}
-        result = json_dumps(data)
+        result = json_encode.json_dumps(data)
 
         assert isinstance(result, str)
         assert json.loads(result) == data
 
-    def test_json_dumps_with_byte_false(self):
-        """Test json_dumps with byte=False returns string"""
+    def test_json_encode.json_dumps_with_byte_false(self):
+        """Test json_encode.json_dumps with byte=False returns string"""
         data = {"test": "data"}
-        result = json_dumps(data, byte=False)
+        result = json_encode.json_dumps(data, byte=False)
 
         assert isinstance(result, str)
 
-    def test_json_dumps_with_byte_true(self):
-        """Test json_dumps with byte=True returns bytes"""
+    def test_json_encode.json_dumps_with_byte_true(self):
+        """Test json_encode.json_dumps with byte=True returns bytes"""
         data = {"test": "data"}
-        result = json_dumps(data, byte=True)
+        result = json_encode.json_dumps(data, byte=True)
 
         assert isinstance(result, bytes)
 
-    def test_json_dumps_with_indent(self):
-        """Test json_dumps with indentation"""
+    def test_json_encode.json_dumps_with_indent(self):
+        """Test json_encode.json_dumps with indentation"""
         data = {"key": "value"}
-        result = json_dumps(data, indent=2)
+        result = json_encode.json_dumps(data, indent=2)
 
         assert isinstance(result, str)
         assert "\n" in result  # Indented JSON has newlines
 
-    def test_json_dumps_with_type_false(self):
-        """Test json_dumps with with_type=False"""
+    def test_json_encode.json_dumps_with_type_false(self):
+        """Test json_encode.json_dumps with with_type=False"""
 
-        class TestType(BaseType):
+        class TestType(json_encode.BaseType):
             def __init__(self):
                 self.value = "test"
 
         obj = TestType()
-        result = json_dumps(obj, with_type=False)
+        result = json_encode.json_dumps(obj, with_type=False)
 
         decoded = json.loads(result)
         assert "type" not in decoded
         assert decoded["value"] == "test"
 
-    def test_json_dumps_with_type_true(self):
-        """Test json_dumps with with_type=True"""
+    def test_json_encode.json_dumps_with_type_true(self):
+        """Test json_encode.json_dumps with with_type=True"""
 
-        class TestType(BaseType):
+        class TestType(json_encode.BaseType):
             def __init__(self):
                 self.value = "test"
 
         obj = TestType()
-        result = json_dumps(obj, with_type=True)
+        result = json_encode.json_dumps(obj, with_type=True)
 
         decoded = json.loads(result)
         assert "type" in decoded
         assert "data" in decoded
 
-    def test_json_dumps_datetime(self):
-        """Test json_dumps with datetime objects"""
+    def test_json_encode.json_dumps_datetime(self):
+        """Test json_encode.json_dumps with datetime objects"""
         data = {"timestamp": datetime.datetime(2025, 12, 3, 15, 30, 0)}
-        result = json_dumps(data)
+        result = json_encode.json_dumps(data)
 
         decoded = json.loads(result)
         assert decoded["timestamp"] == "2025-12-03 15:30:00"
 
 
 class TestJsonLoads:
-    """Test cases for json_loads function"""
+    """Test cases for json_encode.json_loads function"""
 
-    def test_json_loads_string_input(self):
-        """Test json_loads with string input"""
+    def test_json_encode.json_loads_string_input(self):
+        """Test json_encode.json_loads with string input"""
         json_string = '{"key": "value", "number": 42}'
-        result = json_loads(json_string)
+        result = json_encode.json_loads(json_string)
 
         assert isinstance(result, dict)
         assert result["key"] == "value"
         assert result["number"] == 42
 
-    def test_json_loads_bytes_input(self):
-        """Test json_loads with bytes input"""
+    def test_json_encode.json_loads_bytes_input(self):
+        """Test json_encode.json_loads with bytes input"""
         json_bytes = b'{"key": "value"}'
-        result = json_loads(json_bytes)
+        result = json_encode.json_loads(json_bytes)
 
         assert isinstance(result, dict)
         assert result["key"] == "value"
 
-    def test_json_loads_with_object_hook(self):
-        """Test json_loads with object_hook parameter"""
+    def test_json_encode.json_loads_with_object_hook(self):
+        """Test json_encode.json_loads with object_hook parameter"""
 
         def custom_hook(obj):
             if "special" in obj:
@@ -382,20 +382,20 @@ class TestJsonLoads:
             return obj
 
         json_string = '{"special": "value"}'
-        result = json_loads(json_string, object_hook=custom_hook)
+        result = json_encode.json_loads(json_string, object_hook=custom_hook)
 
         assert result["processed"] is True
 
-    def test_json_loads_empty_object(self):
-        """Test json_loads with empty object"""
-        result = json_loads("{}")
+    def test_json_encode.json_loads_empty_object(self):
+        """Test json_encode.json_loads with empty object"""
+        result = json_encode.json_loads("{}")
 
         assert isinstance(result, dict)
         assert len(result) == 0
 
-    def test_json_loads_array(self):
-        """Test json_loads with array"""
-        result = json_loads("[1, 2, 3, 4, 5]")
+    def test_json_encode.json_loads_array(self):
+        """Test json_encode.json_loads with array"""
+        result = json_encode.json_loads("[1, 2, 3, 4, 5]")
 
         assert isinstance(result, list)
         assert result == [1, 2, 3, 4, 5]
@@ -408,8 +408,8 @@ class TestRoundtripConversion:
         """Test roundtrip conversion of dictionary"""
         original = {"key": "value", "number": 42, "list": [1, 2, 3]}
 
-        dumped = json_dumps(original)
-        loaded = json_loads(dumped)
+        dumped = json_encode.json_dumps(original)
+        loaded = json_encode.json_loads(dumped)
 
         assert loaded == original
 
@@ -417,23 +417,23 @@ class TestRoundtripConversion:
         """Test roundtrip with byte conversion"""
         original = {"test": "data"}
 
-        dumped = json_dumps(original, byte=True)
-        loaded = json_loads(dumped)
+        dumped = json_encode.json_dumps(original, byte=True)
+        loaded = json_encode.json_loads(dumped)
 
         assert loaded == original
 
     def test_roundtrip_basetype(self):
-        """Test roundtrip with BaseType object"""
+        """Test roundtrip with json_encode.BaseType object"""
 
-        class TestType(BaseType):
+        class TestType(json_encode.BaseType):
             def __init__(self):
                 self.name = "test"
                 self.value = 42
 
         obj = TestType()
 
-        dumped = json_dumps(obj)
-        loaded = json_loads(dumped)
+        dumped = json_encode.json_dumps(obj)
+        loaded = json_encode.json_loads(dumped)
 
         assert loaded["name"] == "test"
         assert loaded["value"] == 42
@@ -449,8 +449,8 @@ class TestRoundtripConversion:
     )
     def test_roundtrip_various_structures(self, test_data):
         """Test roundtrip for various data structures"""
-        dumped = json_dumps(test_data)
-        loaded = json_loads(dumped)
+        dumped = json_encode.json_dumps(test_data)
+        loaded = json_encode.json_loads(dumped)
 
         assert loaded == test_data
 

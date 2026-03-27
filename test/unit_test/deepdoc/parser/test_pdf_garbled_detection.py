@@ -44,6 +44,7 @@ _MOCK_MODULES = [
     "PIL",
     "PIL.Image",
     "pypdf",
+    "pypdf.errors",
     "sklearn",
     "sklearn.cluster",
     "sklearn.metrics",

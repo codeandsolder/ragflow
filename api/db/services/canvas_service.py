@@ -70,18 +70,18 @@ class UserCanvasService(CommonService):
         fields = [cls.model.id, cls.model.avatar, cls.model.title, cls.model.permission, cls.model.canvas_type, cls.model.canvas_category]
         # find team agents and owned agents
         agents = cls.model.select(*fields).where((cls.model.user_id.in_(tenant_ids) & (cls.model.permission == TenantPermission.TEAM.value)) | (cls.model.user_id == user_id))
-        # sort by create_time, asc
-        agents.order_by(cls.model.create_time.asc())
-        # maybe cause slow query by deep paginate, optimize later
-        offset, limit = 0, 50
+        limit = 50
         res = []
+        last_id = None
         while True:
-            ag_batch = agents.offset(offset).limit(limit)
-            _temp = list(ag_batch.dicts())
-            if not _temp:
+            query = agents.limit(limit).order_by(cls.model.id.asc())
+            if last_id:
+                query = query.where(cls.model.id > last_id)
+            ag_batch = list(query.dicts())
+            if not ag_batch:
                 break
-            res.extend(_temp)
-            offset += limit
+            res.extend(ag_batch)
+            last_id = ag_batch[-1]["id"]
         return res
 
     @classmethod

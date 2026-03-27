@@ -51,7 +51,7 @@ export const useListMcpServer = () => {
       },
     ],
     initialData: { total: 0, mcp_servers: [] },
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await listMcpServers({
         keywords: debouncedSearchString,
@@ -76,7 +76,7 @@ export const useGetMcpServer = (id: string) => {
   const { data, isFetching: loading } = useQuery<IMcpServer>({
     queryKey: [McpApiAction.GetMcpServer, id],
     initialData: {} as IMcpServer,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     enabled: !!id,
     queryFn: async () => {
       const { data } = await mcpServerService.get({ mcp_id: id });
@@ -207,7 +207,7 @@ export const useListMcpServerTools = () => {
   const { data, isFetching: loading } = useQuery<IMCPToolRecord>({
     queryKey: [McpApiAction.ListMcpServerTools],
     initialData: {} as IMCPToolRecord,
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     enabled: ids.length > 0,
     queryFn: async () => {
       const { data } = await mcpServerService.listTools({ mcp_ids: ids });

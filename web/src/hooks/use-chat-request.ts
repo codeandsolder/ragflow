@@ -20,7 +20,7 @@ import { buildMessageListWithUuid, generateConversationId } from '@/utils/chat';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDebounce } from 'ahooks';
 import { has } from 'lodash';
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
 import {
@@ -379,6 +379,12 @@ export function useUploadAndParseFile() {
   const { conversationId: id } = useGetChatSearchParams();
   const { t } = useTranslation();
   const controller = useRef(new AbortController());
+
+  useEffect(() => {
+    return () => {
+      controller.current.abort();
+    };
+  }, []);
 
   const {
     data,

@@ -24,6 +24,7 @@ import psycopg2
 import pyodbc
 from agent.tools.base import ToolParamBase, ToolBase, ToolMeta
 from common.connection_utils import timeout
+from common.sql_validation import validate_text_to_sql, SQLValidationError as CommonSQLValidationError
 
 
 class ExeSQLParam(ToolParamBase):
@@ -50,38 +51,12 @@ class ExeSQLParam(ToolParamBase):
         sql_upper = sql.upper().strip()
         if sql_upper.startswith("/*") or sql_upper.startswith("--") or sql_upper.startswith(";"):
             raise ValueError("SQL comments are not allowed.")
-        dangerous_patterns = [
-            r"\bDROP\b",
-            r"\bDELETE\b",
-            r"\bUPDATE\b",
-            r"\bINSERT\b",
-            r"\bALTER\b",
-            r"\bCREATE\b",
-            r"\bTRUNCATE\b",
-            r"\bGRANT\b",
-            r"\bREVOKE\b",
-            r"\bEXEC\b",
-            r"\bEXECUTE\b",
-            r"\bxp_",
-            r"\bsp_\w+",
-            r"\bINTO\s+OUTFILE\b",
-            r"\bINTO\s+DUMPFILE\b",
-            r"\bLOAD_FILE\b",
-            r"\bBENCHMARK\b",
-            r"\bSLEEP\b",
-        ]
-        for pattern in dangerous_patterns:
-            if re.search(pattern, sql_upper, re.IGNORECASE):
-                raise ValueError(f"SQL statement contains forbidden operation: {pattern}")
-
-        statements = [s.strip() for s in sql.split(";") if s.strip()]
-        if len(statements) > 1:
-            raise ValueError("Multiple SQL statements are not allowed.")
-
-        dangerous_chars = ["--", "/*", "*/", ";", "xp_", "sp_"]
-        for char in dangerous_chars:
-            if char in sql:
-                raise ValueError(f"SQL contains forbidden character sequence: {char}")
+        # Use centralized SQL validation
+        try:
+            # Only allow SELECT, no table/column restrictions for agent tool
+            validate_text_to_sql(sql, set(), set())
+        except CommonSQLValidationError as e:
+            raise ValueError(str(e))
 
         return True
 

@@ -76,7 +76,7 @@ export const useFetchDataflow = () => {
     refetch,
   } = useQuery<IFlow>({
     queryKey: [DataflowApiAction.FetchDataflow, id],
-    gcTime: 0,
+    gcTime: 5 * 60 * 1000,
     initialData: {} as IFlow,
     enabled: !!id,
     refetchOnWindowFocus: false,

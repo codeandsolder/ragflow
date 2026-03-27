@@ -550,7 +550,7 @@ async def setting_user():
             )
 
         if new_password:
-            update_dict["password"] = generate_password_hash(decrypt(new_password))
+            update_dict["password"] = generate_password_hash(new_password)
 
     for k in request_data.keys():
         if k in [

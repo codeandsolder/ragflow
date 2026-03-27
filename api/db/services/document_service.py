@@ -376,17 +376,18 @@ class DocumentService(CommonService):
     def get_all_doc_ids_by_kb_ids(cls, kb_ids):
         fields = [cls.model.id, cls.model.kb_id]
         docs = cls.model.select(*fields).where(cls.model.kb_id.in_(kb_ids))
-        docs.order_by(cls.model.create_time.asc())
-        # maybe cause slow query by deep paginate, optimize later
-        offset, limit = 0, 100
+        limit = 100
         res = []
+        last_id = None
         while True:
-            doc_batch = docs.offset(offset).limit(limit)
-            _temp = list(doc_batch.dicts())
-            if not _temp:
+            query = docs.limit(limit).order_by(cls.model.id.asc())
+            if last_id:
+                query = query.where(cls.model.id > last_id)
+            doc_batch = list(query.dicts())
+            if not doc_batch:
                 break
-            res.extend(_temp)
-            offset += limit
+            res.extend(doc_batch)
+            last_id = doc_batch[-1]["id"]
         return res
 
     @classmethod
@@ -394,17 +395,18 @@ class DocumentService(CommonService):
     def get_all_docs_by_creator_id(cls, creator_id):
         fields = [cls.model.id, cls.model.kb_id, cls.model.token_num, cls.model.chunk_num, Knowledgebase.tenant_id]
         docs = cls.model.select(*fields).join(Knowledgebase, on=(Knowledgebase.id == cls.model.kb_id)).where(cls.model.created_by == creator_id)
-        docs.order_by(cls.model.create_time.asc())
-        # maybe cause slow query by deep paginate, optimize later
-        offset, limit = 0, 100
+        limit = 100
         res = []
+        last_id = None
         while True:
-            doc_batch = docs.offset(offset).limit(limit)
-            _temp = list(doc_batch.dicts())
-            if not _temp:
+            query = docs.limit(limit).order_by(cls.model.id.asc())
+            if last_id:
+                query = query.where(cls.model.id > last_id)
+            doc_batch = list(query.dicts())
+            if not doc_batch:
                 break
-            res.extend(_temp)
-            offset += limit
+            res.extend(doc_batch)
+            last_id = doc_batch[-1]["id"]
         return res
 
     @classmethod

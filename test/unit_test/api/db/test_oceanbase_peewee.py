@@ -3,6 +3,7 @@ Tests for OceanBase Peewee ORM support.
 """
 
 import pytest
+from api.db import db_models
 from api.db.db_models import (
     RetryingPooledOceanBaseDatabase,
     PooledDatabase,

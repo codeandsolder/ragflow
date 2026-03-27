@@ -684,7 +684,8 @@ class Canvas(Graph):
                 },
             )
             self.history.append(("assistant", self.get_component_obj(self.path[-1]).output()))
-            self.globals["sys.history"].append(f"{self.history[-1][0]}: {self.history[-1][1]}")
+            with self._lock:
+                self.globals["sys.history"].append(f"{self.history[-1][0]}: {self.history[-1][1]}")
         elif "Task has been canceled" in self.error:
             yield decorate(
                 "workflow_finished",
@@ -699,7 +700,8 @@ class Canvas(Graph):
     def is_reff(self, exp: str) -> bool:
         exp = exp.strip("{").strip("}")
         if exp.find("@") < 0:
-            return exp in self.globals
+            with self._lock:
+                return exp in self.globals
         arr = exp.split("@")
         if len(arr) != 2:
             return False
@@ -756,8 +758,9 @@ class Canvas(Graph):
         return convs
 
     def add_user_input(self, question):
-        self.history.append(("user", question))
-        self.globals["sys.history"].append(f"{self.history[-1][0]}: {self.history[-1][1]}")
+        with self._lock:
+            self.history.append(("user", question))
+            self.globals["sys.history"].append(f"{self.history[-1][0]}: {self.history[-1][1]}")
 
     def get_prologue(self):
         return self.components["begin"]["obj"]._param.prologue
@@ -766,10 +769,12 @@ class Canvas(Graph):
         return self.components["begin"]["obj"]._param.mode
 
     def get_sys_query(self):
-        return self.globals.get("sys.query", "")
+        with self._lock:
+            return self.globals.get("sys.query", "")
 
     def set_global_param(self, **kwargs):
-        self.globals.update(kwargs)
+        with self._lock:
+            self.globals.update(kwargs)
 
     def get_preset_param(self):
         return self.components["begin"]["obj"]._param.inputs
@@ -842,24 +847,26 @@ class Canvas(Graph):
             logging.exception(e)
 
     def add_reference(self, chunks: list[object], doc_infos: list[object]):
-        if not self.retrieval:
-            self.retrieval = [{"chunks": {}, "doc_aggs": {}}]
+        with self._lock:
+            if not self.retrieval:
+                self.retrieval = [{"chunks": {}, "doc_aggs": {}}]
 
-        r = self.retrieval[-1]
-        for ck in chunks_format({"chunks": chunks}):
-            cid = hash_str2int(ck["id"], 500)
-            # cid = uuid.uuid5(uuid.NAMESPACE_DNS, ck["id"])
-            if cid not in r:
-                r["chunks"][cid] = ck
+            r = self.retrieval[-1]
+            for ck in chunks_format({"chunks": chunks}):
+                cid = hash_str2int(ck["id"], 500)
+                # cid = uuid.uuid5(uuid.NAMESPACE_DNS, ck["id"])
+                if cid not in r:
+                    r["chunks"][cid] = ck
 
-        for doc in doc_infos:
-            if doc["doc_name"] not in r:
-                r["doc_aggs"][doc["doc_name"]] = doc
+            for doc in doc_infos:
+                if doc["doc_name"] not in r:
+                    r["doc_aggs"][doc["doc_name"]] = doc
 
     def get_reference(self):
-        if not self.retrieval:
-            return {"chunks": {}, "doc_aggs": {}}
-        return self.retrieval[-1]
+        with self._lock:
+            if not self.retrieval:
+                return {"chunks": {}, "doc_aggs": {}}
+            return self.retrieval[-1]
 
     def _has_reference(self) -> bool:
         ref = self.get_reference()

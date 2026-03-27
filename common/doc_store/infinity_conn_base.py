@@ -27,6 +27,7 @@ from infinity.index import IndexInfo, IndexType
 from infinity.errors import ErrorCode
 import pandas as pd
 from common.file_utils import get_project_base_directory
+from common.sql_validation import validate_text_to_sql, SQLValidationError
 from rag.nlp import is_english
 from common import settings
 from common.doc_store.doc_store_base import DocStoreConnection, MatchExpr, OrderByExpr
@@ -597,6 +598,26 @@ class InfinityConnectionBase(DocStoreConnection):
 
         try:
             self.logger.debug(f"InfinityConnection.sql get sql: {sql}")
+
+            # Extract table name from SQL for validation
+            table_match = re.search(r"FROM\s+([a-zA-Z0-9_]+)", sql, re.IGNORECASE)
+            table_name = table_match.group(1).lower() if table_match else ""
+
+            # Build allowed columns from mapping file
+            allowed_columns = set()
+            fp_mapping = os.path.join(get_project_base_directory(), "conf", self.mapping_file_name)
+            if os.path.exists(fp_mapping):
+                with open(fp_mapping) as f:
+                    schema = json.load(f)
+                allowed_columns = {k.lower() for k in schema.keys()}
+            allowed_columns.update({"doc_id", "docnm", "kb_id", "id", "chunk_data", "content", "content_with_weight", "page_num", "position", "rownum"})
+
+            # Validate SQL before any transformations
+            try:
+                validate_text_to_sql(sql, {table_name}, allowed_columns)
+            except SQLValidationError as e:
+                self.logger.warning(f"InfinityConnection.sql validation failed: {e}")
+                raise
 
             # Clean up SQL
             sql = re.sub(r"[ `]+", " ", sql)
