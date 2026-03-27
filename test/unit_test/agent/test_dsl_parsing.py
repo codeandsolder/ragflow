@@ -787,29 +787,35 @@ class TestDSLLoopIteration:
         start_cid = loop.get_start()
         assert start_cid == "loopitem_0"
 
-    def _create_iterate_dsl(self) -> dict:
+    def _create_iteration_dsl(self) -> dict:
         return {
             "components": {
                 "begin": {
                     "obj": {"component_name": "Begin", "params": {}},
-                    "downstream": ["iterate_0"],
+                    "downstream": ["iteration_0"],
                     "upstream": [],
                 },
-                "iterate_0": {
+                "iteration_0": {
                     "obj": {
-                        "component_name": "Iterate",
+                        "component_name": "Iteration",
                         "params": {
-                            "max_loop_count": 5,
-                            "terminate_condition": [{"variable": "done", "operator": "is", "value": "true", "input_mode": "constant"}],
+                            "items_ref": "items",
+                            "variable": {"data_type": "string"},
                         },
                     },
-                    "downstream": ["generate_0"],
+                    "downstream": ["iterationitem_0"],
                     "upstream": ["begin"],
+                },
+                "iterationitem_0": {
+                    "obj": {"component_name": "IterationItem", "params": {}},
+                    "downstream": ["generate_0"],
+                    "upstream": ["iteration_0"],
+                    "parent_id": "iteration_0",
                 },
                 "generate_0": {
                     "obj": {"component_name": "Generate", "params": {}},
                     "downstream": [],
-                    "upstream": ["iterate_0"],
+                    "upstream": ["iterationitem_0"],
                 },
             },
             "history": [],
@@ -817,10 +823,30 @@ class TestDSLLoopIteration:
             "retrieval": {"chunks": [], "doc_aggs": []},
         }
 
-    def test_iterate_parsing(self):
-        dsl = self._create_iterate_dsl()
+    def test_iteration_parsing(self):
+        dsl = self._create_iteration_dsl()
         canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
-        assert "iterate_0" in canvas.components
-        iterate = canvas.components["iterate_0"]["obj"]
-        assert iterate.component_name == "Iterate"
-        assert iterate._param.max_loop_count == 5
+        assert "iteration_0" in canvas.components
+        iteration = canvas.components["iteration_0"]["obj"]
+        assert iteration.component_name == "Iteration"
+        assert iteration._param.items_ref == "items"
+
+    def test_iterationitem_parsing(self):
+        dsl = self._create_iteration_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        assert "iterationitem_0" in canvas.components
+        iterationitem = canvas.components["iterationitem_0"]["obj"]
+        assert iterationitem.component_name == "IterationItem"
+
+    def test_iterationitem_parent_relationship(self):
+        dsl = self._create_iteration_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        iterationitem = canvas.components["iterationitem_0"]
+        assert iterationitem.get("parent_id") == "iteration_0"
+
+    def test_iteration_get_start_finds_child(self):
+        dsl = self._create_iteration_dsl()
+        canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
+        iteration = canvas.components["iteration_0"]["obj"]
+        start_cid = iteration.get_start()
+        assert start_cid == "iterationitem_0"

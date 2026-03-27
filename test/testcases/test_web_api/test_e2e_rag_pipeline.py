@@ -27,7 +27,6 @@ from common import (
 )
 from configs import HOST_ADDRESS, VERSION
 from utils import wait_for
-from utils.file_utils import create_txt_file
 from common import delete_datasets
 
 

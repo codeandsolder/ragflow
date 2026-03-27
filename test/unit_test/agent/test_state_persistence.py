@@ -134,7 +134,11 @@ class TestStatePersistence:
                 code1 = base64.b64encode(b"def main(): import os; open('/workspace/test.txt', 'w').write('hello'); return {'result': 'created'}").decode()
                 req1 = CodeExecutionRequest(code_b64=code1, language="python")
 
-                loop.run_until_complete(execute_code(req1))
+                loop = asyncio.new_event_loop()
+                try:
+                    loop.run_until_complete(execute_code(req1))
+                finally:
+                    loop.close()
 
                 loop = asyncio.new_event_loop()
                 try:
@@ -191,7 +195,11 @@ class TestStatePersistence:
                 code1 = base64.b64encode(b"def main(): import os; open('/workspace/test.txt', 'w').write('hello'); return {'result': 'created'}").decode()
                 req1 = CodeExecutionRequest(code_b64=code1, language="python")
 
-                loop.run_until_complete(execute_code(req1))
+                loop = asyncio.new_event_loop()
+                try:
+                    loop.run_until_complete(execute_code(req1))
+                finally:
+                    loop.close()
 
                 loop = asyncio.new_event_loop()
                 try:
@@ -246,7 +254,11 @@ class TestStatePersistence:
                 code1 = base64.b64encode(b"def main(): import os; os.environ['TEST_VAR'] = 'hello'; return {'result': 'set'}").decode()
                 req1 = CodeExecutionRequest(code_b64=code1, language="python")
 
-                loop.run_until_complete(execute_code(req1))
+                loop = asyncio.new_event_loop()
+                try:
+                    loop.run_until_complete(execute_code(req1))
+                finally:
+                    loop.close()
 
                 loop = asyncio.new_event_loop()
                 try:
@@ -301,7 +313,11 @@ class TestStatePersistence:
                 code1 = base64.b64encode(b"def main(): import os; os.environ['TEST_VAR'] = 'hello'; return {'result': 'set'}").decode()
                 req1 = CodeExecutionRequest(code_b64=code1, language="python")
 
-                loop.run_until_complete(execute_code(req1))
+                loop = asyncio.new_event_loop()
+                try:
+                    loop.run_until_complete(execute_code(req1))
+                finally:
+                    loop.close()
 
                 loop = asyncio.new_event_loop()
                 try:
@@ -378,7 +394,6 @@ class TestStatePersistence:
 
             # With LOCAL_DEPLOYMENT=true, container should be put back in queue
             # without any memory cleanup (no docker run to create fresh container)
-            call_args_str = " ".join([str(call) for call in mock_cmd.call_args_list])
             fresh_container_calls = [c for c in mock_cmd.call_args_list if "run" in str(c) and "docker" in str(c)]
             assert len(fresh_container_calls) == 0, "No fresh container should be created with LOCAL_DEPLOYMENT"
 

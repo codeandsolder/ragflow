@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/tooltip';
 import { LlmModelType } from '@/constants/knowledge';
 import { useTranslate } from '@/hooks/common-hooks';
+import { useFetchLiteLLMStatus } from '@/hooks/use-litellm-status';
 import {
   ISystemModelSettingSavingParams,
   useComposeLlmOptionsByModelTypes,
@@ -29,6 +30,7 @@ const SystemSetting = ({ onOk, loading }: IProps) => {
   const { systemSetting: initialValues, allOptions } =
     useFetchSystemModelSettingOnMount();
   const { t } = useTranslate('setting');
+  const { data: litellmStatus } = useFetchLiteLLMStatus();
 
   const [formData, setFormData] = useState({
     llm_id: '',
@@ -189,7 +191,7 @@ const SystemSetting = ({ onOk, loading }: IProps) => {
           <Items key={item.id} {...item} />
         ))}
         <LiteLLMProxyCard
-          enabled={true}
+          enabled={litellmStatus?.status === 'alive'}
           proxyUrl={window.LITE_LLM_PROXY_URL || 'http://litellm:4000'}
           adminUrl={window.LITE_LLM_ADMIN_URL || 'http://localhost:4000/ui'}
         />

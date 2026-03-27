@@ -130,16 +130,43 @@ class _SqliteDocument(peewee.Model):
 
 
 class _SqliteUserCanvas(peewee.Model):
-    """SQLite version of UserCanvas model."""
+    """SQLite version of UserCanvas model.
+
+    Note: BaseModel fields inherited from production model.
+    dsl uses TextField with JSON string parsing to simulate JSONField behavior.
+    """
 
     id = peewee.CharField(max_length=32, primary_key=True)
+    avatar = peewee.TextField(null=True)
+    user_id = peewee.CharField(max_length=255, null=False, index=True)
     tenant_id = peewee.CharField(max_length=32, null=False, index=True)
     title = peewee.CharField(max_length=255, null=True)
-    canvas_category = peewee.CharField(max_length=16, null=False, default="chat")
+    permission = peewee.CharField(max_length=16, null=False, default="me", index=True)
+    release = peewee.BooleanField(null=False, default=False, index=True)
+    description = peewee.TextField(null=True)
+    canvas_type = peewee.CharField(max_length=32, null=True, index=True)
+    canvas_category = peewee.CharField(max_length=32, null=False, default="agent_canvas", index=True)
+    dsl = peewee.TextField(null=True, default="{}")
+    create_time = peewee.BigIntegerField(null=True, index=True)
+    create_date = peewee.DateTimeField(null=True, index=True)
+    update_time = peewee.BigIntegerField(null=True, index=True)
+    update_date = peewee.DateTimeField(null=True, index=True)
 
     class Meta:
         table_name = "user_canvas"
         database = None
+
+    def get_dsl(self):
+        """Parse dsl JSON string (simulates JSONField)."""
+        import json
+
+        return json.loads(self.dsl) if self.dsl else {}
+
+    def set_dsl(self, config: dict):
+        """Serialize dsl to JSON string (simulates JSONField)."""
+        import json
+
+        self.dsl = json.dumps(config)
 
 
 class _SqliteFile2Document(peewee.Model):
