@@ -868,8 +868,15 @@ class DocumentService(CommonService):
                     # fallback
                     cls.update_by_id(d["id"], {"process_begin_at": begin_at})
 
+<<<<<<< HEAD
                 info = {"process_duration": max(datetime.timestamp(datetime.now()) - begin_at.timestamp(), 0), "run": status}
                 if prg != 0 and not freeze_progress:
+=======
+                info = {
+                    "process_duration": max(datetime.timestamp(datetime.now()) - begin_at.timestamp(), 0),
+                    "run": status}
+                if (prg != 0 or doc_progress < 0) and not freeze_progress:
+>>>>>>> refs/pull/13293/head
                     info["progress"] = prg
                 if msg:
                     info["progress_msg"] = msg

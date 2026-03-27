@@ -304,8 +304,15 @@ class TaskService(CommonService):
 
         Update Rules:
             - progress_msg: Always appends the new message to the existing one, and trims the result to max 3000 lines.
+<<<<<<< HEAD
             - progress: Updates when (a) new progress >= 1 (allows recovery from -1), or
                         (b) current progress != -1 AND (new progress is -1 OR greater than existing).
+=======
+            - progress: Only updates if (a) new progress >= 1 (task complete),
+                        (b) new progress is -1 (transient error), or
+                        (c) new progress is greater than the existing progress.
+                        This allows recovery from error state (-1) while preventing regressive updates.
+>>>>>>> refs/pull/13293/head
 
         Args:
             id (str): The unique identifier of the task to update.
@@ -326,8 +333,12 @@ class TaskService(CommonService):
                 prog = info["progress"]
                 cls.model.update(progress=prog).where(
                     (cls.model.id == id) &
+<<<<<<< HEAD
                     ((prog >= 1) | ((cls.model.progress != -1) &
                     ((prog == -1) | (prog > cls.model.progress))))
+=======
+                    ((prog >= 1) | (prog == -1) | (prog > cls.model.progress))
+>>>>>>> refs/pull/13293/head
                 ).execute()
         else:
             with DB.lock("update_progress", -1):
@@ -338,8 +349,12 @@ class TaskService(CommonService):
                     prog = info["progress"]
                     cls.model.update(progress=prog).where(
                         (cls.model.id == id) &
+<<<<<<< HEAD
                         ((prog >= 1) | ((cls.model.progress != -1) &
                         ((prog == -1) | (prog > cls.model.progress))))
+=======
+                        ((prog >= 1) | (prog == -1) | (prog > cls.model.progress))
+>>>>>>> refs/pull/13293/head
                     ).execute()
 
         process_duration = (datetime.now() - task.begin_at).total_seconds()
