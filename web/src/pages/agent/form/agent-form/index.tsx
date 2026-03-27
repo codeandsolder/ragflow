@@ -1,12 +1,12 @@
-import { Collapse } from '@/components/collapse';
 import {
   LargeModelFilterFormSchema,
   LargeModelFormField,
-} from '@/components/large-model-form-field';
+} from '@/components/form-fields/large-model-form-field';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
+import { Collapse } from '@/components/layout/collapse';
 import { LlmSettingSchema } from '@/components/llm-setting-items/next';
 import { MessageHistoryWindowSizeFormField } from '@/components/message-history-window-size-item';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
-import { RAGFlowFormItem } from '@/components/ragflow-form';
 import { Button } from '@/components/ui/button';
 import {
   Form,

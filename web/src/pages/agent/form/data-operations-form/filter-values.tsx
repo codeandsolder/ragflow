@@ -1,6 +1,6 @@
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
 import { KeyInput } from '@/components/key-input';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
-import { RAGFlowFormItem } from '@/components/ragflow-form';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useBuildSwitchOperatorOptions } from '@/hooks/logic-hooks/use-build-operator-options';

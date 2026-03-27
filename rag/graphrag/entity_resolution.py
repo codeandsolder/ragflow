@@ -29,6 +29,7 @@ from rag.nlp import is_english
 import editdistance
 from rag.graphrag.entity_resolution_prompt import ENTITY_RESOLUTION_PROMPT
 from rag.graphrag.utils import perform_variable_replacements, chat_limiter, GraphChange
+from rag.graphrag.memory import GraphMemoryMonitor, stream_pagerank
 from api.db.services.task_service import has_canceled
 from common.exceptions import TaskCanceledException
 
@@ -161,8 +162,9 @@ class EntityResolution(Extractor):
             await asyncio.gather(*tasks, return_exceptions=True)
             raise
 
-        # Update pagerank
-        pr = nx.pagerank(graph)
+        # Update pagerank using streaming for large graphs
+        monitor = GraphMemoryMonitor()
+        pr = stream_pagerank(graph, monitor=monitor)
         for node_name, pagerank in pr.items():
             graph.nodes[node_name]["pagerank"] = pagerank
 

@@ -1,8 +1,8 @@
 import {
   AutoKeywordsFormField,
   AutoQuestionsFormField,
-} from '@/components/auto-keywords-form-field';
-import { LayoutRecognizeFormField } from '@/components/layout-recognize-form-field';
+} from '@/components/form-fields/auto-keywords-form-field';
+import { LayoutRecognizeFormField } from '@/components/form-fields/layout-recognize-form-field';
 import { ConfigurationFormContainer } from '../configuration-form-container';
 import { AutoMetadata } from './common-item';
 

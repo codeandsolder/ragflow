@@ -19,7 +19,7 @@ import re
 from copy import deepcopy
 from functools import partial
 from common.misc_utils import get_uuid
-from rag.utils.base64_image import id2image, image2id
+from rag.utils.base64_image import async_id2image, image2id
 from deepdoc.parser.pdf_parser import RAGFlowPdfParser
 from rag.flow.base import ProcessBase, ProcessParamBase
 from rag.flow.splitter.schema import SplitterFromUpstream
@@ -120,18 +120,16 @@ class Splitter(ProcessBase):
 
         sections = []
         tasks = []
-        loop = asyncio.get_running_loop()
         for o in json_result:
             sections.append((o.get("text", ""), o.get("position_tag", "")))
             tasks.append(
-                loop.run_in_executor(
-                    self._canvas._thread_pool,
-                    id2image,
+                async_id2image(
                     o.get("img_id"),
                     partial(settings.STORAGE_IMPL.get, tenant_id=self._canvas._tenant_id),
                 )
             )
-        section_images = await asyncio.gather(*tasks)
+        section_images = await asyncio.gather(*tasks, return_exceptions=True)
+        section_images = [img if not isinstance(img, Exception) else None for img in section_images]
 
         chunks, images = naive_merge_with_images(
             sections,

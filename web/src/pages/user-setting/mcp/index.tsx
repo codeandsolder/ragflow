@@ -1,8 +1,8 @@
-import { CardContainer } from '@/components/card-container';
 import {
   ConfirmDeleteDialog,
   ConfirmDeleteDialogNode,
-} from '@/components/confirm-delete-dialog';
+} from '@/components/dialogs/confirm-delete-dialog';
+import { CardContainer } from '@/components/layout/card-container';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SearchInput } from '@/components/ui/input';

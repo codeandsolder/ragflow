@@ -1,4 +1,4 @@
-import CopyToClipboard from '@/components/copy-to-clipboard';
+import CopyToClipboard from '@/components/file-upload/copy-to-clipboard';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
 import { Button } from '@/components/ui/button';
 import {

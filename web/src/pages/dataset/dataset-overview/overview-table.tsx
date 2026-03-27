@@ -1,8 +1,8 @@
 import { EmptyType } from '@/components/empty/constant';
 import Empty from '@/components/empty/empty';
 import FileStatusBadge from '@/components/file-status-badge';
-import { FileIcon, IconFontFill } from '@/components/icon-font';
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+import { FileIcon, IconFontFill } from '@/components/icons/icon-font';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
 import { Button } from '@/components/ui/button';
 import { RAGFlowPagination } from '@/components/ui/ragflow-pagination';
 import {

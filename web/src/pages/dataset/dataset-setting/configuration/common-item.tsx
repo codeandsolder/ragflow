@@ -2,12 +2,12 @@ import {
   FormFieldConfig,
   FormFieldType,
   RenderField,
-} from '@/components/dynamic-form';
+} from '@/components/form-fields/dynamic-form';
+import { SliderInputFormField } from '@/components/form-fields/slider-input-form-field';
 import {
   SelectWithSearch,
   SelectWithSearchFlagOptionType,
 } from '@/components/originui/select-with-search';
-import { SliderInputFormField } from '@/components/slider-input-form-field';
 import { Button } from '@/components/ui/button';
 import {
   FormControl,
@@ -40,7 +40,7 @@ import {
   util,
 } from '../../components/metedata/hooks/use-manage-modal';
 
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
 import {
   IBuiltInMetadataItem,
   IMetaDataReturnJSONSettings,

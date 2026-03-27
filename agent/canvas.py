@@ -207,17 +207,18 @@ class Graph:
             with self._lock:
                 return self.globals[exp]
         cpn_id, var_nm = exp.split("@")
-        cpn = self.get_component(cpn_id)
-        if not cpn:
-            raise Exception(f"Can't find variable: '{cpn_id}@{var_nm}'")
-        parts = var_nm.split(".", 1)
-        root_key = parts[0]
-        rest = parts[1] if len(parts) > 1 else ""
-        root_val = cpn["obj"].output(root_key)
+        with self._lock:
+            cpn = self.get_component(cpn_id)
+            if not cpn:
+                raise Exception(f"Can't find variable: '{cpn_id}@{var_nm}'")
+            parts = var_nm.split(".", 1)
+            root_key = parts[0]
+            rest = parts[1] if len(parts) > 1 else ""
+            root_val = cpn["obj"].output(root_key)
 
-        if not rest:
-            return root_val
-        return self.get_variable_param_value(root_val, rest)
+            if not rest:
+                return root_val
+            return self.get_variable_param_value(root_val, rest)
 
     def get_variable_param_value(self, obj: Any, path: str) -> Any:
         cur = obj
@@ -253,21 +254,22 @@ class Graph:
         if exp.find("@") < 0:
             with self._lock:
                 self.globals[exp] = value
-                return
-        cpn_id, var_nm = exp.split("@")
-        cpn = self.get_component(cpn_id)
-        if not cpn:
-            raise Exception(f"Can't find variable: '{cpn_id}@{var_nm}'")
-        parts = var_nm.split(".", 1)
-        root_key = parts[0]
-        rest = parts[1] if len(parts) > 1 else ""
-        if not rest:
-            cpn["obj"].set_output(root_key, value)
             return
-        root_val = cpn["obj"].output(root_key)
-        if not root_val:
-            root_val = {}
-        cpn["obj"].set_output(root_key, self.set_variable_param_value(root_val, rest, value))
+        cpn_id, var_nm = exp.split("@")
+        with self._lock:
+            cpn = self.get_component(cpn_id)
+            if not cpn:
+                raise Exception(f"Can't find variable: '{cpn_id}@{var_nm}'")
+            parts = var_nm.split(".", 1)
+            root_key = parts[0]
+            rest = parts[1] if len(parts) > 1 else ""
+            if not rest:
+                cpn["obj"].set_output(root_key, value)
+                return
+            root_val = cpn["obj"].output(root_key)
+            if not root_val:
+                root_val = {}
+            cpn["obj"].set_output(root_key, self.set_variable_param_value(root_val, rest, value))
 
     def set_variable_param_value(self, obj: Any, path: str, value) -> Any:
         cur = obj

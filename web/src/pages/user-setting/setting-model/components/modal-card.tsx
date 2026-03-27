@@ -2,8 +2,8 @@
 import {
   ConfirmDeleteDialog,
   ConfirmDeleteDialogNode,
-} from '@/components/confirm-delete-dialog';
-import { LlmIcon } from '@/components/svg-icon';
+} from '@/components/dialogs/confirm-delete-dialog';
+import { LlmIcon } from '@/components/icons/svg-icon';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useSetModalState, useTranslate } from '@/hooks/common-hooks';

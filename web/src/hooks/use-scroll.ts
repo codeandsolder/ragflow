@@ -7,6 +7,7 @@ export const useScrollToBottom = (
   const ref = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const isAtBottomRef = useRef(true);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     isAtBottomRef.current = isAtBottom;
@@ -23,15 +24,25 @@ export const useScrollToBottom = (
     const container = containerRef.current;
 
     const handleScroll = () => {
-      setIsAtBottom(checkIfUserAtBottom());
+      if (scrollTimeoutRef.current) {
+        return;
+      }
+      scrollTimeoutRef.current = setTimeout(() => {
+        scrollTimeoutRef.current = null;
+        setIsAtBottom(checkIfUserAtBottom());
+      }, 16);
     };
 
-    container.addEventListener('scroll', handleScroll);
+    container.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
-    return () => container.removeEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
   }, [containerRef, checkIfUserAtBottom]);
 
-  // Imperative scroll function
   const scrollToBottom = useCallback(() => {
     if (containerRef?.current) {
       const container = containerRef.current;
@@ -46,11 +57,9 @@ export const useScrollToBottom = (
     if (!messages) return;
     if (!containerRef?.current) return;
     requestAnimationFrame(() => {
-      setTimeout(() => {
-        if (isAtBottomRef.current) {
-          scrollToBottom();
-        }
-      }, 100);
+      if (isAtBottomRef.current) {
+        scrollToBottom();
+      }
     });
   }, [messages, containerRef, scrollToBottom]);
 

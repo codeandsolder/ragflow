@@ -1,3 +1,4 @@
+import LiteLLMProxyCard from '@/components/litellm-proxy-card';
 import {
   SelectWithSearch,
   SelectWithSearchFlagOptionType,
@@ -187,6 +188,11 @@ const SystemSetting = ({ onOk, loading }: IProps) => {
         {llmList.map((item) => (
           <Items key={item.id} {...item} />
         ))}
+        <LiteLLMProxyCard
+          enabled={true}
+          proxyUrl={window.LITE_LLM_PROXY_URL || 'http://litellm:4000'}
+          adminUrl={window.LITE_LLM_ADMIN_URL || 'http://localhost:4000/ui'}
+        />
       </div>
       {/* <div className="border-t px-6 py-4 flex justify-end">
           <Button

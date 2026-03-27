@@ -1,5 +1,6 @@
-import { crossLanguageOptions } from '@/components/cross-language-form-field';
-import { LayoutRecognizeFormField } from '@/components/layout-recognize-form-field';
+import { crossLanguageOptions } from '@/components/form-fields/cross-language-form-field';
+import { LayoutRecognizeFormField } from '@/components/form-fields/layout-recognize-form-field';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
 import {
   LLMFormField,
   LLMFormFieldProps,
@@ -8,7 +9,6 @@ import {
   SelectWithSearch,
   SelectWithSearchFlagOptionType,
 } from '@/components/originui/select-with-search';
-import { RAGFlowFormItem } from '@/components/ragflow-form';
 import { upperCase, upperFirst } from 'lodash';
 import { useTranslation } from 'react-i18next';
 import {

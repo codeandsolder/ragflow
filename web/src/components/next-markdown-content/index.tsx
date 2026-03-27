@@ -1,5 +1,5 @@
+import SvgIcon from '@/components/icons/svg-icon';
 import Image from '@/components/image';
-import SvgIcon from '@/components/svg-icon';
 import { IReferenceChunk, IReferenceObject } from '@/interfaces/database/chat';
 import { getExtension } from '@/utils/document-util';
 import { downloadFileFromBlob } from '@/utils/file-util';

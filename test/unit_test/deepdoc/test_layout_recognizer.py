@@ -25,7 +25,6 @@ Tests cover:
 Uses function reimplementations to avoid heavy dependency loading.
 """
 
-import pytest
 import numpy as np
 from functools import cmp_to_key
 

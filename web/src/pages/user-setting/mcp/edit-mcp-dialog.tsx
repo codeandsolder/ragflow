@@ -1,4 +1,4 @@
-import { Collapse } from '@/components/collapse';
+import { Collapse } from '@/components/layout/collapse';
 import { Button, ButtonLoading } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DialogClose, DialogFooter } from '@/components/ui/dialog';

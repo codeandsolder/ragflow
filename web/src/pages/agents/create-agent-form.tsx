@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { RAGFlowFormItem } from '@/components/ragflow-form';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
 import { Card, CardContent } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
 import { TagRenameId } from '@/constants/knowledge';

@@ -1,16 +1,17 @@
-import { Collapse } from '@/components/collapse';
-import { CrossLanguageFormField } from '@/components/cross-language-form-field';
-import { KnowledgeBaseFormField } from '@/components/knowledge-base-item';
-import { MemoriesFormField } from '@/components/memories-form-field';
+import { CrossLanguageFormField } from '@/components/form-fields/cross-language-form-field';
+import { MemoriesFormField } from '@/components/form-fields/memories-form-field';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
+import { TOCEnhanceFormField } from '@/components/form-fields/toc-enhance-form-field';
+import { KnowledgeBaseFormField } from '@/components/knowledge/knowledge-base-item';
+import { TopNFormField } from '@/components/knowledge/top-n-item';
+import { UseKnowledgeGraphFormField } from '@/components/knowledge/use-knowledge-graph-item';
+import { Collapse } from '@/components/layout/collapse';
 import {
   MetadataFilter,
   MetadataFilterSchema,
 } from '@/components/metadata-filter';
-import { RAGFlowFormItem } from '@/components/ragflow-form';
 import { RerankFormFields } from '@/components/rerank';
 import { SimilaritySliderFormField } from '@/components/similarity-slider';
-import { TOCEnhanceFormField } from '@/components/toc-enhance-form-field';
-import { TopNFormField } from '@/components/top-n-item';
 import {
   Form,
   FormControl,
@@ -21,7 +22,6 @@ import {
 } from '@/components/ui/form';
 import { Radio } from '@/components/ui/radio';
 import { Textarea } from '@/components/ui/textarea';
-import { UseKnowledgeGraphFormField } from '@/components/use-knowledge-graph-item';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { memo, useMemo } from 'react';
 import {

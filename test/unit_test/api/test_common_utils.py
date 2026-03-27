@@ -105,7 +105,7 @@ class TestRoundtripConversion:
             "",
         ],
     )
-    def test_common_module.string_to_common_module.bytes_to_string(self, test_string):
+    def test_common_module_string_to_common_module_bytes_to_string(self, test_string):
         """Test converting string to bytes and back for various inputs"""
         as_bytes = common_module.string_to_bytes(test_string)
         back_to_string = common_module.bytes_to_string(as_bytes)

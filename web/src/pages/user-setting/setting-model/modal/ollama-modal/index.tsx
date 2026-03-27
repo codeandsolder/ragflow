@@ -3,7 +3,7 @@ import {
   DynamicFormRef,
   FormFieldConfig,
   FormFieldType,
-} from '@/components/dynamic-form';
+} from '@/components/form-fields/dynamic-form';
 import { Modal } from '@/components/ui/modal/modal';
 import { LLMFactory } from '@/constants/llm';
 import { useCommonTranslation, useTranslate } from '@/hooks/common-hooks';

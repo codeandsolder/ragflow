@@ -1,6 +1,6 @@
-import { FormContainer } from '@/components/form-container';
+import { TopNFormField } from '@/components/knowledge/top-n-item';
+import { FormContainer } from '@/components/layout/form-container';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
-import { TopNFormField } from '@/components/top-n-item';
 import { DatePicker } from '@/components/ui/date-picker';
 import {
   Form,

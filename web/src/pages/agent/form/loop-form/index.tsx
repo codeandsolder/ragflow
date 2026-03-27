@@ -1,4 +1,4 @@
-import { SliderInputFormField } from '@/components/slider-input-form-field';
+import { SliderInputFormField } from '@/components/form-fields/slider-input-form-field';
 import { Form } from '@/components/ui/form';
 import { FormLayout } from '@/constants/form';
 import { zodResolver } from '@hookform/resolvers/zod';

@@ -1,4 +1,4 @@
-import { crossLanguageOptions } from '@/components/cross-language-form-field';
+import { crossLanguageOptions } from '@/components/form-fields/cross-language-form-field';
 import { isEmpty } from 'lodash';
 import { useEffect } from 'react';
 import { useFormContext } from 'react-hook-form';

@@ -1,4 +1,4 @@
-import { Collapse } from '@/components/collapse';
+import { Collapse } from '@/components/layout/collapse';
 import { Button } from '@/components/ui/button';
 import {
   FormControl,

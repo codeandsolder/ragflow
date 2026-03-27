@@ -1,10 +1,11 @@
 'use client';
 
-import { CrossLanguageFormField } from '@/components/cross-language-form-field';
+import { CrossLanguageFormField } from '@/components/form-fields/cross-language-form-field';
+import { SwitchFormField } from '@/components/form-fields/switch-fom-field';
+import { TopNFormField } from '@/components/knowledge/top-n-item';
+import { UseKnowledgeGraphFormField } from '@/components/knowledge/use-knowledge-graph-item';
 import { RerankFormFields } from '@/components/rerank';
 import { SimilaritySliderFormField } from '@/components/similarity-slider';
-import { SwitchFormField } from '@/components/switch-fom-field';
-import { TopNFormField } from '@/components/top-n-item';
 import {
   FormControl,
   FormField,
@@ -13,7 +14,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
-import { UseKnowledgeGraphFormField } from '@/components/use-knowledge-graph-item';
 import { useTranslate } from '@/hooks/common-hooks';
 import { getDirAttribute } from '@/utils/text-direction';
 import { useFormContext } from 'react-hook-form';

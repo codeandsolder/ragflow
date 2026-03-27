@@ -1,4 +1,4 @@
-import CopyToClipboard from '@/components/copy-to-clipboard';
+import CopyToClipboard from '@/components/file-upload/copy-to-clipboard';
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet';
 import { useDebugSingle, useFetchInputForm } from '@/hooks/use-agent-request';
 import { IModalProps } from '@/interfaces/common';

@@ -1,5 +1,5 @@
 import EditTag from '@/components/edit-tag';
-import { FileUploader } from '@/components/file-uploader';
+import { FileUploader } from '@/components/file-upload/file-uploader';
 import Image from '@/components/image';
 import Divider from '@/components/ui/divider';
 import {

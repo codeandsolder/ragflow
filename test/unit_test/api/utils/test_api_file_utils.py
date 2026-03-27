@@ -149,7 +149,7 @@ class TestRepairPdfWithGhostscript:
 class TestConstants:
     """Resource limit constants are positive and reasonable."""
 
-    def test_file_utils.thumbnail_limit_positive(self):
+    def test_file_utils_thumbnail_limit_positive(self):
         assert file_utils.MAX_BLOB_SIZE_THUMBNAIL > 0
 
     def test_pdf_limit_positive(self):

@@ -1,8 +1,8 @@
-import { Collapse } from '@/components/collapse';
+import { WebHookResponseStatusFormField } from '@/components/file-upload/webhook-response-status';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
+import { Collapse } from '@/components/layout/collapse';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
-import { RAGFlowFormItem } from '@/components/ragflow-form';
 import { Textarea } from '@/components/ui/textarea';
-import { WebHookResponseStatusFormField } from '@/components/webhook-response-status';
 import { WebhookExecutionMode } from '@/pages/agent/constant';
 import { buildOptions } from '@/utils/form';
 import { useFormContext, useWatch } from 'react-hook-form';

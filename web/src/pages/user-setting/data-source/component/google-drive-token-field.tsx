@@ -1,4 +1,4 @@
-import { FileUploader } from '@/components/file-uploader';
+import { FileUploader } from '@/components/file-upload/file-uploader';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

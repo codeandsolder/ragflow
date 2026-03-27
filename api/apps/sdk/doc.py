@@ -579,6 +579,7 @@ def list_docs(dataset_id, tenant_id):
 
     page = int(q.get("page", 1))
     page_size = int(q.get("page_size", 30))
+    cursor = q.get("cursor")
     orderby = q.get("orderby", "create_time")
     desc = str(q.get("desc", "true")).strip().lower() != "false"
     keywords = q.get("keywords", "")
@@ -609,7 +610,23 @@ def list_docs(dataset_id, tenant_id):
         if metadata_condition.get("conditions") and not doc_ids_filter:
             return get_result(data={"total": 0, "docs": []})
 
-    docs, total = DocumentService.get_list(dataset_id, page, page_size, orderby, desc, keywords, document_id, name, suffix, run_status_converted, doc_ids_filter)
+    if cursor:
+        docs, next_cursor, total = DocumentService.get_list_with_cursor(
+            dataset_id,
+            page_size or 30,
+            cursor,
+            orderby,
+            desc,
+            keywords,
+            document_id,
+            name,
+            suffix,
+            run_status_converted,
+            doc_ids_filter,
+        )
+    else:
+        docs, total = DocumentService.get_list(dataset_id, page, page_size, orderby, desc, keywords, document_id, name, suffix, run_status_converted, doc_ids_filter)
+        next_cursor = None
 
     # time range filter (0 means no bound)
     if create_time_from or create_time_to:
@@ -631,7 +648,7 @@ def list_docs(dataset_id, tenant_id):
             renamed_doc["run"] = run_status_numeric_to_text.get(str(d["run"]), d["run"])
         output_docs.append(renamed_doc)
 
-    return get_result(data={"total": total, "docs": output_docs})
+    return get_result(data={"total": total, "docs": output_docs, "cursor": next_cursor})
 
 
 @manager.route("/datasets/<dataset_id>/metadata/summary", methods=["GET"])  # noqa: F821
@@ -1722,6 +1739,7 @@ async def retrieval_test(tenant_id):
             doc_ids = None
     similarity_threshold = float(req.get("similarity_threshold", 0.2))
     vector_similarity_weight = float(req.get("vector_similarity_weight", 0.3))
+    hybrid_weight = req.get("hybrid_weight")
     top = int(req.get("top_k", 1024))
     highlight_val = req.get("highlight", None)
     if highlight_val is None:
@@ -1763,16 +1781,17 @@ async def retrieval_test(tenant_id):
             question += await keyword_extraction(chat_mdl, question)
 
         ranks = await settings.retriever.retrieval(
-            question,
-            embd_mdl,
-            tenant_ids,
-            kb_ids,
-            page,
-            size,
-            similarity_threshold,
-            vector_similarity_weight,
-            top,
-            doc_ids,
+            question=question,
+            embd_mdl=embd_mdl,
+            tenant_ids=tenant_ids,
+            kb_ids=kb_ids,
+            page=page,
+            page_size=size,
+            similarity_threshold=similarity_threshold,
+            vector_similarity_weight=vector_similarity_weight,
+            hybrid_weight=hybrid_weight,
+            top=top,
+            doc_ids=doc_ids,
             rerank_mdl=rerank_mdl,
             highlight=highlight,
             rank_feature=label_question(question, kbs),

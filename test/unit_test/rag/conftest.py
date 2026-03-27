@@ -48,6 +48,7 @@ def _install_hanging_module_stubs():
         "httpx",
         "elasticsearch_dsl",
         "elastic_transport",
+        "litellm",
     ]
 
     for mod_name in hanging_modules:
@@ -76,6 +77,18 @@ def _install_hanging_module_stubs():
 
                 return MockResponse()
 
+    class AsyncOpenAI:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def embeddings(self, *args, **kwargs):
+            class MockResponse:
+                def __init__(self):
+                    self.data = [type("MockData", (), {"embedding": [0.1, 0.2, 0.3]})()]
+                    self.usage = type("MockUsage", (), {"total_tokens": 10})()
+
+            return MockResponse()
+
     class TextEmbedding:
         def __init__(self, *args, **kwargs):
             pass
@@ -91,11 +104,82 @@ def _install_hanging_module_stubs():
         def encode(self, *args, **kwargs):
             return [1, 2, 3]
 
+    # For graphrag.utils
+    if "rag.graphrag" in sys.modules:
+        rag_graphrag = sys.modules["rag.graphrag"]
+
+        class chat_limiter:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def __call__(self, fn):
+                return fn
+
+        rag_graphrag.chat_limiter = chat_limiter
+        rag_graphrag.utils = types.ModuleType("rag.graphrag.utils")
+        rag_graphrag.utils.__file__ = "<stub for rag.graphrag.utils>"
+        rag_graphrag.utils.__path__ = []
+        rag_graphrag.utils.__package__ = "rag.graphrag"
+        sys.modules["rag.graphrag.utils"] = rag_graphrag.utils
+
+    # For rag.utils.ob_conn
+    if "rag.utils.ob_conn" in sys.modules:
+        ob_conn = types.ModuleType("rag.utils.ob_conn")
+        ob_conn.__file__ = "<stub for rag.utils.ob_conn>"
+        ob_conn.__path__ = []
+        ob_conn.__package__ = "rag.utils"
+
+        # Stub functions
+        def get_value_str(*args, **kwargs):
+            return ""
+
+        def get_metadata_filter_expression(*args, **kwargs):
+            return ""
+
+        ob_conn.get_value_str = get_value_str
+        ob_conn.get_metadata_filter_expression = get_metadata_filter_expression
+        sys.modules["rag.utils.ob_conn"] = ob_conn
+
+    # For rag.utils.raptor_utils
+    if "rag.utils.raptor_utils" not in sys.modules:
+        raptor_utils = types.ModuleType("rag.utils.raptor_utils")
+        raptor_utils.__file__ = "<stub for rag.utils.raptor_utils>"
+        raptor_utils.__path__ = []
+        raptor_utils.__package__ = "rag.utils"
+
+        # Stub constants
+        raptor_utils.EXCEL_EXTENSIONS = [".xlsx", ".xls"]
+        raptor_utils.CSV_EXTENSIONS = [".csv"]
+        raptor_utils.STRUCTURED_EXTENSIONS = [".xlsx", ".xls", ".csv"]
+
+        # Stub functions
+        def is_structured_file_type(*args, **kwargs):
+            return False
+
+        def is_tabular_pdf(*args, **kwargs):
+            return False
+
+        def should_skip_raptor(*args, **kwargs):
+            return False
+
+        def get_skip_reason(*args, **kwargs):
+            return ""
+
+        raptor_utils.is_structured_file_type = is_structured_file_type
+        raptor_utils.is_tabular_pdf = is_tabular_pdf
+        raptor_utils.should_skip_raptor = should_skip_raptor
+        raptor_utils.get_skip_reason = get_skip_reason
+        sys.modules["rag.utils.raptor_utils"] = raptor_utils
+
     if "ollama" in sys.modules:
         sys.modules["ollama"].Client = Client
     if "openai" in sys.modules:
         sys.modules["openai"].OpenAI = OpenAI
         sys.modules["openai"]._version = type("MockVersion", (), {"__version__": "0.0.0"})()
+        # Stub openai._models for litellm
+        openai_models = types.ModuleType("openai._models")
+        openai_models.BaseModel = type("BaseModel", (), {})
+        sys.modules["openai._models"] = openai_models
     if "dashscope" in sys.modules:
         sys.modules["dashscope"].TextEmbedding = TextEmbedding
     if "zhipuai" in sys.modules:
@@ -136,24 +220,44 @@ def _install_rag_utils_stub():
             stub.__package__ = "rag.utils"
             sys.modules[full_name] = stub
 
-    # Stub for circuit_breaker
-    if "rag.utils.circuit_breaker" in sys.modules:
 
-        class LLMCircuitBreaker:
-            def __init__(self, *args, **kwargs):
-                pass
+# Stub for circuit_breaker
+if "rag.utils.circuit_breaker" in sys.modules:
 
-            def call(self, fn, *args, **kwargs):
-                return fn(*args, **kwargs)
+    class MockCircuitBreaker:
+        def __init__(self, *args, **kwargs):
+            self.failure_threshold = kwargs.get("failure_threshold", 5)
+            self.recovery_timeout = kwargs.get("recovery_timeout", 30)
 
-            def is_open(self):
-                return False
+        def call_sync(self, fn, *args, **kwargs):
+            return fn(*args, **kwargs)
 
-        class CircuitBreakerError(Exception):
-            pass
+        async def call(self, fn, *args, **kwargs):
+            return fn(*args, **kwargs)
 
-        sys.modules["rag.utils.circuit_breaker"].LLMCircuitBreaker = LLMCircuitBreaker
-        sys.modules["rag.utils.circuit_breaker"].CircuitBreakerError = CircuitBreakerError
+        @property
+        def state(self):
+            return "closed"
+
+    class LLMCircuitBreaker:
+        _breakers = {}
+
+        @classmethod
+        def get_breaker(cls, provider, **kwargs):
+            if provider not in cls._breakers:
+                cls._breakers[provider] = MockCircuitBreaker(**kwargs)
+            return cls._breakers[provider]
+
+        @classmethod
+        def reset_all(cls):
+            cls._breakers.clear()
+
+    class CircuitBreakerError(Exception):
+        pass
+
+    sys.modules["rag.utils.circuit_breaker"].LLMCircuitBreaker = LLMCircuitBreaker
+    sys.modules["rag.utils.circuit_breaker"].CircuitBreakerError = CircuitBreakerError
+    sys.modules["rag.utils.circuit_breaker"].CircuitBreaker = MockCircuitBreaker
 
     # For some modules, we need to provide stub classes
 

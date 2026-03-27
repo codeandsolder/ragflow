@@ -19,7 +19,6 @@ from urllib.parse import urljoin
 
 import httpx
 import numpy as np
-import requests
 from yarl import URL
 
 from common.log_utils import log_exception
@@ -65,7 +64,7 @@ class JinaRerank(Base):
         data = {"model": self.model_name, "query": query, "documents": texts, "top_n": len(texts)}
 
         def call_jina():
-            resp = requests.post(self.base_url, headers=self.headers, json=data)
+            resp = httpx.post(self.base_url, headers=self.headers, json=data)
             resp.raise_for_status()
             return resp.json()
 
@@ -101,7 +100,11 @@ class XInferenceRerank(Base):
         for _, t in pairs:
             token_count += num_tokens_from_string(t)
         data = {"model": self.model_name, "query": query, "return_documents": "true", "return_len": "true", "documents": texts}
-        res = requests.post(self.base_url, headers=self.headers, json=data).json()
+
+        def call_xinference():
+            return httpx.post(self.base_url, headers=self.headers, json=data).json()
+
+        res = self._run_with_retry(call_xinference)
         rank = np.zeros(len(texts), dtype=float)
         try:
             for d in res["results"]:
@@ -134,7 +137,11 @@ class LocalAIRerank(Base):
         token_count = 0
         for t in texts:
             token_count += num_tokens_from_string(t)
-        res = requests.post(self.base_url, headers=self.headers, json=data).json()
+
+        def call_localai():
+            return httpx.post(self.base_url, headers=self.headers, json=data).json()
+
+        res = self._run_with_retry(call_localai)
         rank = np.zeros(len(texts), dtype=float)
         try:
             for d in res["results"]:
@@ -178,7 +185,11 @@ class NvidiaRerank(Base):
             "truncate": "END",
             "top_n": len(texts),
         }
-        res = requests.post(self.base_url, headers=self.headers, json=data).json()
+
+        def call_nvidia():
+            return httpx.post(self.base_url, headers=self.headers, json=data).json()
+
+        res = self._run_with_retry(call_nvidia)
         rank = np.zeros(len(texts), dtype=float)
         try:
             for d in res["rankings"]:
@@ -222,7 +233,11 @@ class OpenAI_APIRerank(Base):
         token_count = 0
         for t in texts:
             token_count += num_tokens_from_string(t)
-        res = requests.post(self.base_url, headers=self.headers, json=data).json()
+
+        def call_openai_api():
+            return httpx.post(self.base_url, headers=self.headers, json=data).json()
+
+        res = self._run_with_retry(call_openai_api)
         rank = np.zeros(len(texts), dtype=float)
         try:
             for d in res["results"]:
@@ -303,7 +318,11 @@ class SILICONFLOWRerank(Base):
             "max_chunks_per_doc": 1024,
             "overlap_tokens": 80,
         }
-        response = requests.post(self.base_url, json=payload, headers=self.headers).json()
+
+        def call_siliconflow():
+            return httpx.post(self.base_url, json=payload, headers=self.headers).json()
+
+        response = self._run_with_retry(call_siliconflow)
         rank = np.zeros(len(texts), dtype=float)
         try:
             for d in response["results"]:
@@ -404,9 +423,7 @@ class HuggingfaceRerank(Base):
         batch_size = 8
         for i in range(0, len(texts), batch_size):
             try:
-                res = requests.post(
-                    f"http://{url}/rerank", headers={"Content-Type": "application/json"}, json={"query": query, "texts": texts[i : i + batch_size], "raw_scores": False, "truncate": True}
-                )
+                res = httpx.post(f"http://{url}/rerank", headers={"Content-Type": "application/json"}, json={"query": query, "texts": texts[i : i + batch_size], "raw_scores": False, "truncate": True})
 
                 for o in res.json():
                     scores[o["index"] + i] = o["score"]
@@ -454,7 +471,7 @@ class GPUStackRerank(Base):
         }
 
         try:
-            response = requests.post(self.base_url, json=payload, headers=self.headers)
+            response = httpx.post(self.base_url, json=payload, headers=self.headers)
             response.raise_for_status()
             response_json = response.json()
 
@@ -546,7 +563,11 @@ class RAGconRerank(Base):
         token_count = 0
         for t in texts:
             token_count += num_tokens_from_string(t)
-        res = requests.post(self._base_url + "/rerank", headers=self.headers, json=data).json()
+
+        def call_ragcon():
+            return httpx.post(self._base_url + "/rerank", headers=self.headers, json=data).json()
+
+        res = self._run_with_retry(call_ragcon)
         rank = np.zeros(len(texts), dtype=float)
         try:
             for d in res["results"]:

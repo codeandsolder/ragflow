@@ -1,4 +1,4 @@
-import { HomeCard } from '@/components/home-card';
+import { HomeCard } from '@/components/layout/home-card';
 import { MoreButton } from '@/components/more-button';
 import { RenameDialog } from '@/components/rename-dialog';
 import { useNavigatePage } from '@/hooks/logic-hooks/navigate-hooks';

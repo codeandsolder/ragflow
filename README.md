@@ -327,6 +327,17 @@ docker build --platform linux/amd64 \
    ```bash
    git clone https://github.com/infiniflow/ragflow.git
    cd ragflow/
+   ```
+
+   > [!NOTE]
+   > Before installing Python dependencies, ensure the following system packages are installed (required for building `lxml`):
+   >
+   > ```bash
+   > # Ubuntu/Debian
+   > sudo apt-get install libxml2-dev libxslt-dev python3-dev build-essential
+   > ```
+
+   ```bash
    uv sync --python 3.12 # install RAGFlow dependent python modules
    uv run download_deps.py
    pre-commit install

@@ -446,3 +446,71 @@ class TestRerankModelTruncation:
 
         payload = mock_post.call_args[1]["json"]
         assert len(payload["documents"][0]) <= 8196
+
+
+class TestRerankModelCircuitBreaker:
+    @patch("rag.llm.rerank_model.httpx.post")
+    def test_circuit_breaker_uses_configurable_failure_threshold(self, mock_post):
+        model = rerank_model.JinaRerank("key", "model", failure_threshold=10)
+        assert model.failure_threshold == 10
+
+    @patch("rag.llm.rerank_model.httpx.post")
+    def test_circuit_breaker_uses_configurable_recovery_timeout(self, mock_post):
+        model = rerank_model.JinaRerank("key", "model", recovery_timeout=60)
+        assert model.recovery_timeout == 60
+
+    @patch("rag.llm.rerank_model.httpx.post")
+    def test_circuit_breaker_uses_default_failure_threshold(self, mock_post):
+        model = rerank_model.JinaRerank("key", "model")
+        assert model.failure_threshold == 5
+
+    @patch("rag.llm.rerank_model.httpx.post")
+    def test_circuit_breaker_uses_default_recovery_timeout(self, mock_post):
+        model = rerank_model.JinaRerank("key", "model")
+        assert model.recovery_timeout == 30
+
+    @patch("rag.llm.rerank_model.httpx.post")
+    def test_circuit_breaker_uses_env_failure_threshold(self, mock_post):
+        import os
+
+        original = os.environ.get("LLM_FAILURE_THRESHOLD")
+        os.environ["LLM_FAILURE_THRESHOLD"] = "3"
+        try:
+            model = rerank_model.JinaRerank("key", "model")
+            assert model.failure_threshold == 3
+        finally:
+            if original is None:
+                os.environ.pop("LLM_FAILURE_THRESHOLD", None)
+            else:
+                os.environ["LLM_FAILURE_THRESHOLD"] = original
+
+    @patch("rag.llm.rerank_model.httpx.post")
+    def test_circuit_breaker_uses_env_recovery_timeout(self, mock_post):
+        import os
+
+        original = os.environ.get("LLM_RECOVERY_TIMEOUT")
+        os.environ["LLM_RECOVERY_TIMEOUT"] = "90"
+        try:
+            model = rerank_model.JinaRerank("key", "model")
+            assert model.recovery_timeout == 90
+        finally:
+            if original is None:
+                os.environ.pop("LLM_RECOVERY_TIMEOUT", None)
+            else:
+                os.environ["LLM_RECOVERY_TIMEOUT"] = original
+
+    @patch("rag.llm.rerank_model.httpx.post")
+    def test_circuit_breaker_property_returns_breaker(self, mock_post):
+        model = rerank_model.JinaRerank("key", "model")
+        breaker = model.circuit_breaker
+        assert breaker is not None
+
+    @patch("rag.llm.rerank_model.httpx.post")
+    def test_circuit_breaker_per_provider_isolation(self, mock_post):
+        model1 = rerank_model.JinaRerank("key", "model")
+        model2 = rerank_model.SILICONFLOWRerank("key", "model")
+
+        breaker1 = model1.circuit_breaker
+        breaker2 = model2.circuit_breaker
+
+        assert id(breaker1) != id(breaker2)

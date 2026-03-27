@@ -21,6 +21,7 @@ import re
 import numpy as np
 from abc import ABC
 from strenum import StrEnum
+from tenacity import retry, stop_after_attempt, wait_fixed, RetryCallState
 from rag.utils.circuit_breaker import LLMCircuitBreaker, CircuitBreakerError
 
 
@@ -43,17 +44,16 @@ class RemoteModelBase(ABC):
     def __init__(self, **kwargs):
         self.max_retries = kwargs.get("max_retries", int(os.environ.get("LLM_MAX_RETRIES", 5)))
         self.base_delay = kwargs.get("retry_interval", float(os.environ.get("LLM_BASE_DELAY", 2.0)))
+        self.failure_threshold = kwargs.get("failure_threshold", int(os.environ.get("LLM_FAILURE_THRESHOLD", 5)))
+        self.recovery_timeout = kwargs.get("recovery_timeout", int(os.environ.get("LLM_RECOVERY_TIMEOUT", 30)))
 
     @property
     def circuit_breaker(self):
         return LLMCircuitBreaker.get_breaker(
             self._FACTORY_NAME if hasattr(self, "_FACTORY_NAME") else "default",
-            failure_threshold=5,
-            recovery_timeout=30,
+            failure_threshold=self.failure_threshold,
+            recovery_timeout=self.recovery_timeout,
         )
-
-    def _get_delay(self):
-        return self.base_delay * random.uniform(1.0, 2.0)
 
     def _classify_error(self, error):
         error_str = str(error).lower()
@@ -84,30 +84,45 @@ class RemoteModelBase(ABC):
             LLMErrorCode.ERROR_CONNECTION,
         }
 
-    def _handle_exception(self, e, attempt):
-        error_code = self._classify_error(e)
-        if attempt >= self.max_retries:
-            logging.error(f"Max retries reached: {error_code} - {str(e)}")
-            return False
+    def _get_retry_wait(self, retry_state: RetryCallState) -> float:
+        return self.base_delay * random.uniform(1.0, 2.0)
 
-        if self._should_retry(error_code):
-            delay = self._get_delay()
+    def _before_retry(self, retry_state: RetryCallState):
+        e = retry_state.outcome.exception()
+        if e:
+            error_code = self._classify_error(e)
+            attempt = retry_state.attempt_number
+            delay = self._get_retry_wait(retry_state)
             logging.warning(f"Error: {error_code}. Retrying in {delay:.2f} seconds... (Attempt {attempt + 1}/{self.max_retries})")
             time.sleep(delay)
-            return True
 
-        logging.error(f"Non-retryable error: {error_code} - {str(e)}")
-        return False
+    def _retry_if_retryable(self, retry_state: RetryCallState) -> bool:
+        if retry_state.outcome is None:
+            return False
+        e = retry_state.outcome.exception()
+        if e is None:
+            return False
+        if isinstance(e, CircuitBreakerError):
+            return False
+        return self._is_retryable_error(e)
+
+    def _is_retryable_error(self, e: Exception) -> bool:
+        error_code = self._classify_error(e)
+        return self._should_retry(error_code)
 
     def _run_with_retry(self, func, *args, **kwargs):
-        for attempt in range(self.max_retries + 1):
-            try:
-                return self.circuit_breaker.call_sync(func, *args, **kwargs)
-            except CircuitBreakerError:
-                raise
-            except Exception as e:
-                if not self._handle_exception(e, attempt):
-                    raise e
+        retry_decorator = retry(
+            stop=stop_after_attempt(self.max_retries + 1),
+            wait=wait_fixed(0),
+            retry=self._retry_if_retryable,
+            before_sleep=self._before_retry,
+            reraise=True,
+        )
+
+        def wrapped_func(*args, **kwargs):
+            return self.circuit_breaker.call_sync(func, *args, **kwargs)
+
+        return retry_decorator(wrapped_func)(*args, **kwargs)
 
     def _run_in_batches(self, items, batch_size, func, *args, **kwargs):
         results = []

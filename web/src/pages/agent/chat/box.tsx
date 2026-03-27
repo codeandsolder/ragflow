@@ -2,7 +2,7 @@ import { MessageType } from '@/constants/chat';
 
 import { useSendAgentMessage } from './use-send-agent-message';
 
-import { FileUploadProps } from '@/components/file-upload';
+import { FileUploadProps } from '@/components/file-upload/file-upload';
 import { NextMessageInput } from '@/components/message-input/next';
 import MarkdownContent from '@/components/next-markdown-content';
 import MessageItem from '@/components/next-message-item';

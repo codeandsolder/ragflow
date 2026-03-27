@@ -1,5 +1,5 @@
+import SvgIcon from '@/components/icons/svg-icon';
 import { FilterCollection } from '@/components/list-filter-bar/interface';
-import SvgIcon from '@/components/svg-icon';
 import { useIsDarkTheme } from '@/components/theme-provider';
 
 import {

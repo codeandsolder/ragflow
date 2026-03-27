@@ -1,6 +1,6 @@
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
+import { SliderInputFormField } from '@/components/form-fields/slider-input-form-field';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
-import { RAGFlowFormItem } from '@/components/ragflow-form';
-import { SliderInputFormField } from '@/components/slider-input-form-field';
 import { Form } from '@/components/ui/form';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { buildOptions } from '@/utils/form';

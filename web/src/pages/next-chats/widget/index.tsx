@@ -1,4 +1,4 @@
-import FloatingChatWidget from '@/components/floating-chat-widget';
+import FloatingChatWidget from '@/components/chat/floating-chat-widget';
 
 const ChatWidget = () => {
   return (

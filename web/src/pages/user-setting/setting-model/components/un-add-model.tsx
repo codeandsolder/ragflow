@@ -1,5 +1,5 @@
 // src/components/AvailableModels.tsx
-import { LlmIcon } from '@/components/svg-icon';
+import { LlmIcon } from '@/components/icons/svg-icon';
 import { Button } from '@/components/ui/button';
 import { SearchInput } from '@/components/ui/input';
 import { APIMapUrl } from '@/constants/llm';

@@ -1,4 +1,7 @@
-import { FilterFormField, FormFieldType } from '@/components/dynamic-form';
+import {
+  FilterFormField,
+  FormFieldType,
+} from '@/components/form-fields/dynamic-form';
 import { TFunction } from 'i18next';
 
 export const confluenceConstant = (t: TFunction) => [

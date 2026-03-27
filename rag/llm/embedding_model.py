@@ -21,7 +21,7 @@ from urllib.parse import urljoin
 
 import dashscope
 import numpy as np
-import requests
+import httpx
 from ollama import Client
 from openai import OpenAI
 from zhipuai import ZhipuAI
@@ -90,6 +90,10 @@ class OpenAIEmbed(Base):
     def __init__(self, key, model_name="text-embedding-ada-002", base_url="https://api.openai.com/v1"):
         if not base_url:
             base_url = "https://api.openai.com/v1"
+        use_litellm_proxy = os.environ.get("USE_LITELLM_PROXY", "false").lower() == "true"
+        if use_litellm_proxy:
+            litellm_proxy_url = os.environ.get("LITELLM_PROXY_URL", "http://litellm:4000")
+            base_url = f"{litellm_proxy_url}/v1"
         self.client = OpenAI(api_key=key, base_url=base_url)
         self.model_name = model_name
 
@@ -105,12 +109,11 @@ class OpenAIEmbed(Base):
         return self._run_in_batches(texts, batch_size, encode_batch)
 
     def encode_queries(self, text):
-        res = self.client.embeddings.create(input=[truncate(text, 8191)], model=self.model_name, encoding_format="float", extra_body={"drop_params": True})
-        try:
+        def encode_query():
+            res = self.client.embeddings.create(input=[truncate(text, 8191)], model=self.model_name, encoding_format="float", extra_body={"drop_params": True})
             return np.array(res.data[0].embedding), total_token_count_from_response(res)
-        except Exception as _e:
-            log_exception(_e, res)
-            raise Exception(f"Error: {res}")
+
+        return self._run_with_retry(encode_query)
 
 
 class LocalAIEmbed(Base):
@@ -126,15 +129,16 @@ class LocalAIEmbed(Base):
     def encode(self, texts: list):
         batch_size = 16
         ress = []
+        token_count = 0
         for i in range(0, len(texts), batch_size):
             res = self.client.embeddings.create(input=texts[i : i + batch_size], model=self.model_name)
             try:
                 ress.extend([d.embedding for d in res.data])
+                token_count += total_token_count_from_response(res)
             except Exception as _e:
                 log_exception(_e, res)
                 raise Exception(f"Error: {res}")
-        # local embedding for LmStudio donot count tokens
-        return np.array(ress), 1024
+        return np.array(ress), token_count
 
     def encode_queries(self, text):
         embds, cnt = self.encode([text])
@@ -358,7 +362,7 @@ class JinaMultiVecEmbed(Base):
                 data["task"] = task
                 data["truncate"] = True
 
-            response = requests.post(self.base_url, headers=self.headers, json=data)
+            response = httpx.post(self.base_url, headers=self.headers, json=data)
             try:
                 res = response.json()
                 for d in res["data"]:
@@ -636,7 +640,7 @@ class NvidiaEmbed(Base):
                 "encoding_format": "float",
                 "truncate": "END",
             }
-            response = requests.post(self.base_url, headers=self.headers, json=payload)
+            response = httpx.post(self.base_url, headers=self.headers, json=payload)
             try:
                 res = response.json()
                 ress.extend([d["embedding"] for d in res["data"]])
@@ -776,7 +780,7 @@ class SILICONFLOWEmbed(Base):
                 "input": texts_batch,
                 "encoding_format": "float",
             }
-            response = requests.post(self.base_url, json=payload, headers=self.headers)
+            response = httpx.post(self.base_url, json=payload, headers=self.headers)
             try:
                 res = response.json()
                 ress.extend([d["embedding"] for d in res["data"]])
@@ -793,7 +797,7 @@ class SILICONFLOWEmbed(Base):
             "input": text,
             "encoding_format": "float",
         }
-        response = requests.post(self.base_url, json=payload, headers=self.headers)
+        response = httpx.post(self.base_url, json=payload, headers=self.headers)
         try:
             res = response.json()
             return np.array(res["data"][0]["embedding"]), total_token_count_from_response(res)
@@ -903,7 +907,7 @@ class HuggingFaceEmbed(Base):
         self.base_url = base_url or "http://127.0.0.1:8080"
 
     def encode(self, texts: list):
-        response = requests.post(f"{self.base_url}/embed", json={"inputs": texts}, headers={"Content-Type": "application/json"})
+        response = httpx.post(f"{self.base_url}/embed", json={"inputs": texts}, headers={"Content-Type": "application/json"})
         if response.status_code == 200:
             embeddings = response.json()
         else:
@@ -911,7 +915,7 @@ class HuggingFaceEmbed(Base):
         return np.array(embeddings), sum([num_tokens_from_string(text) for text in texts])
 
     def encode_queries(self, text: str):
-        response = requests.post(f"{self.base_url}/embed", json={"inputs": text}, headers={"Content-Type": "application/json"})
+        response = httpx.post(f"{self.base_url}/embed", json={"inputs": text}, headers={"Content-Type": "application/json"})
         if response.status_code == 200:
             embedding = response.json()[0]
             return np.array(embedding), num_tokens_from_string(text)
@@ -1112,7 +1116,7 @@ class PerplexityEmbed(Base):
                     "input": [[chunk] for chunk in batch],
                     "encoding_format": "base64_int8",
                 }
-                response = requests.post(url, headers=self.headers, json=payload)
+                response = httpx.post(url, headers=self.headers, json=payload)
                 try:
                     res = response.json()
                     for doc in res["data"]:
@@ -1131,7 +1135,7 @@ class PerplexityEmbed(Base):
                     "input": batch,
                     "encoding_format": "base64_int8",
                 }
-                response = requests.post(url, headers=self.headers, json=payload)
+                response = httpx.post(url, headers=self.headers, json=payload)
                 try:
                     res = response.json()
                     for d in res["data"]:

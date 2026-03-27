@@ -1,7 +1,7 @@
 import {
   ConfirmDeleteDialog,
   ConfirmDeleteDialogNode,
-} from '@/components/confirm-delete-dialog';
+} from '@/components/dialogs/confirm-delete-dialog';
 import { EmptyType } from '@/components/empty/constant';
 import Empty from '@/components/empty/empty';
 import { Button } from '@/components/ui/button';

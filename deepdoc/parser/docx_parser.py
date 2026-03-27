@@ -17,7 +17,6 @@
 from docx import Document
 import pandas as pd
 from collections import Counter
-from rag.nlp import rag_tokenizer
 from io import BytesIO
 import logging
 from docx.image.exceptions import (

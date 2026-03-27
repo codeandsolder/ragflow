@@ -14,7 +14,7 @@ import {
 import { ArrowUpDown } from 'lucide-react';
 import * as React from 'react';
 
-import { FileIcon } from '@/components/icon-font';
+import { FileIcon } from '@/components/icons/icon-font';
 import { RenameDialog } from '@/components/rename-dialog';
 import { TableEmpty, TableSkeleton } from '@/components/table-skeleton';
 import { Button } from '@/components/ui/button';

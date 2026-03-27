@@ -120,3 +120,43 @@ def query_db(model: type[DataBaseModel], limit: int = 0, offset: int = 0, query:
         data = data.offset(offset)
 
     return list(data), count
+
+
+def query_db_with_cursor(
+    model: type[DataBaseModel],
+    limit: int,
+    cursor: str | None = None,
+    query: dict | None = None,
+    order_by: str = "id",
+    desc: bool = False,
+):
+    data = model.select()
+    if query:
+        data = data.where(query_dict2expression(model, query))
+
+    order_field = getattr(model, f"f_{order_by}")
+    id_field = model.f_id
+
+    if desc:
+        if cursor:
+            cursor_value, cursor_id = cursor.split(":", 1)
+            data = data.where((order_field < cursor_value) | ((order_field == cursor_value) & (id_field < cursor_id)))
+        data = data.order_by(order_field.desc(), id_field.desc())
+    else:
+        if cursor:
+            cursor_value, cursor_id = cursor.split(":", 1)
+            data = data.where((order_field > cursor_value) | ((order_field == cursor_value) & (id_field > cursor_id)))
+        data = data.order_by(order_field.asc(), id_field.asc())
+
+    data = data.limit(limit)
+    results = list(data)
+
+    if results:
+        last_item = results[-1]
+        last_order_value = getattr(last_item, f"f_{order_by}")
+        last_id = last_item.id
+        next_cursor = f"{last_order_value}:{last_id}"
+    else:
+        next_cursor = None
+
+    return results, next_cursor

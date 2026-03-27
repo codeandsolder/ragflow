@@ -14,7 +14,6 @@
 #  limitations under the License.
 #
 
-import base64
 import ipaddress
 import json
 import re
@@ -26,14 +25,7 @@ from email.header import Header
 from common import settings
 from quart import render_template_string
 from api.utils.email_templates import EMAIL_TEMPLATES
-from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.expected_conditions import staleness_of
-from selenium.webdriver.support.ui import WebDriverWait
-from webdriver_manager.chrome import ChromeDriverManager
+from playwright.sync_api import sync_playwright
 
 
 OTP_LENGTH = 4
@@ -138,54 +130,33 @@ def html2pdf(
     install_driver: bool = True,
     print_options: dict = {},
 ):
-    result = __get_pdf_from_html(source, timeout, install_driver, print_options)
-    return result
-
-
-def __send_devtools(driver, cmd, params={}):
-    resource = "/session/%s/chromium/send_command_and_get_result" % driver.session_id
-    url = driver.command_executor._url + resource
-    body = json.dumps({"cmd": cmd, "params": params})
-    response = driver.command_executor._request("POST", url, body)
-
-    if not response:
-        raise Exception(response.get("value"))
-
-    return response.get("value")
+    return __get_pdf_from_html(source, timeout, install_driver, print_options)
 
 
 def __get_pdf_from_html(path: str, timeout: int, install_driver: bool, print_options: dict):
-    webdriver_options = Options()
-    webdriver_prefs = {}
-    webdriver_options.add_argument("--headless")
-    webdriver_options.add_argument("--disable-gpu")
-    webdriver_options.add_argument("--no-sandbox")
-    webdriver_options.add_argument("--disable-dev-shm-usage")
-    webdriver_options.experimental_options["prefs"] = webdriver_prefs
+    calculated_print_options = {
+        "landscape": False,
+        "display_header_footer": False,
+        "print_background": True,
+        "prefer_css_page_size": True,
+    }
+    # Keep backward compatibility with old keys.
+    if "displayHeaderFooter" in print_options:
+        print_options["display_header_footer"] = print_options.pop("displayHeaderFooter")
+    if "printBackground" in print_options:
+        print_options["print_background"] = print_options.pop("printBackground")
+    if "preferCSSPageSize" in print_options:
+        print_options["prefer_css_page_size"] = print_options.pop("preferCSSPageSize")
+    calculated_print_options.update(print_options)
 
-    webdriver_prefs["profile.default_content_settings"] = {"images": 2}
-
-    if install_driver:
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=webdriver_options)
-    else:
-        driver = webdriver.Chrome(options=webdriver_options)
-
-    driver.get(path)
-
-    try:
-        WebDriverWait(driver, timeout).until(staleness_of(driver.find_element(by=By.TAG_NAME, value="html")))
-    except TimeoutException:
-        calculated_print_options = {
-            "landscape": False,
-            "displayHeaderFooter": False,
-            "printBackground": True,
-            "preferCSSPageSize": True,
-        }
-        calculated_print_options.update(print_options)
-        result = __send_devtools(driver, "Page.printToPDF", calculated_print_options)
-        driver.quit()
-        return base64.b64decode(result["data"])
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True, args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"])
+        context = browser.new_context()
+        page = context.new_page()
+        page.goto(path, timeout=timeout * 1000, wait_until="networkidle")
+        pdf_bytes = page.pdf(**calculated_print_options)
+        browser.close()
+        return pdf_bytes
 
 
 def is_private_ip(ip: str) -> bool:

@@ -14,7 +14,7 @@
 #  limitations under the License.
 #
 
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch
 
 import pytest
 

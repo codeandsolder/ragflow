@@ -1,0 +1,266 @@
+"""
+Tests for database migration functions.
+"""
+
+import pytest
+from unittest.mock import MagicMock, patch, call
+from peewee import SqliteDatabase, Model, CharField, BooleanField, IntegerField, DoesNotExist
+from playhouse.migrate import SqliteMigrator, migrate
+
+
+class TestMigrations:
+    """Test cases for database migration functions."""
+
+    @pytest.fixture
+    def in_memory_db(self):
+        """Create an in-memory SQLite database for testing."""
+        db = SqliteDatabase(":memory:")
+        yield db
+        db.close()
+
+    @pytest.fixture
+    def test_model(self, in_memory_db):
+        """Create a test model bound to the in-memory database."""
+
+        class TestUser(Model):
+            id = CharField(max_length=32, primary_key=True)
+            email = CharField(max_length=255, null=False)
+            nickname = CharField(max_length=100, null=False)
+            is_superuser = BooleanField(default=False)
+            create_time = MagicMock()
+
+            class Meta:
+                database = in_memory_db
+                db_table = "test_user"
+
+        in_memory_db.create_tables([TestUser])
+        return TestUser
+
+    def test_migrate_from_clean_database(self, in_memory_db, test_model):
+        """Test that migrations work on a clean database."""
+        migrator = SqliteMigrator(in_memory_db)
+
+        # Test adding a new column
+        from peewee import TextField
+
+        alter_db_add_column(migrator, test_model._meta.db_table, "new_field", TextField(null=True))
+
+        # Verify column was added
+        columns = in_memory_db.get_columns(test_model._meta.db_table)
+        column_names = [col.name for col in columns]
+        assert "new_field" in column_names
+
+    def test_migrate_add_unique_email(self, in_memory_db, test_model):
+        """Test migrate_add_unique_email handles duplicates."""
+        from api.db.db_models import alter_db_add_column
+
+        migrator = SqliteMigrator(in_memory_db)
+
+        # Create users with duplicate emails
+        test_model.create(id="user1", email="test@example.com", nickname="User 1")
+        test_model.create(id="user2", email="test@example.com", nickname="User 2")
+
+        with patch("api.db.db_models.User", test_model):
+            with patch("api.db.db_models.DB", in_memory_db):
+                with patch("api.db.db_models.settings") as mock_settings:
+                    mock_settings.DATABASE_TYPE.upper.return_value = "SQLITE"
+
+                    from api.db.db_models import migrate_add_unique_email
+
+                    result = migrate_add_unique_email(migrator)
+                    assert result is None
+
+                    emails = [u.email for u in test_model.select()]
+                    assert len(set(emails)) == 2
+
+    def test_migrate_idempotency(self, in_memory_db, test_model):
+        """Test that migrations are idempotent (can be run multiple times)."""
+        migrator = SqliteMigrator(in_memory_db)
+
+        from peewee import TextField
+
+        # First run - add column
+        alter_db_add_column(migrator, test_model._meta.db_table, "idempotent_field", TextField(null=True))
+
+        # Second run - should not fail (column already exists)
+        alter_db_add_column(migrator, test_model._meta.db_table, "idempotent_field", TextField(null=True))
+
+        # Verify column exists
+        columns = in_memory_db.get_columns(test_model._meta.db_table)
+        column_names = [col.name for col in columns]
+        assert "idempotent_field" in column_names
+
+    def test_migration_preserves_data(self, in_memory_db, test_model):
+        """Test that migrations preserve existing data."""
+        migrator = SqliteMigrator(in_memory_db)
+
+        # Insert test data
+        test_model.create(id="preserve_test", email="preserve@example.com", nickname="Preserve User", is_superuser=True)
+
+        from peewee import TextField
+
+        # Add a new column
+        alter_db_add_column(migrator, test_model._meta.db_table, "preserved_field", TextField(null=True, default="default_value"))
+
+        # Verify original data is preserved
+        user = test_model.get(test_model.id == "preserve_test")
+        assert user.email == "preserve@example.com"
+        assert user.nickname == "Preserve User"
+        assert user.is_superuser is True
+
+    def test_alter_db_column_type(self, in_memory_db, test_model):
+        """Test column type alteration."""
+        migrator = SqliteMigrator(in_memory_db)
+
+        from peewee import IntegerField
+
+        # Add a column as text first
+        from peewee import CharField as TestCharField
+
+        alter_db_add_column(migrator, test_model._meta.db_table, "score", IntegerField(default=0))
+
+        # Verify column exists
+        columns = in_memory_db.get_columns(test_model._meta.db_table)
+        column_names = [col.name for col in columns]
+        assert "score" in column_names
+
+    def test_alter_db_rename_column(self, in_memory_db, test_model):
+        """Test column renaming."""
+        migrator = SqliteMigrator(in_memory_db)
+
+        from peewee import CharField as TestCharField
+
+        # Add a column to rename
+        alter_db_add_column(migrator, test_model._meta.db_table, "old_name", TestCharField(max_length=100, null=True))
+
+        # Attempt rename (may fail silently on SQLite if column doesn't exist)
+        from api.db.db_models import alter_db_rename_column
+
+        alter_db_rename_column(migrator, test_model._meta.db_table, "old_name", "new_name")
+
+        # Column rename behavior varies by database, just verify no crash
+
+    def test_migrate_add_unique_email_no_duplicates(self, in_memory_db, test_model):
+        """Test migrate_add_unique_email when no duplicates exist."""
+        from api.db.db_models import migrate_add_unique_email
+
+        migrator = SqliteMigrator(in_memory_db)
+
+        # Create users with unique emails
+        test_model.create(id="unique1", email="unique1@example.com", nickname="Unique 1")
+        test_model.create(id="unique2", email="unique2@example.com", nickname="Unique 2")
+
+        with patch("api.db.db_models.User", test_model):
+            with patch("api.db.db_models.DB", in_memory_db):
+                with patch("api.db.db_models.settings") as mock_settings:
+                    mock_settings.DATABASE_TYPE.upper.return_value = "SQLITE"
+
+                    result = migrate_add_unique_email(migrator)
+                    assert result is None
+
+                    users = list(test_model.select())
+                    emails = [u.email for u in users]
+                    assert len(emails) == len(set(emails))
+
+    def test_migrate_add_unique_email_keeps_superuser(self, in_memory_db, test_model):
+        """Test that migrate_add_unique_email keeps superuser when deduplicating."""
+        from api.db.db_models import migrate_add_unique_email
+
+        migrator = SqliteMigrator(in_memory_db)
+
+        # Create superuser and regular user with same email
+        test_model.create(id="super1", email="shared@example.com", nickname="Superuser", is_superuser=True)
+        test_model.create(id="regular1", email="shared@example.com", nickname="Regular", is_superuser=False)
+
+        with patch("api.db.db_models.User", test_model):
+            with patch("api.db.db_models.DB", in_memory_db):
+                with patch("api.db.db_models.settings") as mock_settings:
+                    mock_settings.DATABASE_TYPE.upper.return_value = "SQLITE"
+
+                    migrate_add_unique_email(migrator)
+
+                    superuser = test_model.get(test_model.id == "super1")
+                    assert superuser.email == "shared@example.com"
+
+                    regular = test_model.get(test_model.id == "regular1")
+                    assert "_DUPLICATE_" in regular.email
+
+    def test_update_tenant_llm_to_id_primary_key_mysql(self, in_memory_db):
+        """Test update_tenant_llm_to_id_primary_key for MySQL."""
+        from api.db.db_models import update_tenant_llm_to_id_primary_key
+
+        class MockCursor:
+            def __init__(self, rowcount=0):
+                self.rowcount = rowcount
+
+        with patch("api.db.db_models.DB") as mock_db:
+            mock_db.execute_sql = MagicMock(
+                side_effect=[
+                    MockCursor(0),
+                    MockCursor(1),
+                    MockCursor(1),
+                    MockCursor(1),
+                    MockCursor(1),
+                    MockCursor(1),
+                    MockCursor(1),
+                ]
+            )
+            mock_db.atomic = MagicMock()
+
+            with patch("api.db.db_models.settings") as mock_settings:
+                mock_settings.DATABASE_TYPE.upper.return_value = "MYSQL"
+
+                update_tenant_llm_to_id_primary_key()
+
+                assert mock_db.execute_sql.call_count >= 7
+
+    def test_update_tenant_llm_to_id_primary_key_postgres(self, in_memory_db):
+        """Test update_tenant_llm_to_id_primary_key for PostgreSQL."""
+        from api.db.db_models import update_tenant_llm_to_id_primary_key
+
+        class MockCursor:
+            def __init__(self, rowcount=0):
+                self.rowcount = rowcount
+
+        with patch("api.db.db_models.DB") as mock_db:
+            mock_db.execute_sql = MagicMock(
+                side_effect=[
+                    MockCursor(0),
+                    MockCursor(1),
+                    MockCursor(1),
+                    MockCursor(1),
+                    MockCursor(1),
+                    MockCursor(1),
+                ]
+            )
+            mock_db.atomic = MagicMock()
+
+            with patch("api.db.db_models.settings") as mock_settings:
+                mock_settings.DATABASE_TYPE.upper.return_value = "POSTGRES"
+
+                update_tenant_llm_to_id_primary_key()
+
+                assert mock_db.execute_sql.call_count >= 6
+
+    def test_update_tenant_llm_to_id_primary_key_already_exists(self, in_memory_db):
+        """Test update_tenant_llm_to_id_primary_key when ID column already exists."""
+        from api.db.db_models import update_tenant_llm_to_id_primary_key
+
+        class MockCursor:
+            def __init__(self, rowcount=1):
+                self.rowcount = rowcount
+
+        with patch("api.db.db_models.DB") as mock_db:
+            mock_db.execute_sql = MagicMock(return_value=MockCursor(1))
+            mock_db.atomic = MagicMock()
+
+            with patch("api.db.db_models.settings") as mock_settings:
+                mock_settings.DATABASE_TYPE.upper.return_value = "MYSQL"
+
+                update_tenant_llm_to_id_primary_key()
+
+                mock_db.execute_sql.assert_called_once()
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

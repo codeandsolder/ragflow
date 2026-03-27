@@ -1,4 +1,4 @@
-import { FormContainer } from '@/components/form-container';
+import { FormContainer } from '@/components/layout/form-container';
 import { Form } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { memo } from 'react';

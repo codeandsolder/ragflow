@@ -26,13 +26,15 @@ import numpy as np
 from rag.app.naive import by_plaintext, PARSERS
 from common.parser_config_utils import normalize_layout_recognizer
 
+from rag.app.pdf_metadata import extract_pdf_metadata
+
 
 class Pdf(PdfParser):
     def __init__(self):
         self.model_speciess = ParserType.PAPER.value
         super().__init__()
 
-    def __call__(self, filename, binary=None, from_page=0, to_page=100000, zoomin=3, callback=None):
+    def __call__(self, filename, binary=None, from_page=0, to_page=100000, zoomin=3, callback=None, use_enhanced_metadata=False):
         from timeit import default_timer as timer
 
         start = timer()
@@ -62,7 +64,7 @@ class Pdf(PdfParser):
             logging.debug("two_column................... {} {}".format(column_width, self.page_images[0].size[0] / zoomin / 2))
             self.boxes = self.sort_X_by_page(self.boxes, column_width / 2)
         for b in self.boxes:
-            b["text"] = re.sub(r"([\t 　]|\u3000){2,}", " ", b["text"].strip())
+            b["text"] = re.sub(r"([\t ]|\u3000){2,}", " ", b["text"].strip())
 
         def _begin(txt):
             return re.match("[0-9. 一、i]*(introduction|abstract|摘要|引言|keywords|key words|关键词|background|背景|目录|前言|contents)", txt.lower().strip())
@@ -75,6 +77,80 @@ class Pdf(PdfParser):
                 "sections": [(b["text"] + self._line_tag(b, zoomin), b.get("layoutno", "")) for b in self.boxes if re.match(r"(text|title)", b.get("layoutno", "text"))],
                 "tables": tbls,
             }
+
+        # Try enhanced metadata extraction if enabled and binary is available
+        enhanced_meta = None
+        if use_enhanced_metadata and binary:
+            try:
+                enhanced_meta = extract_pdf_metadata(binary, use_vlm=False, lang="en")
+            except Exception as e:
+                logging.debug(f"Enhanced metadata extraction failed: {e}")
+
+        # get title and authors (legacy method)
+        title = ""
+        authors = []
+        i = 0
+        while i < min(32, len(self.boxes) - 1):
+            b = self.boxes[i]
+            i += 1
+            if b.get("layoutno", "").find("title") >= 0:
+                title = b["text"]
+                if _begin(title):
+                    title = ""
+                    break
+                for j in range(3):
+                    next_idx = i + j
+                    if next_idx >= len(self.boxes):
+                        break
+                    candidate = self.boxes[next_idx]["text"]
+                    if _begin(candidate):
+                        break
+                    if "@" in candidate:
+                        break
+                    authors.append(candidate)
+                    break
+                break
+
+        # get abstract (legacy method)
+        abstr = ""
+        i = 0
+        while i + 1 < min(32, len(self.boxes)):
+            b = self.boxes[i]
+            i += 1
+            txt = b["text"].lower().strip()
+            if re.match("(abstract|摘要)", txt):
+                if len(txt.split()) > 32 or len(txt) > 64:
+                    abstr = txt + self._line_tag(b, zoomin)
+                    break
+                txt = self.boxes[i]["text"].lower().strip()
+                if len(txt.split()) > 32 or len(txt) > 64:
+                    abstr = txt + self._line_tag(self.boxes[i], zoomin)
+                    i += 1
+                    break
+        if not abstr:
+            i = 0
+
+        # Use enhanced metadata if available and better than legacy
+        if enhanced_meta:
+            if enhanced_meta.get("title") and len(enhanced_meta["title"]) > len(title):
+                title = enhanced_meta["title"]
+            if enhanced_meta.get("authors") and len(enhanced_meta["authors"]) > len(" ".join(authors)):
+                authors = [enhanced_meta["authors"]]
+            if enhanced_meta.get("abstract") and len(enhanced_meta["abstract"]) > len(abstr):
+                abstr = enhanced_meta["abstract"]
+
+        callback(0.8, "Page {}~{}: Text merging finished".format(from_page, min(to_page, self.total_page)))
+        for b in self.boxes:
+            logging.debug("{} {}".format(b["text"], b.get("layoutno")))
+        logging.debug("{}".format(tbls))
+
+        return {
+            "title": title,
+            "authors": " ".join(authors),
+            "abstract": abstr,
+            "sections": [(b["text"] + self._line_tag(b, zoomin), b.get("layoutno", "")) for b in self.boxes[i:] if re.match(r"(text|title)", b.get("layoutno", "text"))],
+            "tables": tbls,
+        }
         # get title and authors
         title = ""
         authors = []

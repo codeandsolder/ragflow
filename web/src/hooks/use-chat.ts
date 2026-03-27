@@ -1,4 +1,7 @@
+import message from '@/components/ui/message';
+import { Authorization } from '@/constants/authorization';
 import { MessageType } from '@/constants/chat';
+import { ResponseType } from '@/interfaces/database/base';
 import {
   IAnswer,
   IClientConversation,
@@ -19,9 +22,6 @@ import {
   useState,
 } from 'react';
 import { v4 as uuid } from 'uuid';
-import { Authorization } from '@/constants/authorization';
-import { ResponseType } from '@/interfaces/database/base';
-import message from '@/components/ui/message';
 import { useScrollToBottom } from './use-scroll';
 
 function useSetDoneRecord() {
@@ -201,8 +201,17 @@ export const useSendMessageWithSse = (
 };
 
 export const useSpeechWithSse = (url: string = api.tts) => {
+  const sseRef = useRef<AbortController>();
+
+  useEffect(() => {
+    return () => {
+      sseRef.current?.abort();
+    };
+  }, []);
+
   const read = useCallback(
     async (body: any) => {
+      sseRef.current = new AbortController();
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -210,6 +219,7 @@ export const useSpeechWithSse = (url: string = api.tts) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
+        signal: sseRef.current.signal,
       });
       try {
         const res = await response.clone().json();

@@ -6,7 +6,7 @@ import {
   ProfileIcon,
   TeamIcon,
 } from '@/assets/icon/next-icon';
-import { IconFont } from '@/components/icon-font';
+import { IconFont } from '@/components/icons/icon-font';
 import { LLMFactory } from '@/constants/llm';
 import { UserSettingRouteKey } from '@/constants/setting';
 import { MonitorOutlined } from '@ant-design/icons';

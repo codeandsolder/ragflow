@@ -11,6 +11,7 @@ Reference:
 
 import asyncio
 import dataclasses
+import gc
 import html
 import json
 import logging
@@ -32,6 +33,11 @@ from rag.nlp import rag_tokenizer, search
 from rag.utils.redis_conn import REDIS_CONN
 from common import settings
 from common.doc_store.doc_store_base import OrderByExpr
+from rag.graphrag.memory import (
+    GraphMemoryMonitor,
+    iter_subgraphs_by_source,
+    truncate_graph,
+)
 
 GRAPH_FIELD_SEP = "<SEP>"
 
@@ -412,27 +418,45 @@ async def get_graph_doc_ids(tenant_id, kb_id) -> list[str]:
 
 
 async def get_graph(tenant_id, kb_id, exclude_rebuild=None):
+    monitor = GraphMemoryMonitor()
     conds = {"fields": ["content_with_weight", "removed_kwd", "source_id"], "size": 1, "knowledge_graph_kwd": ["graph"]}
     res = await settings.retriever.search(conds, search.index_name(tenant_id), [kb_id])
+
     if not res.total == 0:
         for id in res.ids:
             try:
                 if res.field[id]["removed_kwd"] == "N":
-                    g = json_graph.node_link_graph(json.loads(res.field[id]["content_with_weight"]), edges="edges")
+                    graph_data = json.loads(res.field[id]["content_with_weight"])
+                    g = json_graph.node_link_graph(graph_data, edges="edges")
+
+                    # Check memory limits
+                    is_safe, msg = monitor.check_memory_limits(g)
+                    if not is_safe:
+                        logging.warning(f"Graph exceeds limits: {msg}")
+                        g = truncate_graph(g, monitor.max_nodes, monitor.max_edges)
+
                     if "source_id" not in g.graph:
                         g.graph["source_id"] = res.field[id]["source_id"]
+                    return g
                 else:
                     g = await rebuild_graph(tenant_id, kb_id, exclude_rebuild)
-                return g
+                    return g
             except Exception:
                 continue
-    result = None
-    return result
+    return None
 
 
 async def set_graph(tenant_id: str, kb_id: str, embd_mdl, graph: nx.Graph, change: GraphChange, callback, affected_doc_ids=None):
     limiter = get_chat_limiter()
     start = asyncio.get_running_loop().time()
+
+    # Check memory limits before processing
+    monitor = GraphMemoryMonitor()
+    is_safe, msg = monitor.check_memory_limits(graph)
+    if not is_safe:
+        logging.warning(f"Graph exceeds memory limits: {msg}")
+        graph = truncate_graph(graph, monitor.max_nodes, monitor.max_edges)
+        gc.collect()
 
     await thread_pool_exec(settings.docStoreConn.delete, {"knowledge_graph_kwd": ["graph"]}, search.index_name(tenant_id), kb_id)
     if affected_doc_ids:
@@ -482,26 +506,47 @@ async def set_graph(tenant_id: str, kb_id: str, embd_mdl, graph: nx.Graph, chang
         }
     ]
 
-    # generate updated subgraphs
-    doc_ids_to_update = affected_doc_ids if affected_doc_ids is not None else graph.graph.get("source_id", [])
-    for source in doc_ids_to_update:
-        subgraph = graph.subgraph([n for n in graph.nodes if source in graph.nodes[n]["source_id"]]).copy()
-        if len(subgraph.nodes) == 0:
-            continue
-        subgraph.graph["source_id"] = [source]
-        for n in subgraph.nodes:
-            subgraph.nodes[n]["source_id"] = [source]
-        chunks.append(
-            {
-                "id": get_uuid(),
-                "content_with_weight": json.dumps(nx.node_link_data(subgraph, edges="edges"), ensure_ascii=False),
-                "knowledge_graph_kwd": "subgraph",
-                "kb_id": kb_id,
-                "source_id": [source],
-                "available_int": 0,
-                "removed_kwd": "N",
-            }
-        )
+    doc_ids_to_update = set(affected_doc_ids) if affected_doc_ids is not None else set(graph.graph.get("source_id", []))
+
+    if monitor.should_stream(graph):
+        if callback:
+            callback(msg=f"Large graph detected, using streaming mode for {graph.number_of_nodes()} nodes")
+
+        batch_size = 10
+        batch = []
+        for source_id, subgraph in iter_subgraphs_by_source(graph, filter_doc_ids=doc_ids_to_update):
+            batch.append(
+                {
+                    "id": get_uuid(),
+                    "content_with_weight": json.dumps(nx.node_link_data(subgraph, edges="edges"), ensure_ascii=False),
+                    "knowledge_graph_kwd": "subgraph",
+                    "kb_id": kb_id,
+                    "source_id": [source_id],
+                    "available_int": 0,
+                    "removed_kwd": "N",
+                }
+            )
+
+            if len(batch) >= batch_size:
+                chunks.extend(batch)
+                batch = []
+                gc.collect()
+
+        if batch:
+            chunks.extend(batch)
+    elif doc_ids_to_update:
+        for source_id, subgraph in iter_subgraphs_by_source(graph, filter_doc_ids=doc_ids_to_update):
+            chunks.append(
+                {
+                    "id": get_uuid(),
+                    "content_with_weight": json.dumps(nx.node_link_data(subgraph, edges="edges"), ensure_ascii=False),
+                    "knowledge_graph_kwd": "subgraph",
+                    "kb_id": kb_id,
+                    "source_id": [source_id],
+                    "available_int": 0,
+                    "removed_kwd": "N",
+                }
+            )
 
     tasks = []
     for ii, node in enumerate(change.added_updated_nodes):
@@ -627,36 +672,66 @@ def flat_uniq_list(arr, key):
 
 
 async def rebuild_graph(tenant_id, kb_id, exclude_rebuild=None):
+    monitor = GraphMemoryMonitor()
     graph = nx.Graph()
     flds = ["knowledge_graph_kwd", "content_with_weight", "source_id"]
     bs = 256
+    chunks = []
+
+    # Stream subgraphs in chunks to reduce memory pressure
     for i in range(0, 1024 * bs, bs):
         es_res = await thread_pool_exec(settings.docStoreConn.search, flds, [], {"kb_id": kb_id, "knowledge_graph_kwd": ["subgraph"]}, [], OrderByExpr(), i, bs, search.index_name(tenant_id), [kb_id])
-        # tot = settings.docStoreConn.get_total(es_res)
         es_res = settings.docStoreConn.get_fields(es_res, flds)
 
         if len(es_res) == 0:
             break
 
         for id, d in es_res.items():
-            assert d["knowledge_graph_kwd"] == "subgraph"
+            if d["knowledge_graph_kwd"] != "subgraph":
+                continue
             if isinstance(exclude_rebuild, list):
                 if sum([n in d["source_id"] for n in exclude_rebuild]):
                     continue
             elif exclude_rebuild in d["source_id"]:
                 continue
 
-            next_graph = json_graph.node_link_graph(json.loads(d["content_with_weight"]), edges="edges")
-            merged_graph = nx.compose(graph, next_graph)
-            merged_source = {n: graph.nodes[n]["source_id"] + next_graph.nodes[n]["source_id"] for n in graph.nodes & next_graph.nodes}
-            nx.set_node_attributes(merged_graph, merged_source, "source_id")
-            if "source_id" in graph.graph:
-                merged_graph.graph["source_id"] = graph.graph["source_id"] + next_graph.graph["source_id"]
-            else:
-                merged_graph.graph["source_id"] = next_graph.graph["source_id"]
-            graph = merged_graph
+            chunks.append(d["content_with_weight"])
+
+            # Periodically check memory and process chunks
+            if len(chunks) >= 10:  # Process in batches of 10
+                graph = await _merge_chunks(graph, chunks, monitor)
+                chunks = []
+                gc.collect()
+
+    # Process remaining chunks
+    if chunks:
+        graph = await _merge_chunks(graph, chunks, monitor)
 
     if len(graph.nodes) == 0:
         return None
     graph.graph["source_id"] = sorted(graph.graph["source_id"])
     return graph
+
+
+async def _merge_chunks(base_graph: nx.Graph, chunks: list[str], monitor: GraphMemoryMonitor) -> nx.Graph:
+    """Merge multiple graph chunks in a memory-efficient manner."""
+    for chunk_data in chunks:
+        try:
+            subgraph = json_graph.node_link_graph(json.loads(chunk_data), edges="edges")
+            base_graph = nx.compose(base_graph, subgraph)
+            merged_source = {n: base_graph.nodes[n]["source_id"] + subgraph.nodes[n]["source_id"] for n in base_graph.nodes & subgraph.nodes}
+            if merged_source:
+                nx.set_node_attributes(base_graph, merged_source, "source_id")
+
+            # Check memory limits and truncate if needed
+            is_safe, msg = monitor.check_memory_limits(base_graph)
+            if not is_safe:
+                logging.warning(f"Memory limit exceeded during rebuild: {msg}")
+                base_graph = truncate_graph(base_graph, monitor.max_nodes, monitor.max_edges)
+                gc.collect()
+
+        except Exception as e:
+            logging.error(f"Error processing chunk: {e}")
+            continue
+
+    return base_graph

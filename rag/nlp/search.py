@@ -133,7 +133,7 @@ class Searcher:
                 if not settings.DOC_ENGINE_INFINITY:
                     src.append(f"q_{len(q_vec)}_vec")
 
-                fusionExpr = FusionExpr("weighted_sum", topk, {"weights": "0.05,0.95"})
+                fusionExpr = FusionExpr("weighted_sum", topk, {"weights": req.get("hybrid_weight", "0.05,0.95")})
                 matchExprs = [matchText, matchDense, fusionExpr]
 
                 res = await thread_pool_exec(self.dataStore.search, src, highlightFields, filters, matchExprs, orderBy, offset, limit, idx_names, kb_ids, rank_feature=rank_feature)
@@ -396,6 +396,7 @@ class Dealer:
         page_size,
         similarity_threshold=0.2,
         vector_similarity_weight=0.3,
+        hybrid_weight=None,
         top=1024,
         doc_ids=None,
         aggs=True,
@@ -419,6 +420,7 @@ class Dealer:
             "topk": top,
             "similarity": similarity_threshold,
             "available_int": 1,
+            "hybrid_weight": hybrid_weight,
         }
 
         if isinstance(tenant_ids, str):

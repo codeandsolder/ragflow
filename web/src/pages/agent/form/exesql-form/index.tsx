@@ -1,6 +1,6 @@
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
 import NumberInput from '@/components/originui/number-input';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
-import { RAGFlowFormItem } from '@/components/ragflow-form';
 import { ButtonLoading } from '@/components/ui/button';
 import {
   Form,

@@ -21,7 +21,7 @@ from copy import deepcopy
 from functools import partial
 
 from common.misc_utils import get_uuid
-from rag.utils.base64_image import id2image, image2id
+from rag.utils.base64_image import async_id2image, image2id
 from deepdoc.parser.pdf_parser import RAGFlowPdfParser
 from rag.flow.base import ProcessBase, ProcessParamBase
 from rag.flow.hierarchical_merger.schema import HierarchicalMergerFromUpstream
@@ -158,25 +158,34 @@ class HierarchicalMerger(ProcessBase):
 
             self.set_output("chunks", [{"text": c} for c in cks if c])
         else:
+            tasks = []
+            for path in all_pathes:
+                for i in path:
+                    tasks.append(
+                        async_id2image(
+                            section_images[i],
+                            partial(settings.STORAGE_IMPL.get, tenant_id=self._canvas._tenant_id),
+                        )
+                    )
+            section_images = await asyncio.gather(*tasks, return_exceptions=True)
+            section_images = [img if not isinstance(img, Exception) else None for img in section_images]
+
             cks = []
-            images = []
             for path in all_pathes:
                 txt = ""
                 img = None
                 for i in path:
                     txt += lines[i] + "\n"
-                    concat_img(img, id2image(section_images[i], partial(settings.STORAGE_IMPL.get, tenant_id=self._canvas._tenant_id)))
-                cks.append(txt)
-                images.append(img)
+                    img = concat_img(img, section_images[i])
+                if txt.strip():
+                    cks.append(
+                        {
+                            "text": RAGFlowPdfParser.remove_tag(txt.strip()),
+                            "image": img,
+                            "positions": RAGFlowPdfParser.extract_positions(txt.strip()),
+                        }
+                    )
 
-            cks = [
-                {
-                    "text": RAGFlowPdfParser.remove_tag(c),
-                    "image": img,
-                    "positions": RAGFlowPdfParser.extract_positions(c),
-                }
-                for c, img in zip(cks, images)
-            ]
             tasks = []
             for d in cks:
                 tasks.append(asyncio.create_task(image2id(d, partial(settings.STORAGE_IMPL.put, tenant_id=self._canvas._tenant_id), get_uuid())))

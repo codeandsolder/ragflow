@@ -1,4 +1,4 @@
-import { FileUploadProps } from '@/components/file-upload';
+import { FileUploadProps } from '@/components/file-upload/file-upload';
 import { NextMessageInput } from '@/components/message-input/next';
 import MessageItem from '@/components/next-message-item';
 import PdfSheet from '@/components/pdf-drawer';

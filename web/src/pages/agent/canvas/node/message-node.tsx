@@ -1,4 +1,4 @@
-import { NodeCollapsible } from '@/components/collapse';
+import { NodeCollapsible } from '@/components/layout/collapse';
 import { IMessageNode } from '@/interfaces/database/agent';
 import { cn } from '@/lib/utils';
 import { useGetVariableLabelOrTypeByValue } from '@/pages/agent/hooks/use-get-begin-query';

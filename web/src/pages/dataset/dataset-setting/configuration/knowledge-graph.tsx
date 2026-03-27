@@ -1,6 +1,6 @@
-import { DelimiterFormField } from '@/components/delimiter-form-field';
-import { EntityTypesFormField } from '@/components/entity-types-form-field';
-import { MaxTokenNumberFormField } from '@/components/max-token-number-from-field';
+import { DelimiterFormField } from '@/components/form-fields/delimiter-form-field';
+import { EntityTypesFormField } from '@/components/form-fields/entity-types-form-field';
+import { MaxTokenNumberFormField } from '@/components/form-fields/max-token-number-from-field';
 
 export function KnowledgeGraphConfiguration() {
   return (

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = {
@@ -18,12 +18,12 @@ RAGFlowAvatar is a customizable avatar component that displays user avatars with
 
 ### Import Path
 \`\`\`typescript
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
 \`\`\`
 
 ### Basic Usage
 \`\`\`tsx
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
 
 function MyComponent() {
   return (

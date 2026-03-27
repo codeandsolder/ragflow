@@ -1,4 +1,4 @@
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
 import { Button } from '@/components/ui/button';
 import { useSecondPathName } from '@/hooks/route-hook';
 import { cn } from '@/lib/utils';

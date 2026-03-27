@@ -28,7 +28,27 @@ from PIL import Image
 
 import chardet
 
-__all__ = ["rag_tokenizer"]
+__all__ = [
+    "rag_tokenizer",
+    "find_codec",
+    "naive_merge",
+    "naive_merge_with_images",
+    "concat_img",
+    "attach_media_context",
+    "tokenize_chunks",
+    "is_english",
+    "bullets_category",
+    "remove_contents_table",
+    "hierarchical_merge",
+    "random_choices",
+    "tokenize_table",
+    "tokenize",
+    "surname",
+    "sentence_tokenize",
+    "make_colon_as_title",
+    "title_frequency",
+    "docx_question_level",
+]
 
 all_codecs = [
     "utf-8",
@@ -1201,12 +1221,13 @@ def naive_merge(sections: str | list, chunk_token_num=128, delimiter="\n。；�
                     continue
                 text = "\n" + sub_sec
                 local_pos = pos
-                if num_tokens_from_string(text) < 8:
+                tnum = num_tokens_from_string(text)
+                if tnum < 8:
                     local_pos = ""
                 if local_pos and text.find(local_pos) < 0:
                     text += local_pos
                 cks.append(text)
-                tk_nums.append(num_tokens_from_string(text))
+                tk_nums.append(tnum)
         return cks
 
     for sec, pos in sections:
@@ -1265,18 +1286,19 @@ def naive_merge_with_images(texts, images, chunk_token_num=128, delimiter="\n。
                 text_str = ""
             text_pos = text[1] if isinstance(text, tuple) and len(text) > 1 else ""
             split_sec = re.split(r"(%s)" % custom_pattern, text_str)
-            for sub_sec in split_sec:
-                if re.fullmatch(custom_pattern, sub_sec or ""):
-                    continue
-                text_seg = "\n" + sub_sec
-                local_pos = text_pos
-                if num_tokens_from_string(text_seg) < 8:
-                    local_pos = ""
-                if local_pos and text_seg.find(local_pos) < 0:
-                    text_seg += local_pos
-                cks.append(text_seg)
-                result_images.append(image)
-                tk_nums.append(num_tokens_from_string(text_seg))
+        for sub_sec in split_sec:
+            if re.fullmatch(custom_pattern, sub_sec or ""):
+                continue
+            text_seg = "\n" + sub_sec
+            local_pos = text_pos
+            tnum = num_tokens_from_string(text_seg)
+            if tnum < 8:
+                local_pos = ""
+            if local_pos and text_seg.find(local_pos) < 0:
+                text_seg += local_pos
+            cks.append(text_seg)
+            result_images.append(image)
+            tk_nums.append(tnum)
         return cks, result_images
 
     for text, image in zip(texts, images):

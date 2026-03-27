@@ -1,4 +1,4 @@
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
 import i18n, { changeLanguageAsync } from '@/locales/config';
 import { useEffect, useState } from 'react';
 import {

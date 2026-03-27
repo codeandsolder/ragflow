@@ -1,6 +1,6 @@
 import EmbedDialog from '@/components/embed-dialog';
 import { useShowEmbedModal } from '@/components/embed-dialog/use-show-embed-dialog';
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 import {
   Breadcrumb,
   BreadcrumbItem,

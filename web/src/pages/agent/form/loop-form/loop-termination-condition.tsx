@@ -1,7 +1,7 @@
-import { BoolSegmented } from '@/components/bool-segmented';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
+import { BoolSegmented } from '@/components/layout/bool-segmented';
 import { LogicalOperator } from '@/components/logical-operator';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
-import { RAGFlowFormItem } from '@/components/ragflow-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';

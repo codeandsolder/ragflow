@@ -2,7 +2,7 @@ import {
   DynamicForm,
   DynamicFormRef,
   FormFieldConfig,
-} from '@/components/dynamic-form';
+} from '@/components/form-fields/dynamic-form';
 import { Modal } from '@/components/ui/modal/modal';
 import { t } from 'i18next';
 import { useEffect, useRef } from 'react';

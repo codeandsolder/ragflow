@@ -1,4 +1,4 @@
-import { HomeCard } from '@/components/home-card';
+import { HomeCard } from '@/components/layout/home-card';
 import { MoreButton } from '@/components/more-button';
 import { useNavigatePage } from '@/hooks/logic-hooks/navigate-hooks';
 import { IDialog } from '@/interfaces/database/chat';
@@ -10,7 +10,10 @@ export type IProps = {
   data: IDialog;
 } & Pick<ReturnType<typeof useRenameChat>, 'showChatRenameModal'>;
 
-export const ChatCard = memo(function ChatCard({ data, showChatRenameModal }: IProps) {
+export const ChatCard = memo(function ChatCard({
+  data,
+  showChatRenameModal,
+}: IProps) {
   const { navigateToChat } = useNavigatePage();
 
   return (

@@ -21,7 +21,7 @@ import re
 from abc import ABC
 import tempfile
 
-import requests
+import httpx
 from openai import OpenAI
 from openai.lib.azure import AzureOpenAI
 
@@ -150,7 +150,7 @@ class XinferenceSeq2txt(Base):
         files = {"file": (audio_file_name, audio_data, "audio/wav")}
 
         try:
-            response = requests.post(f"{self.base_url}/v1/audio/transcriptions", files=files, data=payload)
+            response = httpx.post(f"{self.base_url}/v1/audio/transcriptions", files=files, data=payload)
             response.raise_for_status()
             result = response.json()
 
@@ -160,7 +160,7 @@ class XinferenceSeq2txt(Base):
             else:
                 return "**ERROR**: Failed to retrieve transcription.", 0
 
-        except requests.exceptions.RequestException as e:
+        except httpx.RequestError as e:
             return f"**ERROR**: {str(e)}", 0
 
 
@@ -322,7 +322,7 @@ class ZhipuSeq2txt(Base):
             files = {"file": audio_file}
 
             try:
-                response = requests.post(
+                response = httpx.post(
                     url=f"{self.base_url}/audio/transcriptions",
                     data=payload,
                     files=files,

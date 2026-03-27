@@ -15,7 +15,7 @@ import {
 import { ArrowUpDown, Pencil, Trash2 } from 'lucide-react';
 import * as React from 'react';
 
-import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
+import { ConfirmDeleteDialog } from '@/components/dialogs/confirm-delete-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';

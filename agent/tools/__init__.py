@@ -45,6 +45,9 @@ def _import_submodules() -> None:
 
 _import_submodules()
 
-__all__ = list(__all_classes.keys()) + ["__all_classes"]
+# Ensure explicit re-exports for key tool classes
+from .retrieval import RetrievalParam  # noqa: F401
+
+__all__ = list(__all_classes.keys()) + ["__all_classes", "RetrievalParam"]
 
 del _package_path, _import_submodules, _extract_classes_from_module

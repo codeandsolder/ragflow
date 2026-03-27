@@ -26,7 +26,7 @@ from io import BytesIO
 from pathlib import Path
 from urllib.parse import urljoin
 
-import requests
+import httpx
 from openai import OpenAI, AsyncOpenAI
 from openai.lib.azure import AzureOpenAI, AsyncAzureOpenAI
 
@@ -433,7 +433,7 @@ class Zhipu4V(GptV4):
         return gen_conf
 
     def _request(self, msg, stream, gen_conf={}):
-        response = requests.post(
+        response = httpx.post(
             self.base_url,
             json={"model": self.model_name, "messages": msg, "stream": stream, **gen_conf},
             headers={
@@ -1019,7 +1019,7 @@ class NvidiaCV(Base):
 
     def describe(self, image):
         b64 = self.image2base64(image)
-        response = requests.post(
+        response = httpx.post(
             url=self.base_url,
             headers={
                 "accept": "application/json",
@@ -1035,7 +1035,7 @@ class NvidiaCV(Base):
         )
 
     def _request(self, msg, gen_conf={}):
-        response = requests.post(
+        response = httpx.post(
             url=self.base_url,
             headers={
                 "accept": "application/json",

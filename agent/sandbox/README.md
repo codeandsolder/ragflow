@@ -144,6 +144,42 @@ The RAGFlow sandbox is designed to balance security and usability, offering soli
 
 At its core, we use [gVisor](https://gvisor.dev/docs/architecture_guide/security/), a user-space kernel, to isolate code execution from the host system. gVisor intercepts and restricts syscalls, offering robust protection against container escapes and privilege escalations.
 
+### 🛡️ Docker API Proxy (Least Privilege Access)
+
+The executor manager now uses a **restricted Docker API proxy** instead of direct socket access. This follows the principle of least privilege by:
+
+1. **No privileged mode**: The executor manager container runs without `privileged: true`
+2. **No direct socket mount**: The Docker socket is not mounted into the executor container
+3. **API filtering**: A dedicated proxy filters Docker API calls, allowing only:
+   - Container create/remove/inspect operations
+   - Container exec operations
+   - Image list/pull operations
+   - Docker info queries
+
+**Blocked operations** include: volume management, network management, privileged container creation, host path mounts, and other potentially dangerous Docker API calls.
+
+#### Architecture
+
+```
+┌─────────────────────┐        ┌─────────────────────┐        ┌─────────────────────┐
+│  executor_manager   │ ──TCP──▶│   docker_api_proxy  │ ──TCP──▶│   Docker Daemon     │
+│                     │ :2376  │  (filtered access)  │ :2375  │                     │
+│  - no socket mount  │        │                     │        │                     │
+│  - no privileges    │        │  Allowed:           │        │                     │
+│  - cap_drop: ALL    │        │  • container CRUD   │        │                     │
+│                     │        │  • exec, logs       │        │                     │
+│                     │        │  • images (list)    │        │                     │
+│                     │        │  • info, version    │        │                     │
+└─────────────────────┘        └─────────────────────┘        └─────────────────────┘
+```
+
+This architecture ensures that even if the executor manager is compromised, the attacker cannot:
+- Create privileged containers
+- Mount host paths
+- Access Docker volumes
+- Modify Docker networks
+- Perform other dangerous Docker operations
+
 ### 🔒 Optional seccomp Support (Advanced)
 
 For users who need **zero-trust-level syscall control**, we support an additional `seccomp` profile. This feature restricts containers to only a predefined set of system calls, as specified in `executor_manager/seccomp-profile-default.json`.

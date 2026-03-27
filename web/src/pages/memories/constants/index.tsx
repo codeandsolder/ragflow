@@ -1,4 +1,7 @@
-import { FormFieldConfig, FormFieldType } from '@/components/dynamic-form';
+import {
+  FormFieldConfig,
+  FormFieldType,
+} from '@/components/form-fields/dynamic-form';
 import {
   EmbeddingSelect,
   LLMSelect,

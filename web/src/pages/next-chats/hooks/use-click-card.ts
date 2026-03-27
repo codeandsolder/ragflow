@@ -1,20 +1,18 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 export function useHandleClickConversationCard() {
-  const [controller, setController] = useState(new AbortController());
+  const controllerRef = useRef(new AbortController());
   const { setConversationBoth } = useChatUrlParams();
 
   useEffect(() => {
     return () => {
-      controller.abort();
+      controllerRef.current.abort();
     };
-  }, [controller]);
+  }, []);
 
   const stopOutputMessage = useCallback(() => {
-    setController((pre) => {
-      pre.abort();
-      return new AbortController();
-    });
+    controllerRef.current.abort();
+    controllerRef.current = new AbortController();
   }, []);
 
   const handleConversationCardClick = useCallback(
@@ -25,5 +23,9 @@ export function useHandleClickConversationCard() {
     [setConversationBoth, stopOutputMessage],
   );
 
-  return { controller, handleConversationCardClick, stopOutputMessage };
+  return {
+    controller: controllerRef,
+    handleConversationCardClick,
+    stopOutputMessage,
+  };
 }

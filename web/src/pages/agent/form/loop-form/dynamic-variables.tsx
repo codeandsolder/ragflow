@@ -1,7 +1,7 @@
-import { BoolSegmented } from '@/components/bool-segmented';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
 import { KeyInput } from '@/components/key-input';
+import { BoolSegmented } from '@/components/layout/bool-segmented';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
-import { RAGFlowFormItem } from '@/components/ragflow-form';
 import { useIsDarkTheme } from '@/components/theme-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

@@ -1,5 +1,5 @@
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
-import { SliderInputFormField } from '@/components/slider-input-form-field';
+import { SliderInputFormField } from '@/components/form-fields/slider-input-form-field';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
 import {
   FormControl,
   FormField,

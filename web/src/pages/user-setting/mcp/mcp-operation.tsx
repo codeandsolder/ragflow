@@ -1,7 +1,7 @@
 import {
   ConfirmDeleteDialog,
   ConfirmDeleteDialogNode,
-} from '@/components/confirm-delete-dialog';
+} from '@/components/dialogs/confirm-delete-dialog';
 import { useDeleteMcpServer } from '@/hooks/use-mcp-request';
 import { IMcpServer } from '@/interfaces/database/mcp';
 import { PenLine, Trash2, Upload } from 'lucide-react';

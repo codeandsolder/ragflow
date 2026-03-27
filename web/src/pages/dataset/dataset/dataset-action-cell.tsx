@@ -1,4 +1,4 @@
-import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
+import { ConfirmDeleteDialog } from '@/components/dialogs/confirm-delete-dialog';
 import { Button } from '@/components/ui/button';
 import {
   HoverCard,

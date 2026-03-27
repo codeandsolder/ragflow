@@ -123,6 +123,78 @@ class DocumentService(CommonService):
 
     @classmethod
     @DB.connection_context()
+    def get_list_with_cursor(
+        cls,
+        kb_id,
+        limit,
+        cursor,
+        orderby,
+        desc,
+        keywords,
+        id,
+        name,
+        suffix,
+        run,
+        doc_ids=None,
+    ):
+        fields = cls.get_cls_model_fields()
+        docs = (
+            cls.model.select(*[*fields, UserCanvas.title])
+            .join(File2Document, on=(File2Document.document_id == cls.model.id))
+            .join(File, on=(File.id == File2Document.file_id))
+            .join(UserCanvas, on=((cls.model.pipeline_id == UserCanvas.id) & (UserCanvas.canvas_category == CanvasCategory.DataFlow.value)), join_type=JOIN.LEFT_OUTER)
+            .where(cls.model.kb_id == kb_id)
+        )
+        if id:
+            docs = docs.where(cls.model.id == id)
+        if name:
+            docs = docs.where(cls.model.name == name)
+        if keywords:
+            docs = docs.where(fn.LOWER(cls.model.name).contains(keywords.lower()))
+        if doc_ids:
+            docs = docs.where(cls.model.id.in_(doc_ids))
+        if suffix:
+            docs = docs.where(cls.model.suffix.in_(suffix))
+        if run:
+            docs = docs.where(cls.model.run.in_(run))
+
+        order_field = cls.model.getter_by(orderby)
+        id_field = cls.model.f_id
+
+        if desc:
+            if cursor:
+                cursor_order_val, cursor_id = cursor.split(":", 1)
+                if orderby == "create_time":
+                    cursor_order_val = int(cursor_order_val)
+                docs = docs.where((order_field < cursor_order_val) | ((order_field == cursor_order_val) & (id_field < cursor_id)))
+            docs = docs.order_by(order_field.desc(), id_field.desc())
+        else:
+            if cursor:
+                cursor_order_val, cursor_id = cursor.split(":", 1)
+                if orderby == "create_time":
+                    cursor_order_val = int(cursor_order_val)
+                docs = docs.where((order_field > cursor_order_val) | ((order_field == cursor_order_val) & (id_field > cursor_id)))
+            docs = docs.order_by(order_field.asc(), id_field.asc())
+
+        docs = docs.limit(limit)
+        docs_list = list(docs.dicts())
+
+        next_cursor = None
+        if docs_list:
+            last_doc = docs_list[-1]
+            last_order_val = last_doc.get(orderby)
+            next_cursor = f"{last_order_val}:{last_doc['id']}"
+
+        metadata_map = {}
+        doc_ids_on_page = [doc["id"] for doc in docs_list]
+        metadata_map = DocMetadataService.get_metadata_for_documents(doc_ids_on_page, kb_id) if doc_ids_on_page else {}
+        for doc in docs_list:
+            doc["meta_fields"] = metadata_map.get(doc["id"], {})
+
+        return docs_list, next_cursor, len(docs_list)
+
+    @classmethod
+    @DB.connection_context()
     def check_doc_health(cls, tenant_id: str, filename):
         import os
 
@@ -199,6 +271,97 @@ class DocumentService(CommonService):
             for doc in docs_list:
                 doc["meta_fields"] = metadata_map.get(doc["id"], {})
         return docs_list, count
+
+    @classmethod
+    @DB.connection_context()
+    def get_by_kb_id_with_cursor(
+        cls,
+        kb_id,
+        limit,
+        cursor,
+        orderby,
+        desc,
+        keywords,
+        run_status,
+        types,
+        suffix,
+        doc_ids=None,
+        return_empty_metadata=False,
+    ):
+        fields = cls.get_cls_model_fields()
+        if keywords:
+            docs = (
+                cls.model.select(*[*fields, UserCanvas.title.alias("pipeline_name"), User.nickname])
+                .join(File2Document, on=(File2Document.document_id == cls.model.id))
+                .join(File, on=(File.id == File2Document.file_id))
+                .join(UserCanvas, on=(cls.model.pipeline_id == UserCanvas.id), join_type=JOIN.LEFT_OUTER)
+                .join(User, on=(cls.model.created_by == User.id), join_type=JOIN.LEFT_OUTER)
+                .where((cls.model.kb_id == kb_id), (fn.LOWER(cls.model.name).contains(keywords.lower())))
+            )
+        else:
+            docs = (
+                cls.model.select(*[*fields, UserCanvas.title.alias("pipeline_name"), User.nickname])
+                .join(File2Document, on=(File2Document.document_id == cls.model.id))
+                .join(UserCanvas, on=(cls.model.pipeline_id == UserCanvas.id), join_type=JOIN.LEFT_OUTER)
+                .join(File, on=(File.id == File2Document.file_id))
+                .join(User, on=(cls.model.created_by == User.id), join_type=JOIN.LEFT_OUTER)
+                .where(cls.model.kb_id == kb_id)
+            )
+
+        if doc_ids:
+            docs = docs.where(cls.model.id.in_(doc_ids))
+        if run_status:
+            docs = docs.where(cls.model.run.in_(run_status))
+        if types:
+            docs = docs.where(cls.model.type.in_(types))
+        if suffix:
+            docs = docs.where(cls.model.suffix.in_(suffix))
+
+        metadata_map = {}
+        if return_empty_metadata:
+            metadata_map = DocMetadataService.get_metadata_for_documents(None, kb_id)
+            doc_ids_with_metadata = set(metadata_map.keys())
+            if doc_ids_with_metadata:
+                docs = docs.where(cls.model.id.not_in(doc_ids_with_metadata))
+
+        order_field = cls.model.getter_by(orderby)
+        id_field = cls.model.f_id
+
+        if desc:
+            if cursor:
+                cursor_order_val, cursor_id = cursor.split(":", 1)
+                if orderby == "create_time":
+                    cursor_order_val = int(cursor_order_val)
+                docs = docs.where((order_field < cursor_order_val) | ((order_field == cursor_order_val) & (id_field < cursor_id)))
+            docs = docs.order_by(order_field.desc(), id_field.desc())
+        else:
+            if cursor:
+                cursor_order_val, cursor_id = cursor.split(":", 1)
+                if orderby == "create_time":
+                    cursor_order_val = int(cursor_order_val)
+                docs = docs.where((order_field > cursor_order_val) | ((order_field == cursor_order_val) & (id_field > cursor_id)))
+            docs = docs.order_by(order_field.asc(), id_field.asc())
+
+        docs = docs.limit(limit)
+        docs_list = list(docs.dicts())
+
+        next_cursor = None
+        if docs_list:
+            last_doc = docs_list[-1]
+            last_order_val = last_doc.get(orderby)
+            next_cursor = f"{last_order_val}:{last_doc['id']}"
+
+        metadata_map = {}
+        if return_empty_metadata:
+            for doc in docs_list:
+                doc["meta_fields"] = {}
+        else:
+            doc_ids_on_page = [doc["id"] for doc in docs_list]
+            metadata_map = DocMetadataService.get_metadata_for_documents(doc_ids_on_page, kb_id) if doc_ids_on_page else {}
+            for doc in docs_list:
+                doc["meta_fields"] = metadata_map.get(doc["id"], {})
+
+        return docs_list, next_cursor, len(docs_list)
 
     @classmethod
     @DB.connection_context()
@@ -801,7 +964,7 @@ class DocumentService(CommonService):
     @classmethod
     @DB.connection_context()
     def get_doc_count(cls, tenant_id):
-        return cls.model.select(cls.model.id).join(Knowledgebase, on=(Knowledgebase.id == cls.model.kb_id)).where(Knowledgebase.tenant_id == tenant_id).count()
+        return cls.model.join(Knowledgebase, on=(Knowledgebase.id == cls.model.kb_id)).where(Knowledgebase.tenant_id == tenant_id).count()
 
     @classmethod
     @DB.connection_context()

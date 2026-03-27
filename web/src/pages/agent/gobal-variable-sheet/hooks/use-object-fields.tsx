@@ -1,5 +1,5 @@
-import { BoolSegmented } from '@/components/bool-segmented';
 import JsonEditor from '@/components/json-edit';
+import { BoolSegmented } from '@/components/layout/bool-segmented';
 import { BlockButton, Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { t } from 'i18next';

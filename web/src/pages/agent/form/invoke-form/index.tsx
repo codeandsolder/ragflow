@@ -1,5 +1,5 @@
-import { Collapse } from '@/components/collapse';
-import { FormContainer } from '@/components/form-container';
+import { Collapse } from '@/components/layout/collapse';
+import { FormContainer } from '@/components/layout/form-container';
 import NumberInput from '@/components/originui/number-input';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
 import { useIsDarkTheme } from '@/components/theme-provider';

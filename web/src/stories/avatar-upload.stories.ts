@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 
 import { fn } from 'storybook/test';
 
-import { AvatarUpload } from '@/components/avatar-upload';
+import { AvatarUpload } from '@/components/icons/avatar-upload';
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
 const meta = {
@@ -20,13 +20,13 @@ AvatarUpload is a file upload component specifically designed for uploading and 
 
 ### Import Path
 \`\`\`typescript
-import { AvatarUpload } from '@/components/avatar-upload';
+import { AvatarUpload } from '@/components/icons/avatar-upload';
 \`\`\`
 
 ### Basic Usage
 \`\`\`tsx
 import { useState } from 'react';
-import { AvatarUpload } from '@/components/avatar-upload';
+import { AvatarUpload } from '@/components/icons/avatar-upload';
 
 function MyComponent() {
   const [avatarValue, setAvatarValue] = useState('');

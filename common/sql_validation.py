@@ -112,6 +112,11 @@ def check_for_dangerous_patterns(sql: str) -> None:
         if re.search(pattern, sql_upper, re.IGNORECASE):
             raise SQLValidationError(f"SQL contains forbidden operation pattern: {pattern}")
 
+    dangerous_chars = ["--", "/*", "*/"]
+    for char in dangerous_chars:
+        if char in sql:
+            raise SQLValidationError(f"SQL contains forbidden comment sequence: {char}")
+
 
 def validate_table_and_column_names(parsed: sqlglot.expressions.Expression, allowed_tables: set[str], allowed_columns: set[str]) -> None:
     tables = extract_table_names(parsed)

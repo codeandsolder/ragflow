@@ -1,7 +1,7 @@
 import Editor, { loader } from '@monaco-editor/react';
 import { INextOperatorForm } from '../../interface';
 
-import { FormContainer } from '@/components/form-container';
+import { FormContainer } from '@/components/layout/form-container';
 import { useIsDarkTheme } from '@/components/theme-provider';
 import {
   Form,

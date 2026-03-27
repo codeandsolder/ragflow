@@ -1126,6 +1126,7 @@ async def retrieval_test_embedded():
     doc_ids = req.get("doc_ids")
     similarity_threshold = float(req.get("similarity_threshold", 0.0))
     vector_similarity_weight = float(req.get("vector_similarity_weight", 0.3))
+    hybrid_weight = req.get("hybrid_weight")
     use_kg = req.get("use_kg", False)
     top = int(req.get("top_k", 1024))
     langs = req.get("cross_languages", [])
@@ -1136,7 +1137,7 @@ async def retrieval_test_embedded():
         return get_error_data_result(message="permission denined.")
 
     async def _retrieval():
-        nonlocal similarity_threshold, vector_similarity_weight, top, rerank_id
+        nonlocal similarity_threshold, vector_similarity_weight, hybrid_weight, top, rerank_id
         local_doc_ids = [doc_id for doc_id in doc_ids if doc_id] if doc_ids else None
         tenant_ids = []
         _question = question
@@ -1158,6 +1159,8 @@ async def retrieval_test_embedded():
                 similarity_threshold = float(search_config.get("similarity_threshold", similarity_threshold))
             if not req.get("vector_similarity_weight"):
                 vector_similarity_weight = float(search_config.get("vector_similarity_weight", vector_similarity_weight))
+            if not req.get("hybrid_weight"):
+                hybrid_weight = search_config.get("hybrid_weight")
             if not req.get("top_k"):
                 top = int(search_config.get("top_k", top))
             if not req.get("rerank_id"):
@@ -1208,16 +1211,17 @@ async def retrieval_test_embedded():
 
         labels = label_question(_question, [kb])
         ranks = await settings.retriever.retrieval(
-            _question,
-            embd_mdl,
-            tenant_ids,
-            kb_ids,
-            page,
-            size,
-            similarity_threshold,
-            vector_similarity_weight,
-            top,
-            local_doc_ids,
+            question=_question,
+            embd_mdl=embd_mdl,
+            tenant_ids=tenant_ids,
+            kb_ids=kb_ids,
+            page=page,
+            page_size=size,
+            similarity_threshold=similarity_threshold,
+            vector_similarity_weight=vector_similarity_weight,
+            hybrid_weight=hybrid_weight,
+            top=top,
+            doc_ids=local_doc_ids,
             rerank_mdl=rerank_mdl,
             highlight=req.get("highlight"),
             rank_feature=labels,

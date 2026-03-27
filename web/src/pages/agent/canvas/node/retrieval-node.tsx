@@ -1,5 +1,5 @@
-import { NodeCollapsible } from '@/components/collapse';
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
+import { NodeCollapsible } from '@/components/layout/collapse';
 import { useFetchKnowledgeList } from '@/hooks/use-knowledge-request';
 import { useFetchAllMemoryList } from '@/hooks/use-memory-request';
 import { BaseNode } from '@/interfaces/database/agent';

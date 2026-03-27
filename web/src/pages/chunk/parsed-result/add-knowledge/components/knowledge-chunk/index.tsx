@@ -22,7 +22,7 @@ import CheckboxSets from './components/chunk-result-bar/checkbox-sets';
 import DocumentPreview from '@/components/document-preview';
 import DocumentHeader from '@/components/document-preview/document-header';
 import { useGetDocumentUrl } from '@/components/document-preview/hooks';
-import { PageHeader } from '@/components/page-header';
+import { PageHeader } from '@/components/layout/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import message from '@/components/ui/message';

@@ -1,12 +1,12 @@
 import {
   AutoKeywordsFormField,
   AutoQuestionsFormField,
-} from '@/components/auto-keywords-form-field';
-import { ChildrenDelimiterForm } from '@/components/children-delimiter-form';
-import { DelimiterFormField } from '@/components/delimiter-form-field';
-import { ExcelToHtmlFormField } from '@/components/excel-to-html-form-field';
-import { LayoutRecognizeFormField } from '@/components/layout-recognize-form-field';
-import { MaxTokenNumberFormField } from '@/components/max-token-number-from-field';
+} from '@/components/form-fields/auto-keywords-form-field';
+import { ChildrenDelimiterForm } from '@/components/form-fields/children-delimiter-form';
+import { DelimiterFormField } from '@/components/form-fields/delimiter-form-field';
+import { ExcelToHtmlFormField } from '@/components/form-fields/excel-to-html-form-field';
+import { LayoutRecognizeFormField } from '@/components/form-fields/layout-recognize-form-field';
+import { MaxTokenNumberFormField } from '@/components/form-fields/max-token-number-from-field';
 import {
   ConfigurationFormContainer,
   MainContainer,

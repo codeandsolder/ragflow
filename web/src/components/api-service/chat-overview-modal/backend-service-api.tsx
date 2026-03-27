@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-import { CopyToClipboardWithText } from '@/components/copy-to-clipboard';
+import { CopyToClipboardWithText } from '@/components/file-upload/copy-to-clipboard';
 import { useTranslate } from '@/hooks/common-hooks';
 
 const BackendServiceApi = ({ show }: { show(): void }) => {

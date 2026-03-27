@@ -190,42 +190,41 @@ class BaseModel(Model):
     @classmethod
     def query(cls, reverse=None, order_by=None, **kwargs):
         filters = []
+        valid_fields = cls._meta.fields
         for f_n, f_v in kwargs.items():
-            attr_name = "%s" % f_n
-            if not hasattr(cls, attr_name) or f_v is None:
+            if f_n not in valid_fields or f_v is None:
                 continue
             if type(f_v) in {list, set}:
                 f_v = list(f_v)
-                if is_continuous_field(type(getattr(cls, attr_name))):
+                if is_continuous_field(type(getattr(cls, f_n))):
                     if len(f_v) == 2:
                         for i, v in enumerate(f_v):
                             if isinstance(v, str) and f_n in auto_date_timestamp_field():
-                                # time type: %Y-%m-%d %H:%M:%S
                                 f_v[i] = date_string_to_timestamp(v)
                         lt_value = f_v[0]
                         gt_value = f_v[1]
                         if lt_value is not None and gt_value is not None:
-                            filters.append(cls.getter_by(attr_name).between(lt_value, gt_value))
+                            filters.append(cls.getter_by(f_n).between(lt_value, gt_value))
                         elif lt_value is not None:
-                            filters.append(operator.attrgetter(attr_name)(cls) >= lt_value)
+                            filters.append(operator.attrgetter(f_n)(cls) >= lt_value)
                         elif gt_value is not None:
-                            filters.append(operator.attrgetter(attr_name)(cls) <= gt_value)
+                            filters.append(operator.attrgetter(f_n)(cls) <= gt_value)
+                    else:
+                        filters.append(operator.attrgetter(f_n)(cls) << f_v)
                 else:
-                    filters.append(operator.attrgetter(attr_name)(cls) << f_v)
-            else:
-                filters.append(operator.attrgetter(attr_name)(cls) == f_v)
-        if filters:
-            query_records = cls.select().where(*filters)
-            if reverse is not None:
-                if not order_by or not hasattr(cls, f"{order_by}"):
-                    order_by = "create_time"
-                if reverse is True:
-                    query_records = query_records.order_by(cls.getter_by(f"{order_by}").desc())
-                elif reverse is False:
-                    query_records = query_records.order_by(cls.getter_by(f"{order_by}").asc())
-            return [query_record for query_record in query_records]
-        else:
-            return []
+                    filters.append(operator.attrgetter(f_n)(cls) == f_v)
+            if filters:
+                query_records = cls.select().where(*filters)
+                if reverse is not None:
+                    if not order_by or order_by not in valid_fields:
+                        order_by = "create_time"
+                    if reverse is True:
+                        query_records = query_records.order_by(cls.getter_by(order_by).desc())
+                    elif reverse is False:
+                        query_records = query_records.order_by(cls.getter_by(order_by).asc())
+                    return [query_record for query_record in query_records]
+                else:
+                    return []
 
     @classmethod
     def insert(cls, __data=None, **insert):
@@ -836,6 +835,7 @@ class Knowledgebase(DataBaseModel):
     chunk_num = IntegerField(default=0, index=True)
     similarity_threshold = FloatField(default=0.2, index=True)
     vector_similarity_weight = FloatField(default=0.3, index=True)
+    hybrid_weight = CharField(max_length=16, null=True, help_text="hybrid search weights: 'tkweight,vtweight' e.g., '0.3,0.7'", default=None)
 
     parser_id = CharField(max_length=32, null=False, help_text="default parser ID", default=ParserType.NAIVE.value, index=True)
     pipeline_id = CharField(max_length=32, null=True, help_text="Pipeline ID", index=True)
@@ -950,6 +950,7 @@ class Dialog(DataBaseModel):
 
     similarity_threshold = FloatField(default=0.2)
     vector_similarity_weight = FloatField(default=0.3)
+    hybrid_weight = CharField(max_length=16, null=True, help_text="hybrid search weights: 'tkweight,vtweight' e.g., '0.3,0.7'", default=None)
 
     top_n = IntegerField(default=6)
 
@@ -1082,6 +1083,7 @@ class Search(DataBaseModel):
             "doc_ids": [],
             "similarity_threshold": 0.2,
             "vector_similarity_weight": 0.3,
+            "hybrid_weight": None,
             "use_kg": False,
             # rerank settings
             "rerank_id": "",
@@ -1380,7 +1382,7 @@ def migrate_add_unique_email(migrator):
                     return
                 # Non-unique index exists (e.g. from old peewee index=True); drop it so
                 # the upcoming ADD UNIQUE INDEX does not hit MySQL error 1061 "Duplicate key name".
-                DB.execute_sql(f"ALTER TABLE `user` DROP INDEX `{index_name}`")
+                DB.execute_sql("ALTER TABLE `user` DROP INDEX %s", (index_name,))
                 logging.info(f"Dropped non-unique index '{index_name}' on user.email before adding unique index")
     except Exception as ex:
         logging.warning(f"Failed to check/prepare email index on user table: {ex}, continuing with migration")
@@ -1516,7 +1518,7 @@ def _update_tenant_llm_to_id_primary_key_postgres():
             """)
             row = cursor.fetchone()
             if row:
-                DB.execute_sql(f'ALTER TABLE tenant_llm DROP CONSTRAINT "{row[0]}"')
+                DB.execute_sql("ALTER TABLE tenant_llm DROP CONSTRAINT %s", (row[0],))
 
             # 4. Make temp_id NOT NULL and create a sequence for it
             DB.execute_sql("ALTER TABLE tenant_llm ALTER COLUMN temp_id SET NOT NULL")

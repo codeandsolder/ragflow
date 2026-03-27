@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { RAGFlowFormItem } from '@/components/ragflow-form';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
 import { Form } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 
@@ -75,7 +75,7 @@ RAGFlowFormItem is a wrapper component built on top of shadcn/ui Form components
 
 ### Import Path
 \`\`\`typescript
-import { RAGFlowFormItem } from '@/components/ragflow-form';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
 import { Form } from '@/components/ui/form';
 \`\`\`
 

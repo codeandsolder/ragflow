@@ -1,4 +1,4 @@
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { IFlow } from '@/interfaces/database/agent';
 import { cn } from '@/lib/utils';

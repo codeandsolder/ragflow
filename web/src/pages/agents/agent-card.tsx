@@ -1,4 +1,4 @@
-import { HomeCard } from '@/components/home-card';
+import { HomeCard } from '@/components/layout/home-card';
 import { MoreButton } from '@/components/more-button';
 import { SharedBadge } from '@/components/shared-badge';
 import { Button } from '@/components/ui/button';

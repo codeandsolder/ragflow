@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 
-import { RAGFlowFormItem } from '@/components/ragflow-form';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
 import { ButtonLoading } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { FileUploadDirectUpload } from '@/pages/agent/debug-content/uploader';

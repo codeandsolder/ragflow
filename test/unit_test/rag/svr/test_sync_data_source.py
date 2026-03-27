@@ -22,8 +22,6 @@ Tests external data source synchronization module structure.
 import ast
 from pathlib import Path
 
-import pytest
-
 
 class TestSyncDataSourceFileExists:
     """Test that sync_data_source.py exists and is readable."""

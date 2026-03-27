@@ -13,6 +13,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+
+from typing import Optional, Tuple
 import json
 import os
 import time
@@ -69,242 +71,385 @@ def _log_http_debug(method, url, req_id, payload, status, text, resp_json, elaps
     print(f"[HTTP DEBUG] response_json={json.dumps(resp_json, default=str) if resp_json is not None else None}")
 
 
-# API APP
-def api_new_token(auth, payload=None, *, headers=HEADERS, data=None):
+def assert_status_code(res: requests.Response, expected_status: int, msg: Optional[str] = None):
+    """Assert HTTP status code matches expected value."""
+    actual = res.status_code
+    if actual != expected_status:
+        details = msg or f"Expected HTTP {expected_status}, got {actual}"
+        raise AssertionError(f"{details}\nResponse: {res.text}")
+
+
+def assert_status_ok(res: requests.Response, msg: Optional[str] = None):
+    """Assert HTTP status code is 200 (OK)."""
+    assert_status_code(res, 200, msg)
+
+
+def assert_status_201(res: requests.Response, msg: Optional[str] = None):
+    """Assert HTTP status code is 201 (Created)."""
+    assert_status_code(res, 201, msg)
+
+
+def assert_status_400(res: requests.Response, msg: Optional[str] = None):
+    """Assert HTTP status code is 400 (Bad Request)."""
+    assert_status_code(res, 400, msg)
+
+
+def assert_status_401(res: requests.Response, msg: Optional[str] = None):
+    """Assert HTTP status code is 401 (Unauthorized)."""
+    assert_status_code(res, 401, msg)
+
+
+def assert_status_403(res: requests.Response, msg: Optional[str] = None):
+    """Assert HTTP status code is 403 (Forbidden)."""
+    assert_status_code(res, 403, msg)
+
+
+def assert_status_404(res: requests.Response, msg: Optional[str] = None):
+    """Assert HTTP status code is 404 (Not Found)."""
+    assert_status_code(res, 404, msg)
+
+
+def parse_response(res: requests.Response) -> Tuple[int, dict]:
+    """Parse response and return (status_code, json_data).
+
+    Args:
+        res: requests.Response object
+
+    Returns:
+        Tuple of (status_code, parsed_json)
+    """
+    return res.status_code, res.json()
+
+
+def parse_json(res: requests.Response) -> dict:
+    """Parse response JSON. Legacy compatibility wrapper."""
+    return res.json()
+
+
+def get_response_tuple(res: requests.Response) -> Tuple[int, dict]:
+    """Get (status_code, json) tuple. Alias for parse_response for clarity."""
+    return parse_response(res)
+
+
+def api_new_token(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     if payload is None:
         payload = {}
     res = requests.post(url=f"{HOST_ADDRESS}{API_APP_URL}/new_token", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def api_token_list(auth, params=None, *, headers=HEADERS):
+def api_token_list(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{API_APP_URL}/token_list", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def api_rm_token(auth, payload=None, *, headers=HEADERS, data=None):
+def api_rm_token(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{API_APP_URL}/rm", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def api_stats(auth, params=None, *, headers=HEADERS):
+def api_stats(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{API_APP_URL}/stats", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
 # SYSTEM APP
-def system_new_token(auth, payload=None, *, headers=HEADERS, data=None):
+def system_new_token(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{SYSTEM_APP_URL}/new_token", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def system_token_list(auth, params=None, *, headers=HEADERS):
+def system_token_list(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{SYSTEM_APP_URL}/token_list", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def system_delete_token(auth, token, *, headers=HEADERS):
+def system_delete_token(auth, token, *, headers=HEADERS, expected_status=None):
     res = requests.delete(url=f"{HOST_ADDRESS}{SYSTEM_APP_URL}/token/{token}", headers=headers, auth=auth)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def system_status(auth, params=None, *, headers=HEADERS):
+def system_status(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{SYSTEM_APP_URL}/status", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def system_version(auth, params=None, *, headers=HEADERS):
+def system_version(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{SYSTEM_APP_URL}/version", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def system_config(auth=None, params=None, *, headers=HEADERS):
+def system_config(auth=None, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{SYSTEM_APP_URL}/config", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
 # LLM APP
-def llm_factories(auth, params=None, *, headers=HEADERS):
+def llm_factories(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{LLM_APP_URL}/factories", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def llm_list(auth, params=None, *, headers=HEADERS):
+def llm_list(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{LLM_APP_URL}/list", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
 # PLUGIN APP
-def plugin_llm_tools(auth, params=None, *, headers=HEADERS):
+def plugin_llm_tools(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{PLUGIN_APP_URL}/llm_tools", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
 # SEARCH APP
-def search_create(auth, payload=None, *, headers=HEADERS, data=None):
+def search_create(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{SEARCHES_URL}", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def search_update(auth, search_id, payload=None, *, headers=HEADERS, data=None):
+def search_update(auth, search_id, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.put(url=f"{HOST_ADDRESS}{SEARCHES_URL}/{search_id}", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def search_detail(auth, search_id, *, headers=HEADERS):
+def search_detail(auth, search_id, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{SEARCHES_URL}/{search_id}", headers=headers, auth=auth)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def search_list(auth, params=None, *, headers=HEADERS):
+def search_list(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{SEARCHES_URL}", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def search_rm(auth, search_id, *, headers=HEADERS):
+def search_rm(auth, search_id, *, headers=HEADERS, expected_status=None):
     res = requests.delete(url=f"{HOST_ADDRESS}{SEARCHES_URL}/{search_id}", headers=headers, auth=auth)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
 # KB APP
-def create_dataset(auth, payload=None, *, headers=HEADERS, data=None):
+def create_dataset(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{DATASETS_URL}", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def list_datasets(auth, params=None, *, headers=HEADERS):
+def list_datasets(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{DATASETS_URL}", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def update_dataset(auth, dataset_id, payload=None, *, headers=HEADERS, data=None):
+def update_dataset(auth, dataset_id, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.put(url=f"{HOST_ADDRESS}{DATASETS_URL}/{dataset_id}", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def delete_datasets(auth, payload=None, *, headers=HEADERS, data=None):
+def delete_datasets(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     """
     Delete datasets.
     The endpoint is DELETE /api/{VERSION}/datasets with payload {"ids": [...]}
     This is the standard SDK REST API endpoint for dataset deletion.
     """
     res = requests.delete(url=f"{HOST_ADDRESS}{DATASETS_URL}", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def detail_kb(auth, params=None, *, headers=HEADERS):
+def detail_kb(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{KB_APP_URL}/detail", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def kb_get_meta(auth, params=None, *, headers=HEADERS):
+def kb_get_meta(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{KB_APP_URL}/get_meta", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def kb_basic_info(auth, params=None, *, headers=HEADERS):
+def kb_basic_info(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{KB_APP_URL}/basic_info", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def kb_update_metadata_setting(auth, payload=None, *, headers=HEADERS, data=None):
+def kb_update_metadata_setting(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{KB_APP_URL}/update_metadata_setting", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def kb_list_pipeline_logs(auth, params=None, payload=None, *, headers=HEADERS, data=None):
+def kb_list_pipeline_logs(auth, params=None, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     if payload is None:
         payload = {}
     res = requests.post(url=f"{HOST_ADDRESS}{KB_APP_URL}/list_pipeline_logs", headers=headers, auth=auth, params=params, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def kb_list_pipeline_dataset_logs(auth, params=None, payload=None, *, headers=HEADERS, data=None):
+def kb_list_pipeline_dataset_logs(auth, params=None, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     if payload is None:
         payload = {}
     res = requests.post(url=f"{HOST_ADDRESS}{KB_APP_URL}/list_pipeline_dataset_logs", headers=headers, auth=auth, params=params, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def kb_delete_pipeline_logs(auth, params=None, payload=None, *, headers=HEADERS, data=None):
+def kb_delete_pipeline_logs(auth, params=None, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     if payload is None:
         payload = {}
     res = requests.post(url=f"{HOST_ADDRESS}{KB_APP_URL}/delete_pipeline_logs", headers=headers, auth=auth, params=params, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def kb_pipeline_log_detail(auth, params=None, *, headers=HEADERS):
+def kb_pipeline_log_detail(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{KB_APP_URL}/pipeline_log_detail", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
 # DATASET GRAPH AND TASKS
-def knowledge_graph(auth, dataset_id, params=None):
+def knowledge_graph(auth, dataset_id, params=None, expected_status=None):
     url = f"{HOST_ADDRESS}{DATASETS_URL}/{dataset_id}/knowledge_graph"
     res = requests.get(url=url, headers=HEADERS, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def delete_knowledge_graph(auth, dataset_id, payload=None):
+def delete_knowledge_graph(auth, dataset_id, payload=None, expected_status=None):
     url = f"{HOST_ADDRESS}{DATASETS_URL}/{dataset_id}/knowledge_graph"
     if payload is None:
         res = requests.delete(url=url, headers=HEADERS, auth=auth)
     else:
         res = requests.delete(url=url, headers=HEADERS, auth=auth, json=payload)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def run_graphrag(auth, dataset_id, payload=None):
+def run_graphrag(auth, dataset_id, payload=None, expected_status=None):
     url = f"{HOST_ADDRESS}{DATASETS_URL}/{dataset_id}/run_graphrag"
     res = requests.post(url=url, headers=HEADERS, auth=auth, json=payload)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def trace_graphrag(auth, dataset_id, params=None):
+def trace_graphrag(auth, dataset_id, params=None, expected_status=None):
     url = f"{HOST_ADDRESS}{DATASETS_URL}/{dataset_id}/trace_graphrag"
     res = requests.get(url=url, headers=HEADERS, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def run_raptor(auth, dataset_id, payload=None):
+def run_raptor(auth, dataset_id, payload=None, expected_status=None):
     url = f"{HOST_ADDRESS}{DATASETS_URL}/{dataset_id}/run_raptor"
     res = requests.post(url=url, headers=HEADERS, auth=auth, json=payload)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def trace_raptor(auth, dataset_id, params=None):
+def trace_raptor(auth, dataset_id, params=None, expected_status=None):
     url = f"{HOST_ADDRESS}{DATASETS_URL}/{dataset_id}/trace_raptor"
     res = requests.get(url=url, headers=HEADERS, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def kb_run_mindmap(auth, payload=None, *, headers=HEADERS, data=None):
+def kb_run_mindmap(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{KB_APP_URL}/run_mindmap", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def kb_trace_mindmap(auth, params=None, *, headers=HEADERS):
+def kb_trace_mindmap(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{KB_APP_URL}/trace_mindmap", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def list_tags_from_kbs(auth, params=None, *, headers=HEADERS):
+def list_tags_from_kbs(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{KB_APP_URL}/tags", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def list_tags(auth, dataset_id, params=None, *, headers=HEADERS):
+def list_tags(auth, dataset_id, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{KB_APP_URL}/{dataset_id}/tags", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def rm_tags(auth, dataset_id, payload=None, *, headers=HEADERS, data=None):
+def rm_tags(auth, dataset_id, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{KB_APP_URL}/{dataset_id}/rm_tags", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def rename_tags(auth, dataset_id, payload=None, *, headers=HEADERS, data=None):
+def rename_tags(auth, dataset_id, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{KB_APP_URL}/{dataset_id}/rename_tag", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
@@ -316,8 +461,7 @@ def batch_create_datasets(auth, num):
     return ids
 
 
-# DOCUMENT APP
-def upload_documents(auth, payload=None, files_path=None, *, filename_override=None):
+def upload_documents(auth, payload=None, files_path=None, *, filename_override=None, expected_status=None):
     url = f"{HOST_ADDRESS}{DOCUMENT_APP_URL}/upload"
 
     if files_path is None:
@@ -344,71 +488,97 @@ def upload_documents(auth, payload=None, files_path=None, *, filename_override=N
             auth=auth,
             data=m,
         )
+        if expected_status is not None:
+            assert_status_code(res, expected_status)
         return res.json()
     finally:
         for f in file_objects:
             f.close()
 
 
-def create_document(auth, payload=None, *, headers=HEADERS, data=None):
+def create_document(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{DOCUMENT_APP_URL}/create", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def list_documents(auth, params=None, payload=None, *, headers=HEADERS, data=None):
+def list_documents(auth, params=None, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     if payload is None:
         payload = {}
     res = requests.post(url=f"{HOST_ADDRESS}{DOCUMENT_APP_URL}/list", headers=headers, auth=auth, params=params, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def delete_document(auth, payload=None, *, headers=HEADERS, data=None):
+def delete_document(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{DOCUMENT_APP_URL}/rm", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def parse_documents(auth, payload=None, *, headers=HEADERS, data=None):
+def parse_documents(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{DOCUMENT_APP_URL}/run", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def document_filter(auth, payload=None, *, headers=HEADERS, data=None):
+def document_filter(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{DOCUMENT_APP_URL}/filter", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def document_infos(auth, payload=None, *, headers=HEADERS, data=None):
+def document_infos(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{DOCUMENT_APP_URL}/infos", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def document_metadata_summary(auth, payload=None, *, headers=HEADERS, data=None):
+def document_metadata_summary(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{DOCUMENT_APP_URL}/metadata/summary", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def document_metadata_update(auth, payload=None, *, headers=HEADERS, data=None):
+def document_metadata_update(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{DOCUMENT_APP_URL}/metadata/update", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def document_update_metadata_setting(auth, payload=None, *, headers=HEADERS, data=None):
+def document_update_metadata_setting(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{DOCUMENT_APP_URL}/update_metadata_setting", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def document_change_status(auth, payload=None, *, headers=HEADERS, data=None):
+def document_change_status(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{DOCUMENT_APP_URL}/change_status", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def document_rename(auth, payload=None, *, headers=HEADERS, data=None):
+def document_rename(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{DOCUMENT_APP_URL}/rename", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def document_set_meta(auth, payload=None, *, headers=HEADERS, data=None):
+def document_set_meta(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{DOCUMENT_APP_URL}/set_meta", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
@@ -425,39 +595,52 @@ def bulk_upload_documents(auth, kb_id, num, tmp_path):
     return document_ids
 
 
-# CHUNK APP
-def add_chunk(auth, payload=None, *, headers=HEADERS, data=None):
+def add_chunk(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{CHUNK_API_URL}/create", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def list_chunks(auth, payload=None, *, headers=HEADERS):
+def list_chunks(auth, payload=None, *, headers=HEADERS, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{CHUNK_API_URL}/list", headers=headers, auth=auth, json=payload)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def get_chunk(auth, params=None, *, headers=HEADERS):
+def get_chunk(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{CHUNK_API_URL}/get", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def update_chunk(auth, payload=None, *, headers=HEADERS):
+def update_chunk(auth, payload=None, *, headers=HEADERS, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{CHUNK_API_URL}/set", headers=headers, auth=auth, json=payload)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def switch_chunks(auth, payload=None, *, headers=HEADERS):
+def switch_chunks(auth, payload=None, *, headers=HEADERS, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{CHUNK_API_URL}/switch", headers=headers, auth=auth, json=payload)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def delete_chunks(auth, payload=None, *, headers=HEADERS):
+def delete_chunks(auth, payload=None, *, headers=HEADERS, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{CHUNK_API_URL}/rm", headers=headers, auth=auth, json=payload)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def retrieval_chunks(auth, payload=None, *, headers=HEADERS):
+def retrieval_chunks(auth, payload=None, *, headers=HEADERS, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{CHUNK_API_URL}/retrieval_test", headers=headers, auth=auth, json=payload)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
@@ -469,8 +652,7 @@ def batch_add_chunks(auth, doc_id, num):
     return chunk_ids
 
 
-# DIALOG APP
-def create_dialog(auth, payload=None, *, headers=HEADERS, data=None):
+def create_dialog(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     if payload is None:
         payload = {}
     url = f"{HOST_ADDRESS}{DIALOG_APP_URL}/set"
@@ -493,26 +675,36 @@ def create_dialog(auth, payload=None, *, headers=HEADERS, data=None):
             raise AssertionError(f"HTTP helper failure: req_id={req_id} url={url} status={res.status_code} payload={payload_summary} response={res.text}")
     if json_error:
         raise json_error
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return resp_json
 
 
-def update_dialog(auth, payload=None, *, headers=HEADERS, data=None):
+def update_dialog(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{DIALOG_APP_URL}/set", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def get_dialog(auth, params=None, *, headers=HEADERS):
+def get_dialog(auth, params=None, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{DIALOG_APP_URL}/get", headers=headers, auth=auth, params=params)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def list_dialogs(auth, *, headers=HEADERS):
+def list_dialogs(auth, *, headers=HEADERS, expected_status=None):
     res = requests.get(url=f"{HOST_ADDRESS}{DIALOG_APP_URL}/list", headers=headers, auth=auth)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def delete_dialog(auth, payload=None, *, headers=HEADERS, data=None):
+def delete_dialog(auth, payload=None, *, headers=HEADERS, data=None, expected_status=None):
     res = requests.post(url=f"{HOST_ADDRESS}{DIALOG_APP_URL}/rm", headers=headers, auth=auth, json=payload, data=data)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
@@ -560,26 +752,31 @@ def delete_dialogs(auth):
             delete_dialog(auth, {"dialog_ids": dialog_ids})
 
 
-# MEMORY APP
-def create_memory(auth, payload=None):
+def create_memory(auth, payload=None, expected_status=None):
     url = f"{HOST_ADDRESS}{MEMORY_API_URL}"
     res = requests.post(url=url, headers=HEADERS, auth=auth, json=payload)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def update_memory(auth, memory_id: str, payload=None):
+def update_memory(auth, memory_id: str, payload=None, expected_status=None):
     url = f"{HOST_ADDRESS}{MEMORY_API_URL}/{memory_id}"
     res = requests.put(url=url, headers=HEADERS, auth=auth, json=payload)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def delete_memory(auth, memory_id: str):
+def delete_memory(auth, memory_id: str, expected_status=None):
     url = f"{HOST_ADDRESS}{MEMORY_API_URL}/{memory_id}"
     res = requests.delete(url=url, headers=HEADERS, auth=auth)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def list_memory(auth, params=None):
+def list_memory(auth, params=None, expected_status=None):
     url = f"{HOST_ADDRESS}{MEMORY_API_URL}"
     if params:
         query_parts = []
@@ -592,16 +789,20 @@ def list_memory(auth, params=None):
         query_string = "&".join(query_parts)
         url = f"{url}?{query_string}"
     res = requests.get(url=url, headers=HEADERS, auth=auth)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def get_memory_config(auth, memory_id: str):
+def get_memory_config(auth, memory_id: str, expected_status=None):
     url = f"{HOST_ADDRESS}{MEMORY_API_URL}/{memory_id}/config"
     res = requests.get(url=url, headers=HEADERS, auth=auth)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def list_memory_message(auth, memory_id, params=None):
+def list_memory_message(auth, memory_id, params=None, expected_status=None):
     url = f"{HOST_ADDRESS}{MEMORY_API_URL}/{memory_id}"
     if params:
         query_parts = []
@@ -614,29 +815,37 @@ def list_memory_message(auth, memory_id, params=None):
         query_string = "&".join(query_parts)
         url = f"{url}?{query_string}"
     res = requests.get(url=url, headers=HEADERS, auth=auth)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def add_message(auth, payload=None):
+def add_message(auth, payload=None, expected_status=None):
     url = f"{HOST_ADDRESS}{MESSAGE_API_URL}"
     res = requests.post(url=url, headers=HEADERS, auth=auth, json=payload)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def forget_message(auth, memory_id: str, message_id: int):
+def forget_message(auth, memory_id: str, message_id: int, expected_status=None):
     url = f"{HOST_ADDRESS}{MESSAGE_API_URL}/{memory_id}:{message_id}"
     res = requests.delete(url=url, headers=HEADERS, auth=auth)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def update_message_status(auth, memory_id: str, message_id: int, status: bool):
+def update_message_status(auth, memory_id: str, message_id: int, status: bool, expected_status=None):
     url = f"{HOST_ADDRESS}{MESSAGE_API_URL}/{memory_id}:{message_id}"
     payload = {"status": status}
     res = requests.put(url=url, headers=HEADERS, auth=auth, json=payload)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def search_message(auth, params=None):
+def search_message(auth, params=None, expected_status=None):
     url = f"{HOST_ADDRESS}{MESSAGE_API_URL}/search"
     if params:
         query_parts = []
@@ -649,10 +858,12 @@ def search_message(auth, params=None):
         query_string = "&".join(query_parts)
         url = f"{url}?{query_string}"
     res = requests.get(url=url, headers=HEADERS, auth=auth)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def get_recent_message(auth, params=None):
+def get_recent_message(auth, params=None, expected_status=None):
     url = f"{HOST_ADDRESS}{MESSAGE_API_URL}"
     if params:
         query_parts = []
@@ -665,10 +876,64 @@ def get_recent_message(auth, params=None):
         query_string = "&".join(query_parts)
         url = f"{url}?{query_string}"
     res = requests.get(url=url, headers=HEADERS, auth=auth)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
 
 
-def get_message_content(auth, memory_id: str, message_id: int):
+def get_message_content(auth, memory_id: str, message_id: int, expected_status=None):
     url = f"{HOST_ADDRESS}{MESSAGE_API_URL}/{memory_id}:{message_id}/content"
     res = requests.get(url=url, headers=HEADERS, auth=auth)
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
     return res.json()
+
+
+def assert_status_422(res: requests.Response, msg: Optional[str] = None):
+    """Assert HTTP status code is 422 (Unprocessable Entity)."""
+    assert_status_code(res, 422, msg)
+
+
+def assert_status_500(res: requests.Response, msg: Optional[str] = None):
+    """Assert HTTP status code is 500 (Internal Server Error)."""
+    assert_status_code(res, 500, msg)
+
+
+def assert_status_in(res: requests.Response, expected_codes: list, msg: Optional[str] = None):
+    """Assert HTTP status code is one of the expected values."""
+    actual = res.status_code
+    if actual not in expected_codes:
+        details = msg or f"Expected HTTP {expected_codes}, got {actual}"
+        raise AssertionError(f"{details}\nResponse: {res.text}")
+
+
+def api_call(method: str, url: str, *, auth=None, headers=None, params=None, payload=None, data=None, expected_status=None) -> Tuple[int, dict]:
+    """Generic API call helper returning (status_code, json_data).
+
+    Args:
+        method: HTTP method (GET, POST, PUT, DELETE)
+        url: Full URL to call
+        auth: Authentication tuple
+        headers: Request headers
+        params: Query parameters
+        payload: JSON body
+        data: Form data
+        expected_status: If provided, assert status matches
+
+    Returns:
+        Tuple of (status_code, json_response)
+    """
+    if headers is None:
+        headers = HEADERS
+    res = requests.request(
+        method=method,
+        url=url,
+        headers=headers,
+        auth=auth,
+        params=params,
+        json=payload,
+        data=data,
+    )
+    if expected_status is not None:
+        assert_status_code(res, expected_status)
+    return parse_response(res)

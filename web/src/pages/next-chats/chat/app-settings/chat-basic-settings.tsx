@@ -1,11 +1,11 @@
 'use client';
 
-import { AvatarUpload } from '@/components/avatar-upload';
-import { KnowledgeBaseFormField } from '@/components/knowledge-base-item';
+import { SwitchFormField } from '@/components/form-fields/switch-fom-field';
+import { TavilyFormField } from '@/components/form-fields/tavily-form-field';
+import { TOCEnhanceFormField } from '@/components/form-fields/toc-enhance-form-field';
+import { AvatarUpload } from '@/components/icons/avatar-upload';
+import { KnowledgeBaseFormField } from '@/components/knowledge/knowledge-base-item';
 import { MetadataFilter } from '@/components/metadata-filter';
-import { SwitchFormField } from '@/components/switch-fom-field';
-import { TavilyFormField } from '@/components/tavily-form-field';
-import { TOCEnhanceFormField } from '@/components/toc-enhance-form-field';
 import {
   FormControl,
   FormField,

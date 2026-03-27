@@ -1,4 +1,4 @@
-import { RAGFlowFormItem } from '@/components/ragflow-form';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
 import { Input } from '@/components/ui/input';
 import i18n from '@/locales/config';
 import { useTranslation } from 'react-i18next';

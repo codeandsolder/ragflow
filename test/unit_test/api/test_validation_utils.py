@@ -30,7 +30,7 @@ from api.utils import validation_utils
 class TestNormalizeStr:
     """Test cases for validation_utils.normalize_str function"""
 
-    def test_validation_utils.normalize_string_with_whitespace(self):
+    def test_validation_utils_normalize_string_with_whitespace(self):
         """Test normalization of string with leading/trailing whitespace"""
         result = validation_utils.normalize_str("  Admin  ")
         assert result == "admin"

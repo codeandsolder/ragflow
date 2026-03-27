@@ -1,4 +1,4 @@
-import SvgIcon from '@/components/svg-icon';
+import SvgIcon from '@/components/icons/svg-icon';
 import { Button } from '@/components/ui/button';
 import {
   Card,

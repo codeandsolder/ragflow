@@ -115,11 +115,11 @@ class RDBMSConnector(LoadConnector, PollConnector):
                 raise ConnectorValidationError(f"Failed to connect to MySQL: {e}")
         elif self.db_type == DatabaseType.POSTGRESQL:
             try:
-                import psycopg2
+                import psycopg
             except ImportError:
-                raise ConnectorValidationError("PostgreSQL connector not installed. Please install psycopg2-binary.")
+                raise ConnectorValidationError("PostgreSQL connector not installed. Please install psycopg.")
             try:
-                self._connection = psycopg2.connect(
+                self._connection = psycopg.connect(
                     host=self.host,
                     port=self.port,
                     dbname=self.database,

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-webpack5';
 
 import { fn } from 'storybook/test';
 
-import { Collapse } from '@/components/collapse';
+import { Collapse } from '@/components/layout/collapse';
 import { Button } from '@/components/ui/button';
 
 // More on how to set up stories at: https://storybook.js.org/docs/writing-stories#default-export
@@ -77,7 +77,7 @@ export const Default: Story = {
 ### Usage Examples
 
 \`\`\`tsx
-import { Collapse } from '@/components/collapse';
+import { Collapse } from '@/components/layout/collapse';
 
 <Collapse title="Collapse Title">
   <div className="p-4 border border-gray-200 rounded-md">
@@ -110,7 +110,7 @@ export const WithRightContent: Story = {
 ### Usage Examples
 
 \`\`\`tsx
-import { Collapse } from '@/components/collapse';
+import { Collapse } from '@/components/layout/collapse';
 import { Button } from '@/components/ui/button';
 
 <Collapse 

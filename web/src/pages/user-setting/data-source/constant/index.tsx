@@ -1,6 +1,6 @@
-import { FormFieldType } from '@/components/dynamic-form';
-import { IconFontFill } from '@/components/icon-font';
-import SvgIcon from '@/components/svg-icon';
+import { FormFieldType } from '@/components/form-fields/dynamic-form';
+import { IconFontFill } from '@/components/icons/icon-font';
+import SvgIcon from '@/components/icons/svg-icon';
 import { t, TFunction } from 'i18next';
 import { Mail } from 'lucide-react';
 import { useEffect, useState } from 'react';

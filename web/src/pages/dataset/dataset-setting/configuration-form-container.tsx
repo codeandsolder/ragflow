@@ -1,4 +1,4 @@
-import { FormContainerProps } from '@/components/form-container';
+import { FormContainerProps } from '@/components/layout/form-container';
 import { cn } from '@/lib/utils';
 import { PropsWithChildren } from 'react';
 

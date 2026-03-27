@@ -1,5 +1,5 @@
-import { HomeCard } from '@/components/home-card';
-import { IconFont } from '@/components/icon-font';
+import { IconFont } from '@/components/icons/icon-font';
+import { HomeCard } from '@/components/layout/home-card';
 import { MoreButton } from '@/components/more-button';
 import { RenameDialog } from '@/components/rename-dialog';
 import { useNavigatePage } from '@/hooks/logic-hooks/navigate-hooks';

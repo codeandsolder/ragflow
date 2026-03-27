@@ -1,5 +1,5 @@
-import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
-import { FormFieldConfig } from '@/components/dynamic-form';
+import { ConfirmDeleteDialog } from '@/components/dialogs/confirm-delete-dialog';
+import { FormFieldConfig } from '@/components/form-fields/dynamic-form';
 import { BlockButton, Button } from '@/components/ui/button';
 import {
   Sheet,

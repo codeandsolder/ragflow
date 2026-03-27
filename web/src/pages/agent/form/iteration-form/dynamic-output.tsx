@@ -1,7 +1,7 @@
 'use client';
 
-import { FormContainer } from '@/components/form-container';
 import { KeyInput } from '@/components/key-input';
+import { FormContainer } from '@/components/layout/form-container';
 import { BlockButton, Button } from '@/components/ui/button';
 import {
   FormControl,

@@ -1,4 +1,4 @@
-import { LargeModelFormFieldWithoutFilter } from '@/components/large-model-form-field';
+import { LargeModelFormFieldWithoutFilter } from '@/components/form-fields/large-model-form-field';
 import { LlmSettingSchema } from '@/components/llm-setting-items/next';
 import {
   NextMessageInput,

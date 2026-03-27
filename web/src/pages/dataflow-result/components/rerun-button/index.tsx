@@ -1,5 +1,5 @@
+import SvgIcon from '@/components/icons/svg-icon';
 import { TimelineNode } from '@/components/originui/timeline';
-import SvgIcon from '@/components/svg-icon';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal/modal';
 import { CircleAlert } from 'lucide-react';

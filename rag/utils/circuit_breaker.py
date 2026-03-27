@@ -13,11 +13,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import asyncio
 import logging
 import time
+import asyncio
 import threading
 from enum import Enum
+import pybreaker
 
 
 class CircuitState(Enum):
@@ -26,24 +27,41 @@ class CircuitState(Enum):
     HALF_OPEN = "half_open"
 
 
+class CircuitBreakerError(Exception):
+    pass
+
+
 class CircuitBreaker:
     def __init__(self, failure_threshold=5, recovery_timeout=30, expected_exceptions=(Exception,)):
-        self._failure_count = 0
-        self._success_count = 0
         self._failure_threshold = failure_threshold
         self._recovery_timeout = recovery_timeout
         self._expected_exceptions = expected_exceptions
-        self._state = CircuitState.CLOSED
+        self._breaker = pybreaker.CircuitBreaker(
+            fail_max=failure_threshold,
+            reset_timeout=recovery_timeout,
+        )
+        for exc in expected_exceptions:
+            if exc is not Exception:
+                self._breaker.add_exception(exc)
+        self._failure_count = 0
         self._last_failure_time = 0
         self._lock = asyncio.Lock()
         self._sync_lock = threading.Lock()
 
     @property
     def state(self):
-        if self._state == CircuitState.OPEN:
-            if time.time() - self._last_failure_time >= self._recovery_timeout:
-                return CircuitState.HALF_OPEN
-        return self._state
+        current = self._breaker.current_state
+        if current == "closed":
+            return CircuitState.CLOSED
+        elif current == "open":
+            if self._last_failure_time > 0:
+                elapsed = time.time() - self._last_failure_time
+                if elapsed >= self._recovery_timeout:
+                    return CircuitState.HALF_OPEN
+            return CircuitState.OPEN
+        elif current == "half-open":
+            return CircuitState.HALF_OPEN
+        return CircuitState.CLOSED
 
     async def call(self, func, *args, **kwargs):
         state = self.state
@@ -56,10 +74,23 @@ class CircuitBreaker:
                     result = await func(*args, **kwargs)
                 else:
                     result = await asyncio.get_event_loop().run_in_executor(None, lambda: func(*args, **kwargs))
-                await self._on_success()
+                self._failure_count = 0
+                if self.state == CircuitState.HALF_OPEN:
+                    logging.info("Circuit breaker: CLOSED - service recovered")
                 return result
             except self._expected_exceptions:
-                await self._on_failure()
+                self._failure_count += 1
+                self._last_failure_time = time.time()
+                if self._failure_count >= self._failure_threshold:
+                    self._breaker.open()
+                    logging.warning(f"Circuit breaker: OPEN - {self._failure_count} failures reached threshold")
+                raise
+            except Exception:
+                self._failure_count += 1
+                self._last_failure_time = time.time()
+                if self._failure_count >= self._failure_threshold:
+                    self._breaker.open()
+                    logging.warning(f"Circuit breaker: OPEN - {self._failure_count} failures reached threshold")
                 raise
 
     def call_sync(self, func, *args, **kwargs):
@@ -70,43 +101,24 @@ class CircuitBreaker:
         with self._sync_lock:
             try:
                 result = func(*args, **kwargs)
-                self._on_success_sync()
+                self._failure_count = 0
+                if self.state == CircuitState.HALF_OPEN:
+                    logging.info("Circuit breaker: CLOSED - service recovered")
                 return result
             except self._expected_exceptions:
-                self._on_failure_sync()
+                self._failure_count += 1
+                self._last_failure_time = time.time()
+                if self._failure_count >= self._failure_threshold:
+                    self._breaker.open()
+                    logging.warning(f"Circuit breaker: OPEN - {self._failure_count} failures reached threshold")
                 raise
-
-    async def _on_success(self):
-        self._success_count += 1
-        if self._state == CircuitState.HALF_OPEN:
-            self._state = CircuitState.CLOSED
-            self._failure_count = 0
-            logging.info("Circuit breaker: CLOSED - service recovered")
-
-    def _on_success_sync(self):
-        self._success_count += 1
-        if self._state == CircuitState.HALF_OPEN:
-            self._state = CircuitState.CLOSED
-            self._failure_count = 0
-            logging.info("Circuit breaker: CLOSED - service recovered")
-
-    async def _on_failure(self):
-        self._failure_count += 1
-        self._last_failure_time = time.time()
-        if self._failure_count >= self._failure_threshold:
-            self._state = CircuitState.OPEN
-            logging.warning(f"Circuit breaker: OPEN - {self._failure_count} failures reached threshold")
-
-    def _on_failure_sync(self):
-        self._failure_count += 1
-        self._last_failure_time = time.time()
-        if self._failure_count >= self._failure_threshold:
-            self._state = CircuitState.OPEN
-            logging.warning(f"Circuit breaker: OPEN - {self._failure_count} failures reached threshold")
-
-
-class CircuitBreakerError(Exception):
-    pass
+            except Exception:
+                self._failure_count += 1
+                self._last_failure_time = time.time()
+                if self._failure_count >= self._failure_threshold:
+                    self._breaker.open()
+                    logging.warning(f"Circuit breaker: OPEN - {self._failure_count} failures reached threshold")
+                raise
 
 
 class LLMCircuitBreaker:

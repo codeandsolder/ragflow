@@ -1,5 +1,5 @@
-import { DynamicForm } from '@/components/dynamic-form';
-import { HomeIcon } from '@/components/svg-icon';
+import { DynamicForm } from '@/components/form-fields/dynamic-form';
+import { HomeIcon } from '@/components/icons/svg-icon';
 import { Modal } from '@/components/ui/modal/modal';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

@@ -1,9 +1,12 @@
 import {
   ConfirmDeleteDialog,
   ConfirmDeleteDialogNode,
-} from '@/components/confirm-delete-dialog';
-import { DynamicForm, FormFieldType } from '@/components/dynamic-form';
+} from '@/components/dialogs/confirm-delete-dialog';
 import EditTag from '@/components/edit-tag';
+import {
+  DynamicForm,
+  FormFieldType,
+} from '@/components/form-fields/dynamic-form';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';

@@ -1,6 +1,6 @@
 import { IDataPipelineSelectNode } from '@/components/data-pipeline-select';
-import { IconFont } from '@/components/icon-font';
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+import { IconFont } from '@/components/icons/icon-font';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal/modal';
 import { Link } from 'lucide-react';

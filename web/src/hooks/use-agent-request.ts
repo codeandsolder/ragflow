@@ -1,4 +1,4 @@
-import { FileUploadProps } from '@/components/file-upload';
+import { FileUploadProps } from '@/components/file-upload/file-upload';
 import { useHandleFilterSubmit } from '@/components/list-filter-bar/use-handle-filter-submit';
 import message from '@/components/ui/message';
 import { AgentCategory, AgentGlobals } from '@/constants/agent';

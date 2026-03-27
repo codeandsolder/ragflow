@@ -1,9 +1,9 @@
 import {
   ConfirmDeleteDialog,
   ConfirmDeleteDialogNode,
-} from '@/components/confirm-delete-dialog';
-import { FileIcon } from '@/components/icon-font';
-import NewDocumentLink from '@/components/new-document-link';
+} from '@/components/dialogs/confirm-delete-dialog';
+import { FileIcon } from '@/components/icons/icon-font';
+import NewDocumentLink from '@/components/knowledge/new-document-link';
 import { Button } from '@/components/ui/button';
 import { useDownloadFile } from '@/hooks/use-file-request';
 import { IFile } from '@/interfaces/database/file-manager';

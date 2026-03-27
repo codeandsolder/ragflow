@@ -249,6 +249,7 @@ async def list_docs():
     keywords = request.args.get("keywords", "")
     page_number = int(request.args.get("page", 0))
     items_per_page = int(request.args.get("page_size", 0))
+    cursor = request.args.get("cursor")
     orderby = request.args.get("orderby", "create_time")
     if request.args.get("desc", "true").lower() == "false":
         desc = False
@@ -321,19 +322,35 @@ async def list_docs():
     if doc_ids_filter is not None:
         doc_ids_filter = list(doc_ids_filter)
     try:
-        docs, tol = DocumentService.get_by_kb_id(
-            kb_id,
-            page_number,
-            items_per_page,
-            orderby,
-            desc,
-            keywords,
-            run_status,
-            types,
-            suffix,
-            doc_ids_filter,
-            return_empty_metadata=return_empty_metadata,
-        )
+        if cursor:
+            docs, next_cursor, tol = DocumentService.get_by_kb_id_with_cursor(
+                kb_id,
+                items_per_page or 100,
+                cursor,
+                orderby,
+                desc,
+                keywords,
+                run_status,
+                types,
+                suffix,
+                doc_ids_filter,
+                return_empty_metadata=return_empty_metadata,
+            )
+        else:
+            docs, tol = DocumentService.get_by_kb_id(
+                kb_id,
+                page_number,
+                items_per_page,
+                orderby,
+                desc,
+                keywords,
+                run_status,
+                types,
+                suffix,
+                doc_ids_filter,
+                return_empty_metadata=return_empty_metadata,
+            )
+            next_cursor = None
         if create_time_from or create_time_to:
             filtered_docs = []
             for doc in docs:
@@ -348,7 +365,7 @@ async def list_docs():
                 doc_item["source_type"] = doc_item["source_type"].split("/")[0]
             if doc_item["parser_config"].get("metadata"):
                 doc_item["parser_config"]["metadata"] = turn2jsonschema(doc_item["parser_config"]["metadata"])
-        return get_json_result(data={"total": tol, "docs": docs})
+        return get_json_result(data={"total": tol, "docs": docs, "cursor": next_cursor})
     except Exception as e:
         return server_error_response(e)
 
@@ -884,21 +901,7 @@ async def parse():
             return get_json_result(data=False, message="The URL format is invalid", code=RetCode.ARGUMENT_ERROR)
         download_path = os.path.join(get_project_base_directory(), "logs/downloads")
         os.makedirs(download_path, exist_ok=True)
-        from seleniumwire.webdriver import Chrome, ChromeOptions
-
-        options = ChromeOptions()
-        options.add_argument("--headless")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_experimental_option("prefs", {"download.default_directory": download_path, "download.prompt_for_download": False, "download.directory_upgrade": True, "safebrowsing.enabled": True})
-        driver = Chrome(options=options)
-        driver.get(url)
-        res_headers = [r.response.headers for r in driver.requests if r and r.response]
-        if len(res_headers) > 1:
-            sections = RAGFlowHtmlParser().parser_txt(driver.page_source)
-            driver.quit()
-            return get_json_result(data="\n".join(sections))
+        from playwright.sync_api import sync_playwright
 
         class File:
             filename: str
@@ -912,16 +915,57 @@ async def parse():
                 with open(self.filepath, "rb") as f:
                     return f.read()
 
-        r = re.search(r"filename=\"([^\"]+)\"", str(res_headers))
-        if not r or not r.group(1):
-            return get_json_result(data=False, message="Can't not identify downloaded file", code=RetCode.ARGUMENT_ERROR)
-        filename = r.group(1).strip()
-        if not _is_safe_download_filename(filename):
-            return get_json_result(data=False, message="Invalid downloaded filename", code=RetCode.ARGUMENT_ERROR)
-        filepath = os.path.join(download_path, filename)
-        f = File(filename, filepath)
-        txt = FileService.parse_docs([f], current_user.id)
-        return get_json_result(data=txt)
+        # Collect all response headers to mimic existing Selenium logic.
+        response_headers = []
+
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True, args=["--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"])
+            context = browser.new_context()
+
+            def _on_response(resp):
+                if resp:
+                    response_headers.append(resp.headers)
+
+            context.on("response", _on_response)
+
+            page = context.new_page()
+            timeout_ms = 30000
+            resp = page.goto(url, timeout=timeout_ms, wait_until="networkidle")
+
+            # Use network responses to determine whether page content should be parsed.
+            if len(response_headers) > 1:
+                sections = RAGFlowHtmlParser().parser_txt(page.content())
+                browser.close()
+                return get_json_result(data="\n".join(sections))
+
+            # Single-response scenario: likely file download.
+            main_headers = response_headers[0] if response_headers else {}
+            disp = main_headers.get("content-disposition", "")
+            r = re.search(r"filename=\"([^\"]+)\"", disp)
+            if not r or not r.group(1):
+                browser.close()
+                return get_json_result(data=False, message="Can't not identify downloaded file", code=RetCode.ARGUMENT_ERROR)
+
+            filename = r.group(1).strip()
+            if not _is_safe_download_filename(filename):
+                browser.close()
+                return get_json_result(data=False, message="Invalid downloaded filename", code=RetCode.ARGUMENT_ERROR)
+
+            filepath = os.path.join(download_path, filename)
+            body = b""
+            if resp:
+                try:
+                    body = resp.body()
+                except Exception:
+                    body = b""
+
+            if not body:
+                body = page.content().encode("utf-8") if page.content() is not None else b""
+
+            Path(filepath).write_bytes(body)
+            txt = FileService.parse_docs([File(filename, filepath)], current_user.id)
+            browser.close()
+            return get_json_result(data=txt)
 
     files = await request.files
     if "file" not in files:

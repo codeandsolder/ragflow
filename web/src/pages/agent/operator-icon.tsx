@@ -1,5 +1,5 @@
-import { IconFontFill } from '@/components/icon-font';
-import SvgIcon from '@/components/svg-icon';
+import { IconFontFill } from '@/components/icons/icon-font';
+import SvgIcon from '@/components/icons/svg-icon';
 import { cn } from '@/lib/utils';
 import {
   FileCode,

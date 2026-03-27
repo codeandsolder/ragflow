@@ -1,5 +1,5 @@
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
 import { KeyInput } from '@/components/key-input';
-import { RAGFlowFormItem } from '@/components/ragflow-form';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { X } from 'lucide-react';

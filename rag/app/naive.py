@@ -27,7 +27,7 @@ from docx.text.paragraph import Paragraph
 from docx.opc.oxml import parse_xml
 from markdown import markdown
 from PIL import Image
-from common.token_utils import num_tokens_from_string
+from common.token_utils import num_tokens_from_string, encoder
 
 from common.constants import LLMType
 from api.db.services.llm_service import LLMBundle
@@ -1013,11 +1013,10 @@ def chunk(filename, binary=None, from_page=0, to_page=100000, lang="Chinese", ca
             if current_text and current_tokens + sec_tokens > chunk_limit:
                 merged_chunks.append(current_text)
                 merged_images.append(current_image)
-                overlap_part = ""
                 if overlapped_percent > 0:
-                    overlap_len = int(len(current_text) * overlapped_percent / 100)
+                    overlap_len = int(current_tokens * overlapped_percent / 100)
                     if overlap_len > 0:
-                        overlap_part = current_text[-overlap_len:]
+                        overlap_part = encoder.decode(encoder.encode(current_text)[-overlap_len:])
                 current_text = overlap_part
                 current_tokens = num_tokens_from_string(current_text)
                 current_image = current_image if overlap_part else None

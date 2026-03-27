@@ -1,0 +1,211 @@
+# LiteLLM Configuration for RAGFlow
+# This file configures LiteLLM Proxy with dynamic model discovery
+
+model_list:
+  # OpenAI models (dynamic discovery)
+  - model_name: "openai/*"
+    litellm_params:
+      model: "openai/*"
+      api_key: "os.environ/OPENAI_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # Anthropic models (dynamic discovery)
+  - model_name: "anthropic/*"
+    litellm_params:
+      model: "anthropic/*"
+      api_key: "os.environ/ANTHROPIC_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # Azure OpenAI models
+  - model_name: "azure/*"
+    litellm_params:
+      model: "azure/*"
+      api_key: "os.environ/AZURE_API_KEY"
+      api_base: "os.environ/AZURE_API_BASE"
+      api_version: "os.environ/AZURE_API_VERSION"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # Google Gemini models
+  - model_name: "gemini/*"
+    litellm_params:
+      model: "gemini/*"
+      api_key: "os.environ/GEMINI_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # AWS Bedrock models
+  - model_name: "bedrock/*"
+    litellm_params:
+      model: "bedrock/*"
+      api_key: "os.environ/AWS_ACCESS_KEY_ID"
+      aws_region_name: "os.environ/AWS_REGION_NAME"
+      aws_secret_access_key: "os.environ/AWS_SECRET_ACCESS_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # Groq models
+  - model_name: "groq/*"
+    litellm_params:
+      model: "groq/*"
+      api_key: "os.environ/GROQ_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # Together AI models
+  - model_name: "together_ai/*"
+    litellm_params:
+      model: "together_ai/*"
+      api_key: "os.environ/TOGETHERAI_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # DeepInfra models
+  - model_name: "deepinfra/*"
+    litellm_params:
+      model: "deepinfra/*"
+      api_key: "os.environ/DEEPINFRA_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # Fireworks AI models
+  - model_name: "fireworks_ai/*"
+    litellm_params:
+      model: "fireworks_ai/*"
+      api_key: "os.environ/FIREWORKS_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # OpenRouter models
+  - model_name: "openrouter/*"
+    litellm_params:
+      model: "openrouter/*"
+      api_key: "os.environ/OPENROUTER_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # Perplexity AI models
+  - model_name: "perplexity/*"
+    litellm_params:
+      model: "perplexity/*"
+      api_key: "os.environ/PERPLEXITY_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # Mistral AI models
+  - model_name: "mistral/*"
+    litellm_params:
+      model: "mistral/*"
+      api_key: "os.environ/MISTRAL_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # DeepSeek models
+  - model_name: "deepseek/*"
+    litellm_params:
+      model: "deepseek/*"
+      api_key: "os.environ/DEEPSEEK_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # xAI (Grok) models
+  - model_name: "xai/*"
+    litellm_params:
+      model: "xai/*"
+      api_key: "os.environ/XAI_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # Ollama (local models)
+  - model_name: "ollama/*"
+    litellm_params:
+      model: "ollama/*"
+      api_key: "x"
+      api_base: "http://host.docker.internal:11434"
+    litellm_settings:
+      check_provider_endpoint: false
+
+  # vLLM (self-hosted)
+  - model_name: "vllm/*"
+    litellm_params:
+      model: "vllm/*"
+      api_base: "http://vllm:8000/v1"
+      api_key: "x"
+    litellm_settings:
+      check_provider_endpoint: false
+
+  # Hugging Face Inference
+  - model_name: "huggingface/*"
+    litellm_params:
+      model: "huggingface/*"
+      api_key: "os.environ/HUGGINGFACE_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # ModelRelay integration (your existing setup)
+  - model_name: "relay/*"
+    litellm_params:
+      model: "relay/*"
+      api_key: "os.environ/MODELRELAY_API_KEY"
+      api_base: "os.environ/MODELRELAY_BASE_URL"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # Vertex AI models
+  - model_name: "vertex_ai/*"
+    litellm_params:
+      model: "vertex_ai/*"
+      api_key: "os.environ/VERTEXAI_PROJECT"
+      api_base: "https://aiplatform.googleapis.com"
+      api_version: "v1"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # Replicate
+  - model_name: "replicate/*"
+    litellm_params:
+      model: "replicate/*"
+      api_key: "os.environ/REPLICATE_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # Novita AI
+  - model_name: "novita/*"
+    litellm_params:
+      model: "novita/*"
+      api_key: "os.environ/NOVITA_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # Voyage AI
+  - model_name: "voyage/*"
+    litellm_params:
+      model: "voyage/*"
+      api_key: "os.environ/VOYAGE_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+  # Cerebras
+  - model_name: "cerebras/*"
+    litellm_params:
+      model: "cerebras/*"
+      api_key: "os.environ/CEREBRAS_API_KEY"
+    litellm_settings:
+      check_provider_endpoint: true
+
+general_settings:
+  master_key: "os.environ/LITELLM_MASTER_KEY"
+  database_url: "postgresql://litellm_user:os.environ/LITELLM_DB_PASSWORD@litellm-db:5432/litellm"
+  redis_host: "redis"
+  redis_port: "6379"
+
+router_settings:
+  routing_strategy: "usage-based-routing"
+  redis_host: "redis"
+  redis_port: "6379"
+
+litellm_settings:
+  drop_params: true
+  set_verbose: true

@@ -1,8 +1,8 @@
 import {
   ConfirmDeleteDialog,
   ConfirmDeleteDialogNode,
-} from '@/components/confirm-delete-dialog';
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+} from '@/components/dialogs/confirm-delete-dialog';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {

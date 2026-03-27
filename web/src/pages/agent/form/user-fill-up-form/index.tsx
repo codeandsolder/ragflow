@@ -1,5 +1,5 @@
-import { Collapse } from '@/components/collapse';
-import { LayoutRecognizeFormField } from '@/components/layout-recognize-form-field';
+import { LayoutRecognizeFormField } from '@/components/form-fields/layout-recognize-form-field';
+import { Collapse } from '@/components/layout/collapse';
 import { Button } from '@/components/ui/button';
 import {
   Form,

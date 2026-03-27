@@ -1,4 +1,4 @@
-import { NodeCollapsible } from '@/components/collapse';
+import { NodeCollapsible } from '@/components/layout/collapse';
 import { IAgentForm, IToolNode } from '@/interfaces/database/agent';
 import { Handle, NodeProps, Position } from '@xyflow/react';
 import { get } from 'lodash';

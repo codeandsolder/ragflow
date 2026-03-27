@@ -1305,15 +1305,20 @@ class LiteLLMBase(ABC):
         self.model_name = f"{self.prefix}{model_name}"
         self.api_key = key
         self.base_url = (base_url or FACTORY_DEFAULT_BASE_URL.get(self.provider, "")).rstrip("/")
-        # Configure retry parameters
         self.max_retries = kwargs.get("max_retries", int(os.environ.get("LLM_MAX_RETRIES", 5)))
         self.base_delay = kwargs.get("retry_interval", float(os.environ.get("LLM_BASE_DELAY", 2.0)))
         self.max_rounds = kwargs.get("max_rounds", 5)
         self.is_tools = False
         self.tools = []
         self.toolcall_sessions = {}
+        self.use_litellm_proxy = os.environ.get("USE_LITELLM_PROXY", "false").lower() == "true"
+        self.litellm_proxy_url = os.environ.get("LITELLM_PROXY_URL", "http://litellm:4000")
 
-        # Factory specific fields
+        if self.use_litellm_proxy:
+            self.base_url = self.litellm_proxy_url
+            if not self.api_key or self.api_key == "x":
+                self.api_key = os.environ.get("LITELLM_MASTER_KEY", "sk-litellm")
+
         if self.provider == SupportedLiteLLMProvider.OpenRouter:
             self.api_key = json.loads(key).get("api_key", "")
             self.provider_order = json.loads(key).get("provider_order", "")
@@ -1784,9 +1789,14 @@ class LiteLLMBase(ABC):
                     "tool_choice": "auto",
                 }
             )
+        if self.use_litellm_proxy:
+            completion_args["api_base"] = self.litellm_proxy_url
+            return completion_args
         if self.provider in FACTORY_DEFAULT_BASE_URL:
             completion_args.update({"api_base": self.base_url})
         elif self.provider == SupportedLiteLLMProvider.Bedrock:
+            if self.use_litellm_proxy:
+                return completion_args
             import boto3
 
             completion_args.pop("api_key", None)
@@ -1817,6 +1827,8 @@ class LiteLLMBase(ABC):
                 completion_args.update({"aws_region_name": bedrock_region})
 
         elif self.provider == SupportedLiteLLMProvider.OpenRouter:
+            if self.use_litellm_proxy:
+                return completion_args
             if self.provider_order:
 
                 def _to_order_list(x):
@@ -1842,23 +1854,25 @@ class LiteLLMBase(ABC):
                 }
             )
         elif self.provider == SupportedLiteLLMProvider.Azure_OpenAI:
-            completion_args.pop("api_key", None)
-            completion_args.pop("api_base", None)
-            completion_args.update(
-                {
-                    "api_key": self.api_key,
-                    "api_base": self.base_url,
-                    "api_version": self.api_version,
-                }
-            )
+            if not self.use_litellm_proxy:
+                completion_args.pop("api_key", None)
+                completion_args.pop("api_base", None)
+                completion_args.update(
+                    {
+                        "api_key": self.api_key,
+                        "api_base": self.base_url,
+                        "api_version": self.api_version,
+                    }
+                )
 
         # Ollama deployments commonly sit behind a reverse proxy that enforces
         # Bearer auth. Ensure the Authorization header is set when an API key
         # is provided, while respecting any user-supplied headers. #11350
-        extra_headers = deepcopy(completion_args.get("extra_headers") or {})
+        if not self.use_litellm_proxy:
+            extra_headers = deepcopy(completion_args.get("extra_headers") or {})
         if self.provider == SupportedLiteLLMProvider.Ollama and self.api_key and "Authorization" not in extra_headers:
             extra_headers["Authorization"] = f"Bearer {self.api_key}"
-        if extra_headers:
+        if not self.use_litellm_proxy and extra_headers:
             completion_args["extra_headers"] = extra_headers
         return completion_args
 

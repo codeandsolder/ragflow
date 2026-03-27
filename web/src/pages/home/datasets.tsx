@@ -1,8 +1,8 @@
 import { CardSineLineContainer } from '@/components/card-singleline-container';
 import { EmptyCardType } from '@/components/empty/constant';
 import { EmptyAppCard } from '@/components/empty/empty';
+import { HomeIcon } from '@/components/icons/svg-icon';
 import { RenameDialog } from '@/components/rename-dialog';
-import { HomeIcon } from '@/components/svg-icon';
 import { CardSkeleton } from '@/components/ui/skeleton';
 import { useNavigatePage } from '@/hooks/logic-hooks/navigate-hooks';
 import { useFetchNextKnowledgeListByPage } from '@/hooks/use-knowledge-request';

@@ -4,7 +4,7 @@ import {
   DynamicFormRef,
   FormFieldConfig,
   FormFieldType,
-} from '@/components/dynamic-form';
+} from '@/components/form-fields/dynamic-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';

@@ -1,4 +1,4 @@
-import { RAGFlowFormItem } from '@/components/ragflow-form';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { ReactNode } from 'react';

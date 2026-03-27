@@ -14,6 +14,7 @@
 #  limitations under the License.
 #
 import asyncio
+import gc
 import json
 import logging
 import os
@@ -39,6 +40,7 @@ from rag.graphrag.utils import (
     set_graph,
     tidy_graph,
 )
+from rag.graphrag.memory import GraphMemoryMonitor, stream_pagerank, truncate_graph
 from common.misc_utils import thread_pool_exec
 from rag.nlp import rag_tokenizer, search
 from rag.utils.redis_conn import RedisDistributedLock
@@ -468,17 +470,28 @@ async def merge_subgraph(
     callback,
 ):
     start = asyncio.get_running_loop().time()
+    monitor = GraphMemoryMonitor()
     change = GraphChange()
     old_graph = await get_graph(tenant_id, kb_id, subgraph.graph["source_id"])
     if old_graph is not None:
         logging.info("Merge with an exiting graph...................")
         tidy_graph(old_graph, callback)
+
+        # Check memory limits before merge
+        is_safe, msg = monitor.check_memory_limits(old_graph)
+        if not is_safe:
+            logging.warning(f"Old graph exceeds limits, truncating: {msg}")
+            old_graph = truncate_graph(old_graph, monitor.max_nodes, monitor.max_edges)
+            gc.collect()
+
         new_graph = graph_merge(old_graph, subgraph, change)
     else:
         new_graph = subgraph
         change.added_updated_nodes = set(new_graph.nodes())
         change.added_updated_edges = set(new_graph.edges())
-    pr = nx.pagerank(new_graph)
+
+    # Use streaming PageRank for large graphs
+    pr = stream_pagerank(new_graph, monitor=monitor)
     for node_name, pagerank in pr.items():
         new_graph.nodes[node_name]["pagerank"] = pagerank
 

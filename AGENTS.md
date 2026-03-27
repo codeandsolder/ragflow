@@ -54,6 +54,9 @@ test/             # Backend tests (unit_test, testcases)
 ### Backend (Python)
 
 ```bash
+# Install system dependencies for lxml (required before installing Python packages):
+# Ubuntu/Debian: sudo apt-get install libxml2-dev libxslt-dev python3-dev build-essential
+
 # Install Python dependencies
 uv sync --python 3.12 --all-extras
 uv run download_deps.py

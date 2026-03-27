@@ -20,7 +20,7 @@ import re
 from abc import ABC
 import pandas as pd
 import pymysql
-import psycopg2
+import psycopg
 import pyodbc
 from agent.tools.base import ToolParamBase, ToolBase, ToolMeta
 from common.connection_utils import timeout
@@ -136,7 +136,7 @@ class ExeSQL(ToolBase, ABC):
         elif self._param.db_type == "oceanbase":
             db = pymysql.connect(db=self._param.database, user=self._param.username, host=self._param.host, port=self._param.port, password=self._param.password, charset="utf8mb4")
         elif self._param.db_type == "postgres":
-            db = psycopg2.connect(dbname=self._param.database, user=self._param.username, host=self._param.host, port=self._param.port, password=self._param.password)
+            db = psycopg.connect(dbname=self._param.database, user=self._param.username, host=self._param.host, port=self._param.port, password=self._param.password)
         elif self._param.db_type == "mssql":
             conn_str = (
                 r"DRIVER={ODBC Driver 17 for SQL Server};"

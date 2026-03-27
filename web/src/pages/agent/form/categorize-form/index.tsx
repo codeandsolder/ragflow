@@ -1,4 +1,4 @@
-import { LargeModelFormField } from '@/components/large-model-form-field';
+import { LargeModelFormField } from '@/components/form-fields/large-model-form-field';
 import { MessageHistoryWindowSizeFormField } from '@/components/message-history-window-size-item';
 import { Form } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';

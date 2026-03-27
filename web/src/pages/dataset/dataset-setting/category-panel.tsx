@@ -1,4 +1,4 @@
-import SvgIcon from '@/components/svg-icon';
+import SvgIcon from '@/components/icons/svg-icon';
 import Divider from '@/components/ui/divider';
 import { useTranslate } from '@/hooks/common-hooks';
 import { useSelectParserList } from '@/hooks/use-user-setting-request';

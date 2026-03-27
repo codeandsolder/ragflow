@@ -15,7 +15,6 @@
 import sys
 import types
 import enum
-from unittest.mock import MagicMock
 
 
 def create_stub(name, attrs=None):
@@ -140,8 +139,7 @@ def _setup_mocks():
     create_stub("agent.tools")
     create_stub("agent.tools.base")
 
-    from typing import TypedDict, List, Any
-    from functools import partial
+    from typing import TypedDict, List
 
     class ToolParameter(TypedDict):
         type: str

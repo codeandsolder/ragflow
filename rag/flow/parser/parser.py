@@ -41,6 +41,7 @@ from rag.flow.parser.schema import ParserFromUpstream
 from rag.llm.cv_model import Base as VLM
 from rag.nlp import BULLET_PATTERN, bullets_category, docx_question_level, not_bullet
 from rag.utils.base64_image import image2id
+from rag.app.pdf_metadata import extract_pdf_metadata
 
 
 from common.misc_utils import thread_pool_exec
@@ -560,6 +561,21 @@ class Parser(ProcessBase):
                     bboxes[next_idx]["author"] = True
                 break
 
+            # Enhanced metadata extraction using layout-aware parsing
+            enhanced_meta = None
+            try:
+                enhanced_meta = extract_pdf_metadata(blob, use_vlm=False, lang="en")
+            except Exception:
+                pass
+
+            if enhanced_meta:
+                if enhanced_meta.get("authors"):
+                    for j in range(min(3, len(bboxes))):
+                        if j < len(bboxes) and not bboxes[j].get("author"):
+                            if not bboxes[j].get("title"):
+                                bboxes[j]["author"] = True
+                                break
+
         # Get abstract
         if abstract_enabled:
             i = 0
@@ -584,6 +600,14 @@ class Parser(ProcessBase):
                     break
             if abstract_idx is not None:
                 bboxes[abstract_idx]["abstract"] = True
+
+            # Enhanced abstract extraction using layout-aware parsing
+            if enhanced_meta and enhanced_meta.get("abstract"):
+                if abstract_idx is None:
+                    for idx, b in enumerate(bboxes[:10]):
+                        if not b.get("abstract") and not b.get("author") and not b.get("title"):
+                            b["abstract"] = True
+                            break
 
         if conf.get("output_format") == "json":
             self.set_output("json", bboxes)

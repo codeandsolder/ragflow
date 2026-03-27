@@ -18,9 +18,6 @@ from common.sql_validation import (
     validate_text_to_sql,
     SQLValidationError,
     validate_sql_syntax,
-    check_statement_type,
-    check_for_dangerous_patterns,
-    validate_table_and_column_names,
     extract_table_names,
     extract_column_names,
 )

@@ -1,5 +1,5 @@
+import SvgIcon from '@/components/icons/svg-icon';
 import Image from '@/components/image';
-import SvgIcon from '@/components/svg-icon';
 import { IReference, IReferenceChunk } from '@/interfaces/database/chat';
 import { getExtension } from '@/utils/document-util';
 import DOMPurify from 'dompurify';

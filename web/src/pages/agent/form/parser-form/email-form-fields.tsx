@@ -1,4 +1,4 @@
-import { RAGFlowFormItem } from '@/components/ragflow-form';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { buildOptions } from '@/utils/form';
 import { useTranslation } from 'react-i18next';

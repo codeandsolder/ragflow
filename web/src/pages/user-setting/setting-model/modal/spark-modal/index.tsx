@@ -3,7 +3,7 @@ import {
   DynamicFormRef,
   FormFieldConfig,
   FormFieldType,
-} from '@/components/dynamic-form';
+} from '@/components/form-fields/dynamic-form';
 import { Modal } from '@/components/ui/modal/modal';
 import { useCommonTranslation, useTranslate } from '@/hooks/common-hooks';
 import { useBuildModelTypeOptions } from '@/hooks/logic-hooks/use-build-options';

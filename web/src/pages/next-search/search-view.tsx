@@ -1,7 +1,7 @@
 import { EmptyType } from '@/components/empty/constant';
 import Empty from '@/components/empty/empty';
 import HighLightMarkdown from '@/components/highlight-markdown';
-import { FileIcon } from '@/components/icon-font';
+import { FileIcon } from '@/components/icons/icon-font';
 import { ImageWithPopover } from '@/components/image';
 import { Input } from '@/components/originui/input';
 import { SkeletonCard } from '@/components/skeleton-card';

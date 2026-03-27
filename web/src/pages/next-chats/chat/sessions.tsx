@@ -1,8 +1,8 @@
-import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
+import { ConfirmDeleteDialog } from '@/components/dialogs/confirm-delete-dialog';
 import EmbedDialog from '@/components/embed-dialog';
 import { useShowEmbedModal } from '@/components/embed-dialog/use-show-embed-dialog';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
 import { MoreButton } from '@/components/more-button';
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SearchInput } from '@/components/ui/input';

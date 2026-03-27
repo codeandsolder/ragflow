@@ -159,10 +159,11 @@ class TestAzureEmbed:
     def test_azure_embed_factory_name(self):
         assert embedding_model.AzureEmbed._FACTORY_NAME == "Azure-OpenAI"
 
-    @patch("rag.llm.embedding_model.AzureOpenAI")
-    def test_azure_embed_parses_json_key(self, mock_azure):
-        key = '{"api_key": "test-key", "api_version": "2024-02-01"}'
-        model = embedding_model.AzureEmbed(key, "model", base_url="https://example.azure.com")
+
+@patch("rag.llm.embedding_model.AzureOpenAI")
+def test_azure_embed_parses_json_key(self, mock_azure):
+    key = '{"api_key": "test-key", "api_version": "2024-02-01"}'
+    embedding_model.AzureEmbed(key, "model", base_url="https://example.azure.com")
 
 
 class TestBaiChuanEmbed:
@@ -400,3 +401,71 @@ class TestEmbeddingModelEncodeQueries:
 
         assert result.shape == (3,)
         assert tokens == 5
+
+
+class TestEmbeddingModelCircuitBreaker:
+    @patch("rag.llm.embedding_model.OpenAI")
+    def test_circuit_breaker_uses_configurable_failure_threshold(self, mock_openai):
+        model = embedding_model.OpenAIEmbed("key", "model", failure_threshold=10)
+        assert model.failure_threshold == 10
+
+    @patch("rag.llm.embedding_model.OpenAI")
+    def test_circuit_breaker_uses_configurable_recovery_timeout(self, mock_openai):
+        model = embedding_model.OpenAIEmbed("key", "model", recovery_timeout=60)
+        assert model.recovery_timeout == 60
+
+    @patch("rag.llm.embedding_model.OpenAI")
+    def test_circuit_breaker_uses_default_failure_threshold(self, mock_openai):
+        model = embedding_model.OpenAIEmbed("key", "model")
+        assert model.failure_threshold == 5
+
+    @patch("rag.llm.embedding_model.OpenAI")
+    def test_circuit_breaker_uses_default_recovery_timeout(self, mock_openai):
+        model = embedding_model.OpenAIEmbed("key", "model")
+        assert model.recovery_timeout == 30
+
+    @patch("rag.llm.embedding_model.OpenAI")
+    def test_circuit_breaker_uses_env_failure_threshold(self, mock_openai):
+        import os
+
+        original = os.environ.get("LLM_FAILURE_THRESHOLD")
+        os.environ["LLM_FAILURE_THRESHOLD"] = "3"
+        try:
+            model = embedding_model.OpenAIEmbed("key", "model")
+            assert model.failure_threshold == 3
+        finally:
+            if original is None:
+                os.environ.pop("LLM_FAILURE_THRESHOLD", None)
+            else:
+                os.environ["LLM_FAILURE_THRESHOLD"] = original
+
+    @patch("rag.llm.embedding_model.OpenAI")
+    def test_circuit_breaker_uses_env_recovery_timeout(self, mock_openai):
+        import os
+
+        original = os.environ.get("LLM_RECOVERY_TIMEOUT")
+        os.environ["LLM_RECOVERY_TIMEOUT"] = "90"
+        try:
+            model = embedding_model.OpenAIEmbed("key", "model")
+            assert model.recovery_timeout == 90
+        finally:
+            if original is None:
+                os.environ.pop("LLM_RECOVERY_TIMEOUT", None)
+            else:
+                os.environ["LLM_RECOVERY_TIMEOUT"] = original
+
+    @patch("rag.llm.embedding_model.OpenAI")
+    def test_circuit_breaker_property_returns_breaker(self, mock_openai):
+        model = embedding_model.OpenAIEmbed("key", "model")
+        breaker = model.circuit_breaker
+        assert breaker is not None
+
+    @patch("rag.llm.embedding_model.OpenAI")
+    def test_circuit_breaker_per_provider_isolation(self, mock_openai):
+        model1 = embedding_model.OpenAIEmbed("key", "model")
+        model2 = embedding_model.QWenEmbed("key", "text_embedding_v2")
+
+        breaker1 = model1.circuit_breaker
+        breaker2 = model2.circuit_breaker
+
+        assert id(breaker1) != id(breaker2)

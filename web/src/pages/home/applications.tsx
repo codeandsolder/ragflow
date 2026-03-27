@@ -1,7 +1,7 @@
 import { CardSineLineContainer } from '@/components/card-singleline-container';
 import { EmptyCardType } from '@/components/empty/constant';
 import { EmptyAppCard } from '@/components/empty/empty';
-import { HomeIcon } from '@/components/svg-icon';
+import { HomeIcon } from '@/components/icons/svg-icon';
 import { Segmented, SegmentedValue } from '@/components/ui/segmented';
 import { Routes } from '@/routes';
 import { useCallback, useMemo, useState } from 'react';

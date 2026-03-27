@@ -1,4 +1,4 @@
-import { NodeCollapsible } from '@/components/collapse';
+import { NodeCollapsible } from '@/components/layout/collapse';
 import { BaseNode } from '@/interfaces/database/agent';
 import { NodeProps, Position } from '@xyflow/react';
 import { memo } from 'react';

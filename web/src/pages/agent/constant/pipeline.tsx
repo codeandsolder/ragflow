@@ -1,4 +1,4 @@
-import { ParseDocumentType } from '@/components/layout-recognize-form-field';
+import { ParseDocumentType } from '@/components/form-fields/layout-recognize-form-field';
 import {
   initialLlmBaseValues,
   DataflowOperator as Operator,

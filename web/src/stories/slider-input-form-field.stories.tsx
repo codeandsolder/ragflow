@@ -2,7 +2,7 @@ import { Form } from '@/components/ui/form';
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { useForm } from 'react-hook-form';
 
-import { SliderInputFormField } from '@/components/slider-input-form-field';
+import { SliderInputFormField } from '@/components/form-fields/slider-input-form-field';
 import { FormLayout } from '@/constants/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -82,7 +82,7 @@ export const Default: Story = {
 ### Basic Usage
 
 \`\`\`tsx
-import { SliderInputFormField } from '@/components/slider-input-form-field';
+import { SliderInputFormField } from '@/components/form-fields/slider-input-form-field';
 
 <SliderInputFormField
   name="sliderValue"
@@ -117,7 +117,7 @@ export const HorizontalLayout: Story = {
 ### Horizontal Layout
 
 \`\`\`tsx
-import { SliderInputFormField } from '@/components/slider-input-form-field';
+import { SliderInputFormField } from '@/components/form-fields/slider-input-form-field';
 import { FormLayout } from '@/constants/form';
 
 <SliderInputFormField
@@ -153,7 +153,7 @@ export const CustomRange: Story = {
 ### Custom Range
 
 \`\`\`tsx
-import { SliderInputFormField } from '@/components/slider-input-form-field';
+import { SliderInputFormField } from '@/components/form-fields/slider-input-form-field';
 
 <SliderInputFormField
   name="customRange"

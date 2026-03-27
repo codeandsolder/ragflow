@@ -1,4 +1,7 @@
-import { DynamicForm, FormFieldConfig } from '@/components/dynamic-form';
+import {
+  DynamicForm,
+  FormFieldConfig,
+} from '@/components/form-fields/dynamic-form';
 import { Modal } from '@/components/ui/modal/modal';
 import { IModalProps } from '@/interfaces/common';
 import { useEffect, useState } from 'react';

@@ -1,4 +1,4 @@
-import { CopyToClipboardWithText } from '@/components/copy-to-clipboard';
+import { CopyToClipboardWithText } from '@/components/file-upload/copy-to-clipboard';
 import {
   Sheet,
   SheetContent,

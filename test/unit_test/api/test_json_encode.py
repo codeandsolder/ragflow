@@ -25,7 +25,7 @@ from enum import Enum, IntEnum
 from api.utils import json_encode
 
 
-class Testjson_encode.BaseTypeToDict:
+class Testjson_encode_BaseTypeToDict:
     """Test cases for json_encode.BaseType.to_dict method"""
 
     def test_simple_object_to_dict(self):

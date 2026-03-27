@@ -1,4 +1,24 @@
 services:
+  docker-api-proxy:
+    build:
+      context: ./docker_api_proxy
+      dockerfile: Dockerfile
+    container_name: sandbox-docker-proxy
+    ports:
+      - "${DOCKER_PROXY_PORT:-2376}:2376"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - sandbox-network
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=10M
+
   sandbox-executor-manager:
     build:
       context: ./executor_manager
@@ -7,13 +27,13 @@ services:
     runtime: runc
     ports:
       - "${EXECUTOR_PORT:-9385}:9385"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - sandbox-network
     restart: always
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
     environment:
       - SANDBOX_EXECUTOR_MANAGER_POOL_SIZE=${SANDBOX_EXECUTOR_MANAGER_POOL_SIZE:-5}
       - SANDBOX_BASE_PYTHON_IMAGE=${SANDBOX_BASE_PYTHON_IMAGE-sandbox-base-python:latest}
@@ -21,6 +41,9 @@ services:
       - SANDBOX_ENABLE_SECCOMP=${SANDBOX_ENABLE_SECCOMP:-false}
       - SANDBOX_MAX_MEMORY=${SANDBOX_MAX_MEMORY:-256m} # b, k, m, g
       - SANDBOX_TIMEOUT=${SANDBOX_TIMEOUT:-10s} # s, m, 1m30s
+      - DOCKER_HOST=tcp://docker-api-proxy:2376
+    depends_on:
+      - docker-api-proxy
     healthcheck:
       test: ["CMD-SHELL", "curl --fail http://localhost:9385/healthz || exit 1"]
       interval: 10s

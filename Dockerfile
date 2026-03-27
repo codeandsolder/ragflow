@@ -4,6 +4,7 @@ USER root
 SHELL ["/bin/bash", "-c"]
 
 ARG NEED_MIRROR=0
+ARG USE_DOCLING=true
 
 WORKDIR /ragflow
 
@@ -159,7 +160,9 @@ RUN --mount=type=cache,id=ragflow_uv,target=/root/.cache/uv,sharing=locked \
         sed -i 's|mirrors.aliyun.com/pypi|pypi.org|g' uv.lock; \
     fi; \
     uv sync --python 3.12 --frozen && \
-    uv pip install docling==2.71.0 && \
+    if [ "$USE_DOCLING" == "true" ]; then \
+        uv pip install docling==2.71.0; \
+    fi && \
     # Ensure pip is available in the venv for runtime package installation (fixes #12651)
     .venv/bin/python3 -m ensurepip --upgrade
 

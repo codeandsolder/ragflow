@@ -361,55 +361,80 @@ class TestDocumentsUploadUnit:
         assert res["code"] == module.RetCode.ARGUMENT_ERROR
         assert res["message"] == "The URL format is invalid"
 
-        webdriver_mod = ModuleType("seleniumwire.webdriver")
+        class _FakeResponse:
+            def __init__(self, headers, body=b""):
+                self.headers = headers
+                self._body = body
 
-        class _FakeChromeOptions:
+            def body(self):
+                return self._body
+
+        class _FakePage:
+            def __init__(self, responses, page_source):
+                self._responses = [
+                    _FakeResponse(r, b"downloaded-bytes") if r.get("content-disposition") else _FakeResponse(r)
+                    for r in responses
+                ]
+                self._page_source = page_source
+                self.url = ""
+                self._response_callbacks = []
+
+            def goto(self, url, timeout=None, wait_until=None):
+                self.url = url
+                for callback in self._response_callbacks:
+                    for resp in self._responses:
+                        callback(resp)
+                return self._responses[0] if self._responses else None
+
+            def content(self):
+                return self._page_source
+
+        class _FakeContext:
             def __init__(self):
-                self.args = []
-                self.experimental = {}
+                self._callbacks = []
 
-            def add_argument(self, arg):
-                self.args.append(arg)
+            def on(self, event, callback):
+                if event == "response":
+                    self._callbacks.append(callback)
 
-            def add_experimental_option(self, key, value):
-                self.experimental[key] = value
+            def new_page(self):
+                page = queue.pop(0)
+                page._response_callbacks = self._callbacks
+                return page
 
-        class _Req:
-            def __init__(self, headers):
-                self.response = SimpleNamespace(headers=headers)
+        class _FakeBrowser:
+            def new_context(self):
+                return _FakeContext()
 
-        class _FakeDriver:
-            def __init__(self, requests, page_source):
-                self.requests = requests
-                self.page_source = page_source
-                self.quit_called = False
-                self.visited = []
-                self.options = None
+            def close(self):
+                return None
 
-            def get(self, url):
-                self.visited.append(url)
+        class _FakeChromium:
+            @staticmethod
+            def launch(headless=True, args=None):
+                return _FakeBrowser()
 
-            def quit(self):
-                self.quit_called = True
+        class _FakePlaywright:
+            def __enter__(self):
+                return self
 
-        queue = []
-        created = []
+            def __exit__(self, exc_type, exc, tb):
+                return False
 
-        def _fake_chrome(options=None):
-            driver = queue.pop(0)
-            driver.options = options
-            created.append(driver)
-            return driver
+            chromium = _FakeChromium()
 
-        webdriver_mod.Chrome = _fake_chrome
-        webdriver_mod.ChromeOptions = _FakeChromeOptions
+        def _fake_sync_playwright():
+            return _FakePlaywright()
 
-        seleniumwire_mod = ModuleType("seleniumwire")
-        seleniumwire_mod.webdriver = webdriver_mod
-        monkeypatch.setitem(sys.modules, "seleniumwire", seleniumwire_mod)
-        monkeypatch.setitem(sys.modules, "seleniumwire.webdriver", webdriver_mod)
+        monkeypatch.setitem(sys.modules, "playwright", ModuleType("playwright"))
+        sync_playwright_mod = ModuleType("playwright.sync_api")
+        sync_playwright_mod.sync_playwright = _fake_sync_playwright
+        monkeypatch.setitem(sys.modules, "playwright.sync_api", sync_playwright_mod)
+
         monkeypatch.setattr(module, "get_project_base_directory", lambda: str(tmp_path))
         monkeypatch.setattr(module, "is_valid_url", lambda _url: True)
+
+        queue = []
 
         class _Parser:
             def parser_txt(self, page_source):
@@ -417,7 +442,7 @@ class TestDocumentsUploadUnit:
                 return ["section1", "section2"]
 
         monkeypatch.setattr(module, "RAGFlowHtmlParser", lambda: _Parser())
-        queue.append(_FakeDriver([_Req({"x": "1"}), _Req({"y": "2"})], "<html>page</html>"))
+        queue.append(_FakePage([{"x": "1"}, {"y": "2"}], "<html>page</html>"))
 
         async def req_url_html():
             return {"url": "http://example.com/html"}
@@ -426,11 +451,10 @@ class TestDocumentsUploadUnit:
         res = _run(module.parse())
         assert res["code"] == 0
         assert res["data"] == "section1\nsection2"
-        assert created[-1].quit_called is True
 
         (tmp_path / "logs" / "downloads").mkdir(parents=True, exist_ok=True)
         (tmp_path / "logs" / "downloads" / "doc.txt").write_bytes(b"downloaded-bytes")
-        queue.append(_FakeDriver([_Req({"content-disposition": 'attachment; filename="doc.txt"'})], "<html>file</html>"))
+        queue.append(_FakePage([{"content-disposition": 'attachment; filename="doc.txt"'}], "<html>file</html>"))
         captured = {}
 
         def parse_docs_read(files, _uid):

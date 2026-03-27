@@ -1,4 +1,4 @@
-import { IconFont } from '@/components/icon-font';
+import { IconFont } from '@/components/icons/icon-font';
 import { ComparisonOperator, SwitchOperatorOptions } from '@/constants/agent';
 import { cn } from '@/lib/utils';
 import { useMemo } from 'react';

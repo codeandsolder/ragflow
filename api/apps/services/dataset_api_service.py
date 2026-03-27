@@ -275,6 +275,7 @@ def list_datasets(tenant_id: str, args: dict):
     name = args.get("name")
     page = int(args.get("page", 1))
     page_size = int(args.get("page_size", 30))
+    cursor = args.get("cursor")
     ext_fields = args.get("ext", {})
     parser_id = ext_fields.get("parser_id")
     keywords = ext_fields.get("keywords", "")
@@ -301,7 +302,22 @@ def list_datasets(tenant_id: str, args: dict):
     else:
         tenants = TenantService.get_joined_tenants_by_user_id(tenant_id)
         tenant_ids = [m["tenant_id"] for m in tenants]
-    kbs, total = KnowledgebaseService.get_list(tenant_ids, tenant_id, page, page_size, orderby, desc, kb_id, name, keywords, parser_id)
+    if cursor:
+        kbs, next_cursor = KnowledgebaseService.get_list_with_cursor(
+            tenant_ids,
+            tenant_id,
+            page_size or 30,
+            cursor,
+            orderby,
+            desc,
+            kb_id,
+            name,
+            keywords,
+            parser_id,
+        )
+    else:
+        kbs, total = KnowledgebaseService.get_list(tenant_ids, tenant_id, page, page_size, orderby, desc, kb_id, name, keywords, parser_id)
+        next_cursor = None
     users = UserService.get_by_ids([m["tenant_id"] for m in kbs])
     user_map = {m.id: m.to_dict() for m in users}
     response_data_list = []
@@ -309,7 +325,7 @@ def list_datasets(tenant_id: str, args: dict):
         user_dict = user_map.get(kb["tenant_id"], {})
         kb.update({"nickname": user_dict.get("nickname", ""), "tenant_avatar": user_dict.get("avatar", "")})
         response_data_list.append(remap_dictionary_keys(kb))
-    return True, {"data": response_data_list, "total": total}
+    return True, {"data": response_data_list, "total": total, "cursor": next_cursor}
 
 
 async def get_knowledge_graph(dataset_id: str, tenant_id: str):

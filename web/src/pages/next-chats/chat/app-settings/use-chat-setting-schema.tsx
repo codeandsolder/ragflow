@@ -1,3 +1,4 @@
+import { topnSchema } from '@/components/knowledge/top-n-item';
 import {
   LlmSettingEnabledSchema,
   LlmSettingFieldSchema,
@@ -8,7 +9,6 @@ import {
   similarityThresholdSchema,
   vectorSimilarityWeightSchema,
 } from '@/components/similarity-slider';
-import { topnSchema } from '@/components/top-n-item';
 import { useTranslate } from '@/hooks/common-hooks';
 import { z } from 'zod';
 

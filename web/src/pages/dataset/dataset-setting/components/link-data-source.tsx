@@ -1,4 +1,4 @@
-import { IconFontFill } from '@/components/icon-font';
+import { IconFontFill } from '@/components/icons/icon-font';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {

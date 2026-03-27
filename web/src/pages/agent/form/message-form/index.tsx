@@ -1,4 +1,5 @@
-import { MemoriesFormField } from '@/components/memories-form-field';
+import { WebHookResponseStatusFormField } from '@/components/file-upload/webhook-response-status';
+import { MemoriesFormField } from '@/components/form-fields/memories-form-field';
 import { BlockButton, Button } from '@/components/ui/button';
 import {
   Form,
@@ -10,7 +11,6 @@ import {
 } from '@/components/ui/form';
 import { RAGFlowSelect } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { WebHookResponseStatusFormField } from '@/components/webhook-response-status';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { X } from 'lucide-react';
 import { memo } from 'react';

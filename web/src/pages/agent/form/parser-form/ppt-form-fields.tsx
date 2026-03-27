@@ -1,9 +1,9 @@
-import { ParseDocumentType } from '@/components/layout-recognize-form-field';
+import { ParseDocumentType } from '@/components/form-fields/layout-recognize-form-field';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
 import {
   SelectWithSearch,
   SelectWithSearchFlagOptionType,
 } from '@/components/originui/select-with-search';
-import { RAGFlowFormItem } from '@/components/ragflow-form';
 import { isEmpty } from 'lodash';
 import { useEffect, useMemo } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';

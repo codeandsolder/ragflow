@@ -1,4 +1,4 @@
-import SvgIcon from '@/components/svg-icon';
+import SvgIcon from '@/components/icons/svg-icon';
 import { useAuth } from '@/hooks/auth-hooks';
 import {
   useLogin,

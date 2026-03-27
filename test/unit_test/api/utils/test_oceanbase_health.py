@@ -1,18 +1,18 @@
 #
-#  Copyright 2025 The InfiniFlow Authors. All Rights Reserved.
+# Copyright 2025 The InfiniFlow Authors. All Rights Reserved.
 #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 Unit tests for OceanBase health check and performance monitoring functionality.
 """
@@ -31,7 +31,7 @@ class TestOceanBaseHealthCheck:
 
     @patch("api.utils.health_utils.OBConnection")
     @patch.dict(os.environ, {"DOC_ENGINE": "oceanbase"})
-    def test_health_utils.get_oceanbase_status_success(self, mock_ob_class):
+    def test_get_oceanbase_status_success(self, mock_ob_class):
         """Test successful OceanBase status retrieval."""
         # Setup mock
         mock_ob_connection = Mock()
@@ -61,7 +61,7 @@ class TestOceanBaseHealthCheck:
         assert result["message"]["performance"]["latency_ms"] == 5.2
 
     @patch.dict(os.environ, {"DOC_ENGINE": "elasticsearch"})
-    def test_health_utils.get_oceanbase_status_not_configured(self):
+    def test_get_oceanbase_status_not_configured(self):
         """Test OceanBase status when not configured."""
         with pytest.raises(Exception) as exc_info:
             health_utils.get_oceanbase_status()
@@ -69,7 +69,7 @@ class TestOceanBaseHealthCheck:
 
     @patch("api.utils.health_utils.OBConnection")
     @patch.dict(os.environ, {"DOC_ENGINE": "oceanbase"})
-    def test_health_utils.get_oceanbase_status_connection_error(self, mock_ob_class):
+    def test_get_oceanbase_status_connection_error(self, mock_ob_class):
         """Test OceanBase status when connection fails."""
         mock_ob_class.side_effect = Exception("Connection failed")
 
@@ -80,7 +80,7 @@ class TestOceanBaseHealthCheck:
 
     @patch("api.utils.health_utils.OBConnection")
     @patch.dict(os.environ, {"DOC_ENGINE": "oceanbase"})
-    def test_health_utils.check_oceanbase_health_healthy(self, mock_ob_class):
+    def test_check_oceanbase_health_healthy(self, mock_ob_class):
         """Test OceanBase health check returns healthy status."""
         mock_ob_connection = Mock()
         mock_ob_connection.health.return_value = {"uri": "localhost:2881", "version_comment": "OceanBase 4.3.5.1", "status": "healthy", "connection": "connected"}
@@ -105,7 +105,7 @@ class TestOceanBaseHealthCheck:
 
     @patch("api.utils.health_utils.OBConnection")
     @patch.dict(os.environ, {"DOC_ENGINE": "oceanbase"})
-    def test_health_utils.check_oceanbase_health_degraded(self, mock_ob_class):
+    def test_check_oceanbase_health_degraded(self, mock_ob_class):
         """Test OceanBase health check returns degraded status for high latency."""
         mock_ob_connection = Mock()
         mock_ob_connection.health.return_value = {"uri": "localhost:2881", "version_comment": "OceanBase 4.3.5.1", "status": "healthy", "connection": "connected"}
@@ -128,7 +128,7 @@ class TestOceanBaseHealthCheck:
 
     @patch("api.utils.health_utils.OBConnection")
     @patch.dict(os.environ, {"DOC_ENGINE": "oceanbase"})
-    def test_health_utils.check_oceanbase_health_unhealthy(self, mock_ob_class):
+    def test_check_oceanbase_health_unhealthy(self, mock_ob_class):
         """Test OceanBase health check returns unhealthy status."""
         mock_ob_connection = Mock()
         mock_ob_connection.health.return_value = {"uri": "localhost:2881", "status": "unhealthy", "connection": "disconnected", "error": "Connection timeout"}
@@ -142,7 +142,7 @@ class TestOceanBaseHealthCheck:
         assert "error" in result["details"]
 
     @patch.dict(os.environ, {"DOC_ENGINE": "elasticsearch"})
-    def test_health_utils.check_oceanbase_health_not_configured(self):
+    def test_check_oceanbase_health_not_configured(self):
         """Test OceanBase health check when not configured."""
         result = health_utils.check_oceanbase_health()
 

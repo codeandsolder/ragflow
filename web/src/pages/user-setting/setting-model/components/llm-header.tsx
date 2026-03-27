@@ -1,4 +1,4 @@
-import { LlmIcon } from '@/components/svg-icon';
+import { LlmIcon } from '@/components/icons/svg-icon';
 import { Button } from '@/components/ui/button';
 import { APIMapUrl } from '@/constants/llm';
 import { t } from 'i18next';

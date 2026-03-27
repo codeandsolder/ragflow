@@ -1,5 +1,5 @@
 import DocumentPreview from '@/components/document-preview';
-import { FileIcon } from '@/components/icon-font';
+import { FileIcon } from '@/components/icons/icon-font';
 import { Modal } from '@/components/ui/modal/modal';
 import {
   useGetChunkHighlights,

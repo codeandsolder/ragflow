@@ -206,6 +206,46 @@ class LayoutRecognizer4YOLOv10(LayoutRecognizer):
 
         return inputs
 
+    def _batch_infer(self, inputs_list, thr):
+        if not inputs_list:
+            return []
+        batch_tensor = np.concatenate([inp[self.input_names[0]] for inp in inputs_list], axis=0)
+        outputs = self.ort_sess.run(None, {self.input_names[0]: batch_tensor}, self.run_options)
+        batch_output = outputs[0]
+        results = []
+        for i, inp in enumerate(inputs_list):
+            if i < batch_output.shape[0]:
+                results.append(self.postprocess(batch_output[i], inp, thr))
+            else:
+                results.append([])
+        return results
+
+    def forward(self, image_list, thr=0.7, batch_size=16):
+        res = []
+        images = [np.array(img) if not isinstance(img, np.ndarray) else img for img in image_list]
+
+        batch_loop_cnt = math.ceil(float(len(images)) / batch_size)
+        for i in range(batch_loop_cnt):
+            start_index = i * batch_size
+            end_index = min((i + 1) * batch_size, len(images))
+            batch_image_list = images[start_index:end_index]
+            inputs_list = self.preprocess(batch_image_list)
+            try:
+                batch_results = self._batch_infer(inputs_list, thr)
+                res.extend(batch_results)
+            except Exception as e:
+                logging.warning(f"Batch inference failed, falling back to individual processing: {e}")
+                for inp in inputs_list:
+                    try:
+                        output = self.ort_sess.run(None, {self.input_names[0]: inp[self.input_names[0]]}, self.run_options)
+                        bb = self.postprocess(output[0], inp, thr)
+                        res.append(bb)
+                    except Exception as e2:
+                        logging.error(f"Individual inference also failed: {e2}")
+                        res.append([])
+
+        return res
+
     def postprocess(self, boxes, inputs, thr):
         thr = 0.08
         boxes = np.squeeze(boxes)

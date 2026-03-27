@@ -108,10 +108,10 @@ The [.env](./.env) file contains important environment variables for Docker.
   The port used to expose the MinIO console interface to the host machine, allowing **external** access to the web-based console running inside the Docker container. Defaults to `9001`
 - `MINIO_PORT`  
   The port used to expose the MinIO API service to the host machine, allowing **external** access to the MinIO object storage service running inside the Docker container. Defaults to `9000`.
-- `MINIO_USER`  
-  The username for MinIO.
-- `MINIO_PASSWORD`  
-  The password for MinIO.
+- `MINIO_USER`
+The username for MinIO.
+- `MINIO_PASSWORD`
+The password for MinIO.
 
 ### Redis
 
@@ -122,48 +122,15 @@ The [.env](./.env) file contains important environment variables for Docker.
 
 ### RAGFlow
 
-- `SVR_HTTP_PORT`  
-  The port used to expose RAGFlow's HTTP API service to the host machine, allowing **external** access to the service running inside the Docker container. Defaults to `9380`.
-- `RAGFLOW-IMAGE`  
-  The Docker image edition. Defaults to `infiniflow/ragflow:v0.24.0`. The RAGFlow Docker image does not include embedding models.
+- `SVR_HTTP_PORT`
+The port used to expose RAGFlow's HTTP API service to the host machine, allowing **external** access to the service running inside the Docker container. Defaults to `9380`.
+- `RAGFLOW-IMAGE`
+The Docker image edition. Defaults to `infiniflow/ragflow:v0.24.0`. The RAGFlow Docker image does not include embedding models.
 
-  
-> [!TIP]  
-> If you cannot download the RAGFlow Docker image, try the following mirrors.  
-> 
-> - For the `nightly` edition:  
->   - `RAGFLOW_IMAGE=swr.cn-north-4.myhuaweicloud.com/infiniflow/ragflow:nightly` or,
->   - `RAGFLOW_IMAGE=registry.cn-hangzhou.aliyuncs.com/infiniflow/ragflow:nightly`.
+### Docling
 
-### Timezone
-
-- `TZ`  
-  The local time zone. Defaults to `'Asia/Shanghai'`.
-
-### Hugging Face mirror site
-
-- `HF_ENDPOINT`  
-  The mirror site for huggingface.co. It is disabled by default. You can uncomment this line if you have limited access to the primary Hugging Face domain.
-
-### MacOS
-
-- `MACOS`  
-  Optimizations for macOS. It is disabled by default. You can uncomment this line if your OS is macOS.
-
-### Maximum file size
-
-- `MAX_CONTENT_LENGTH`  
-  The maximum file size for each uploaded file, in bytes. You can uncomment this line if you wish to change the 128M file size limit. After making the change, ensure you update `client_max_body_size` in nginx/nginx.conf correspondingly.
-
-### Doc bulk size
-
-- `DOC_BULK_SIZE`  
-  The number of document chunks processed in a single batch during document parsing. Defaults to `4`.
-
-### Embedding batch size
-
-- `EMBEDDING_BATCH_SIZE`  
-  The number of text chunks processed in a single batch during embedding vectorization. Defaults to `16`.
+- `USE_DOCLING`
+Controls whether the docling PDF parser is enabled. Defaults to `true` in the Docker image (docling is pre-installed). Set to `false` to disable docling functionality. The package must be built into the Docker image using `--build-arg USE_DOCLING=true`.
 
 ## 🐋 Service configuration
 

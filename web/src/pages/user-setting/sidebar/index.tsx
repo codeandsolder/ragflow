@@ -1,5 +1,5 @@
-import { IconFontFill } from '@/components/icon-font';
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+import { IconFontFill } from '@/components/icons/icon-font';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
 import ThemeSwitch from '@/components/theme-switch';
 import { Button } from '@/components/ui/button';
 import { Domain } from '@/constants/common';

@@ -11,7 +11,7 @@ import {
   FileUploadList,
   FileUploadTrigger,
   type FileUploadProps,
-} from '@/components/file-upload';
+} from '@/components/file-upload/file-upload';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';

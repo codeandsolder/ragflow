@@ -21,7 +21,6 @@ These tests read module content to verify expected patterns.
 """
 
 import ast
-import os
 from pathlib import Path
 
 
@@ -203,6 +202,3 @@ class TestTaskExecutorImports:
         content = module_path.read_text()
 
         assert "from common" in content
-
-
-import pytest

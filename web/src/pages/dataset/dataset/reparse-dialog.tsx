@@ -1,10 +1,10 @@
-import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
+import { ConfirmDeleteDialog } from '@/components/dialogs/confirm-delete-dialog';
 import {
   DynamicForm,
   DynamicFormRef,
   FormFieldConfig,
   FormFieldType,
-} from '@/components/dynamic-form';
+} from '@/components/form-fields/dynamic-form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DialogProps } from '@radix-ui/react-dialog';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';

@@ -1,4 +1,7 @@
-import { FormFieldType, RenderField } from '@/components/dynamic-form';
+import {
+  FormFieldType,
+  RenderField,
+} from '@/components/form-fields/dynamic-form';
 import { SingleFormSlider } from '@/components/ui/dual-range-slider';
 import { NumberInput } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

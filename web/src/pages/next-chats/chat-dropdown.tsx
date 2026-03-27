@@ -1,7 +1,7 @@
 import {
   ConfirmDeleteDialog,
   ConfirmDeleteDialogNode,
-} from '@/components/confirm-delete-dialog';
+} from '@/components/dialogs/confirm-delete-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,

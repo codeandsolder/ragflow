@@ -74,7 +74,7 @@ class TestDeserializeB64:
         assert result == test_data
 
     @patch("api.utils.configs.get_base_config")
-    def test_deserialize_with_configs.safe_module_disabled(self, mock_config):
+    def test_deserialize_with_configs_safe_module_disabled(self, mock_config):
         """Test deserialization with safe module checking disabled"""
         mock_config.return_value = False
 

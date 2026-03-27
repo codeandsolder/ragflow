@@ -16,8 +16,8 @@ import {
 import DocumentHeader from '@/components/document-preview/document-header';
 
 import { useGetDocumentUrl } from '@/components/document-preview/hooks';
+import { PageHeader } from '@/components/layout/page-header';
 import { TimelineNode } from '@/components/originui/timeline';
-import { PageHeader } from '@/components/page-header';
 import Spotlight from '@/components/spotlight';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal/modal';

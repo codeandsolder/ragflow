@@ -1,5 +1,5 @@
 // src/components/ProfilePage.tsx
-import { AvatarUpload } from '@/components/avatar-upload';
+import { AvatarUpload } from '@/components/icons/avatar-upload';
 import PasswordInput from '@/components/originui/password-input';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
 import Spotlight from '@/components/spotlight';

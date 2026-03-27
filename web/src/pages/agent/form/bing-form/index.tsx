@@ -1,5 +1,5 @@
+import { TopNFormField } from '@/components/knowledge/top-n-item';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
-import { TopNFormField } from '@/components/top-n-item';
 import {
   Form,
   FormControl,

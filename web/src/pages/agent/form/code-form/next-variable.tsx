@@ -1,6 +1,6 @@
 'use client';
 
-import { FormContainer } from '@/components/form-container';
+import { FormContainer } from '@/components/layout/form-container';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
 import { BlockButton, Button } from '@/components/ui/button';
 import {

@@ -456,6 +456,60 @@ class KnowledgebaseService(CommonService):
 
     @classmethod
     @DB.connection_context()
+    def get_list_with_cursor(
+        cls,
+        joined_tenant_ids,
+        user_id,
+        limit,
+        cursor,
+        orderby,
+        desc,
+        id=None,
+        name=None,
+        keywords=None,
+        parser_id=None,
+    ):
+        kbs = cls.model.select()
+        if id:
+            kbs = kbs.where(cls.model.id == id)
+        if name:
+            kbs = kbs.where(cls.model.name == name)
+        if keywords:
+            kbs = kbs.where(fn.LOWER(cls.model.name).contains(keywords.lower()))
+        if parser_id:
+            kbs = kbs.where(cls.model.parser_id == parser_id)
+
+        kbs = kbs.where(
+            ((cls.model.tenant_id.in_(joined_tenant_ids) & (cls.model.permission == TenantPermission.TEAM.value)) | (cls.model.tenant_id == user_id)) & (cls.model.status == StatusEnum.VALID.value)
+        )
+
+        order_field = cls.model.getter_by(orderby)
+        id_field = cls.model.f_id
+
+        if desc:
+            if cursor:
+                cursor_order_val, cursor_id = cursor.split(":", 1)
+                kbs = kbs.where((order_field < cursor_order_val) | ((order_field == cursor_order_val) & (id_field < cursor_id)))
+            kbs = kbs.order_by(order_field.desc(), id_field.desc())
+        else:
+            if cursor:
+                cursor_order_val, cursor_id = cursor.split(":", 1)
+                kbs = kbs.where((order_field > cursor_order_val) | ((order_field == cursor_order_val) & (id_field > cursor_id)))
+            kbs = kbs.order_by(order_field.asc(), id_field.asc())
+
+        kbs = kbs.limit(limit)
+        kbs_list = list(kbs.dicts())
+
+        next_cursor = None
+        if kbs_list:
+            last_kb = kbs_list[-1]
+            last_order_val = last_kb.get(orderby)
+            next_cursor = f"{last_order_val}:{last_kb['id']}"
+
+        return kbs_list, next_cursor
+
+    @classmethod
+    @DB.connection_context()
     def accessible(cls, kb_id, user_id):
         # Check if a dataset is accessible by a user
         # Args:

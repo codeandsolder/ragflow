@@ -15,7 +15,7 @@ import {
 
 import { Routes } from '@/routes';
 
-import { RAGFlowAvatar } from '@/components/ragflow-avatar';
+import { RAGFlowAvatar } from '@/components/icons/ragflow-avatar';
 import Spotlight from '@/components/spotlight';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

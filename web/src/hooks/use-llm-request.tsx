@@ -1,4 +1,4 @@
-import { LlmIcon } from '@/components/svg-icon';
+import { LlmIcon } from '@/components/icons/svg-icon';
 import message from '@/components/ui/message';
 import { LlmModelType } from '@/constants/knowledge';
 import { DefaultOptionType } from '@/interfaces/antd-compat';

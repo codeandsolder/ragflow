@@ -19,8 +19,8 @@ import {
 import { ZodSchema, z } from 'zod';
 
 import EditTag from '@/components/edit-tag';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
-import { RAGFlowFormItem } from '@/components/ragflow-form';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Form,

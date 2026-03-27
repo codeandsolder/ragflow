@@ -1,4 +1,7 @@
-import { FormFieldType, RenderField } from '@/components/dynamic-form';
+import {
+  FormFieldType,
+  RenderField,
+} from '@/components/form-fields/dynamic-form';
 import { useModelOptions } from '@/components/llm-setting-items/llm-form-field';
 import { EmbeddingSelect } from '@/pages/dataset/dataset-setting/configuration/common-item';
 import { MemoryOptions, MemoryType } from '@/pages/memories/constants';

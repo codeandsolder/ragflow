@@ -4,8 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
-import { CrossLanguageFormField } from '@/components/cross-language-form-field';
-import { FormContainer } from '@/components/form-container';
+import { CrossLanguageFormField } from '@/components/form-fields/cross-language-form-field';
+import { UseKnowledgeGraphFormField } from '@/components/knowledge/use-knowledge-graph-item';
+import { FormContainer } from '@/components/layout/form-container';
 import {
   MetadataFilter,
   MetadataFilterSchema,
@@ -31,7 +32,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
-import { UseKnowledgeGraphFormField } from '@/components/use-knowledge-graph-item';
 import { useTestRetrieval } from '@/hooks/use-knowledge-request';
 import { trim } from 'lodash';
 import { Send } from 'lucide-react';

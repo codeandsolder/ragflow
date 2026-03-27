@@ -2,7 +2,7 @@ import { Form } from '@/components/ui/form';
 import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { useForm } from 'react-hook-form';
 
-import { NodeCollapsible } from '@/components/collapse';
+import { NodeCollapsible } from '@/components/layout/collapse';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
@@ -89,7 +89,7 @@ By default, the NodeCollapsible component shows the first 3 items and collapses 
 A toggle button appears at the bottom when there are more than 3 items.
 
 \`\`\`tsx
-import { NodeCollapsible } from '@/components/collapse';
+import { NodeCollapsible } from '@/components/layout/collapse';
 
 <NodeCollapsible 
   items={[

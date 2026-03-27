@@ -1,7 +1,7 @@
 // src/pages/next-search/search-setting.tsx
 
-import { AvatarUpload } from '@/components/avatar-upload';
-import { KnowledgeBaseFormField } from '@/components/knowledge-base-item';
+import { AvatarUpload } from '@/components/icons/avatar-upload';
+import { KnowledgeBaseFormField } from '@/components/knowledge/knowledge-base-item';
 import {
   LlmSettingFieldItems,
   LlmSettingSchema,

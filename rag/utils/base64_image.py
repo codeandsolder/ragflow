@@ -93,6 +93,10 @@ async def image2id(d: dict, storage_put_func: partial, objname: str, bucket: str
 def id2image(image_id: str | None, storage_get_func: partial):
     if not image_id:
         return
+    return _sync_id2image(image_id, storage_get_func)
+
+
+def _sync_id2image(image_id: str | None, storage_get_func: partial):
     arr = image_id.split("-")
     if len(arr) != 2:
         return
@@ -104,3 +108,24 @@ def id2image(image_id: str | None, storage_get_func: partial):
         return Image.open(BytesIO(blob))
     except Exception as e:
         logging.exception(e)
+
+
+async def async_id2image(image_id: str | None, storage_get_func: partial):
+    if not image_id:
+        return None
+    arr = image_id.split("-")
+    if len(arr) != 2:
+        return None
+    bkt, nm = image_id.split("-")
+    try:
+
+        def _get_blob():
+            return storage_get_func(bucket=bkt, fnm=nm)
+
+        blob = await thread_pool_exec(_get_blob)
+        if not blob:
+            return None
+        return Image.open(BytesIO(blob))
+    except Exception as e:
+        logging.exception(e)
+        return None

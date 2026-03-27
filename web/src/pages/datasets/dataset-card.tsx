@@ -1,12 +1,12 @@
-import { HomeCard } from '@/components/home-card';
+import { HomeCard } from '@/components/layout/home-card';
 import { MoreButton } from '@/components/more-button';
 import { SharedBadge } from '@/components/shared-badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useNavigatePage } from '@/hooks/logic-hooks/navigate-hooks';
 import { IKnowledge } from '@/interfaces/database/knowledge';
-import { memo } from 'react';
 import { t } from 'i18next';
 import { ChevronRight } from 'lucide-react';
+import { memo } from 'react';
 import { DatasetDropdown } from './dataset-dropdown';
 import { useRenameDataset } from './use-rename-dataset';
 

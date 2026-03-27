@@ -1,4 +1,4 @@
-import { FormContainer } from '@/components/form-container';
+import { FormContainer } from '@/components/layout/form-container';
 import NumberInput from '@/components/originui/number-input';
 import { SelectWithSearch } from '@/components/originui/select-with-search';
 import {

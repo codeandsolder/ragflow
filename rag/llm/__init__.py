@@ -180,6 +180,14 @@ for module_name, mapping_dict in MODULE_MAPPING.items():
                     mapping_dict[obj._FACTORY_NAME] = obj
 
 
+embedding_model = EmbeddingModel
+rerank_model = RerankModel
+chat_model = ChatModel
+cv_model = CvModel
+seq2txt_model = Seq2txtModel
+tts_model = TTSModel
+ocr_model = OcrModel
+
 __all__ = [
     "ChatModel",
     "CvModel",
@@ -188,4 +196,11 @@ __all__ = [
     "Seq2txtModel",
     "TTSModel",
     "OcrModel",
+    "embedding_model",
+    "rerank_model",
+    "chat_model",
+    "cv_model",
+    "seq2txt_model",
+    "tts_model",
+    "ocr_model",
 ]

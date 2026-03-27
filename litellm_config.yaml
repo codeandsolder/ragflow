@@ -1,0 +1,159 @@
+# LiteLLM Configuration with All Providers and Dynamic Discovery
+# Supports OpenAI, Anthropic, v1beta, and custom OpenAI-compatible endpoints
+
+general_settings:
+  master_key: ${LITELLM_MASTER_KEY}
+  check_provider_endpoint: true
+
+litellm_settings:
+  check_provider_endpoint: true
+  drop_params: true
+
+model_list:
+  # OpenAI Compatible Models (v1 endpoints)
+  - model_name: "openai/*"
+    litellm_params:
+      model: "openai/*"
+      api_key: "os.environ/OPENAI_API_KEY"
+
+  # Anthropic Models (v1beta and native)
+  - model_name: "anthropic/*"
+    litellm_params:
+      model: "anthropic/*"
+      api_key: "os.environ/ANTHROPIC_API_KEY"
+
+  # Google Gemini Models
+  - model_name: "gemini/*"
+    litellm_params:
+      model: "gemini/*"
+      api_key: "os.environ/GEMINI_API_KEY"
+
+  # Azure OpenAI Models
+  - model_name: "azure/*"
+    litellm_params:
+      model: "azure/*"
+      api_key: "os.environ/AZURE_API_KEY"
+      api_base: "os.environ/AZURE_API_BASE"
+      api_version: "os.environ/AZURE_API_VERSION"
+
+  # Amazon Bedrock Models
+  - model_name: "bedrock/*"
+    litellm_params:
+      model: "bedrock/*"
+      api_key: "os.environ/AWS_SECRET_ACCESS_KEY"
+      aws_access_key_id: "os.environ/AWS_ACCESS_KEY_ID"
+      aws_region_name: "os.environ/AWS_REGION_NAME"
+
+  # Groq Models
+  - model_name: "groq/*"
+    litellm_params:
+      model: "groq/*"
+      api_key: "os.environ/GROQ_API_KEY"
+
+  # Together AI Models
+  - model_name: "togetherai/*"
+    litellm_params:
+      model: "together_ai/*"
+      api_key: "os.environ/TOGETHERAI_API_KEY"
+
+  # DeepInfra Models
+  - model_name: "deepinfra/*"
+    litellm_params:
+      model: "deepinfra/*"
+      api_key: "os.environ/DEEPINFRA_API_KEY"
+
+  # Perplexity AI Models
+  - model_name: "perplexity/*"
+    litellm_params:
+      model: "perplexity/*"
+      api_key: "os.environ/PERPLEXITY_API_KEY"
+
+  # Fireworks AI Models
+  - model_name: "fireworks/*"
+    litellm_params:
+      model: "fireworks/*"
+      api_key: "os.environ/FIREWORKS_API_KEY"
+
+  # XAI (Grok) Models
+  - model_name: "xai/*"
+    litellm_params:
+      model: "xai/*"
+      api_key: "os.environ/XAI_API_KEY"
+
+  # DeepSeek Models
+  - model_name: "deepseek/*"
+    litellm_params:
+      model: "deepseek/*"
+      api_key: "os.environ/DEEPSEEK_API_KEY"
+
+  # OpenRouter Models (with ModelRelay support)
+  - model_name: "openrouter/*"
+    litellm_params:
+      model: "openrouter/*"
+      api_key: "os.environ/OPENROUTER_API_KEY"
+
+  # ModelRelay Configuration (combines free API tokens)
+  - model_name: "modelrelay/*"
+    litellm_params:
+      model: "openai/*"
+      api_base: "os.environ/MODELRELAY_BASE_URL"
+      api_key: "os.environ/MODELRELAY_API_KEY"
+
+  # Ollama (local models)
+  - model_name: "ollama/*"
+    litellm_params:
+      model: "ollama_chat/*"
+      api_base: "os.environ/OLLAMA_BASE_URL"
+
+  # Custom OpenAI-Compatible Endpoints (vLLM, etc.)
+  - model_name: "custom/*"
+    litellm_params:
+      model: "openai/*"
+      api_base: "os.environ/CUSTOM_API_BASE"
+      api_key: "os.environ/CUSTOM_API_KEY"
+
+  # Global Catch-all (fallback to OpenAI)
+  - model_name: "*"
+    litellm_params:
+      model: "openai/*"
+      api_key: "os.environ/OPENAI_API_KEY"
+
+# Advanced Routing Configuration
+router_settings:
+  routing_strategy: "simple-shuffle"
+  # Options: simple-shuffle, least-busy, latency-based-routing, cost-based-routing, custom-shuffle
+
+# Rate Limiting
+rate_limit_settings:
+  global_rpm: 3600
+  global_tpm: 216000
+
+# Virtual Keys and Multi-Tenancy (for per-tenant API keys)
+virtual_key_settings:
+  enabled: true
+  default_ttl: 2592000  # 30 days
+
+# Health Checks
+health_check_settings:
+  enabled: true
+
+# Database for virtual key storage
+database:
+  url: "postgresql://litellm_user:${LITELLM_DB_PASSWORD}@litellm-db:5432/litellm"
+
+# Cache for responses
+litellm_settings:
+  cache: true
+  cache_params:
+    type: "redis"
+    host: "redis"
+    port: 6379
+
+# Request timeout settings
+timeout: 600
+
+# CORS settings
+litellm_settings:
+  cors_domain: "*"
+  cors_allowed_origins: ["*"]
+  cors_allow_credentials: true

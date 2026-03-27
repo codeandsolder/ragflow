@@ -1,4 +1,4 @@
-import { FileIcon } from '@/components/icon-font';
+import { FileIcon } from '@/components/icons/icon-font';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';

@@ -1,4 +1,4 @@
-import { FileUploadProps } from '@/components/file-upload';
+import { FileUploadProps } from '@/components/file-upload/file-upload';
 import {
   useGetChatSearchParams,
   useUploadAndParseFile,

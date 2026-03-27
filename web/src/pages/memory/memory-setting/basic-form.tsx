@@ -1,5 +1,5 @@
-import { AvatarUpload } from '@/components/avatar-upload';
-import { RAGFlowFormItem } from '@/components/ragflow-form';
+import { RAGFlowFormItem } from '@/components/form-fields/ragflow-form';
+import { AvatarUpload } from '@/components/icons/avatar-upload';
 import { Input } from '@/components/ui/input';
 import { t } from 'i18next';
 import { z } from 'zod';

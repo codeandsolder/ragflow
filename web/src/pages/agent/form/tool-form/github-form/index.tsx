@@ -1,5 +1,5 @@
-import { FormContainer } from '@/components/form-container';
-import { TopNFormField } from '@/components/top-n-item';
+import { TopNFormField } from '@/components/knowledge/top-n-item';
+import { FormContainer } from '@/components/layout/form-container';
 import { Form } from '@/components/ui/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { memo } from 'react';

@@ -2,7 +2,7 @@ import { useSetModalState } from '@/hooks/common-hooks';
 import { useNavigatePage } from '@/hooks/logic-hooks/navigate-hooks';
 import { useFetchAgentTemplates, useSetAgent } from '@/hooks/use-agent-request';
 
-import { CardContainer } from '@/components/card-container';
+import { CardContainer } from '@/components/layout/card-container';
 import { AgentCategory } from '@/constants/agent';
 import { IFlowTemplate } from '@/interfaces/database/agent';
 import { useCallback, useEffect, useMemo, useState } from 'react';

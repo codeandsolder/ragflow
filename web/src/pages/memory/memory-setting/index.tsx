@@ -1,4 +1,4 @@
-import { DynamicForm } from '@/components/dynamic-form';
+import { DynamicForm } from '@/components/form-fields/dynamic-form';
 import { Button } from '@/components/ui/button';
 import Divider from '@/components/ui/divider';
 import { Form } from '@/components/ui/form';
