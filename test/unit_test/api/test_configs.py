@@ -87,7 +87,7 @@ class TestDeserializeB64:
         mock_config.assert_called_once_with("use_deserialize_configs.safe_module", False)
 
     @patch("api.utils.configs.get_base_config")
-    def test_deserialize_with_configs.safe_module_enabled(self, mock_config):
+    def test_deserialize_with_safe_module_enabled(self, mock_config):
         """Test deserialization with safe module checking enabled"""
         mock_config.return_value = True
 
@@ -133,7 +133,7 @@ class TestRestrictedUnpickler:
             "simple string",
         ],
     )
-    def test_configs.restricted_loads_with_safe_data(self, test_data):
+    def test_restricted_loads_with_safe_data(self, test_data):
         """Test configs.restricted_loads with various safe data types"""
         pickled = pickle.dumps(test_data)
 
@@ -142,7 +142,7 @@ class TestRestrictedUnpickler:
         assert result == test_data
 
     @patch("api.utils.configs.get_base_config")
-    def test_blocks_unconfigs.safe_modules(self, mock_config):
+    def test_blocks_unsafe_modules(self, mock_config):
         """Test that unsafe modules are blocked"""
         mock_config.return_value = True
 
@@ -164,7 +164,7 @@ class TestRestrictedUnpickler:
             # If we can't create the unsafe pickle, skip this test
             pytest.skip("Unable to create unsafe pickle for testing")
 
-    def test_configs.safe_module_set_contains_expected_modules(self):
+    def test_safe_module_set_contains_expected_modules(self):
         """Test that configs.safe_module set contains expected modules"""
         assert "numpy" in configs.safe_module
         assert "rag_flow" in configs.safe_module

@@ -105,6 +105,12 @@ class DocumentService(CommonService):
 
         count = docs.count()
         DEFAULT_ITEMS_PER_PAGE = 100
+        MAX_ITEMS_PER_PAGE = 1000  # Prevent memory exhaustion
+
+        # Apply pagination limits
+        if items_per_page:
+            items_per_page = min(items_per_page, MAX_ITEMS_PER_PAGE)
+
         if page_number and items_per_page:
             docs = docs.paginate(page_number, items_per_page)
         elif page_number:
@@ -113,7 +119,6 @@ class DocumentService(CommonService):
             docs = docs.paginate(1, items_per_page)
         else:
             docs = docs.paginate(1, DEFAULT_ITEMS_PER_PAGE)
-
         docs_list = list(docs.dicts())
         doc_ids_on_page = [doc["id"] for doc in docs_list]
         metadata_map = DocMetadataService.get_metadata_for_documents(doc_ids_on_page, kb_id) if doc_ids_on_page else {}
@@ -137,6 +142,10 @@ class DocumentService(CommonService):
         run,
         doc_ids=None,
     ):
+        # Apply maximum limit to prevent memory exhaustion
+        MAX_LIMIT = 1000
+        limit = min(limit, MAX_LIMIT) if limit else MAX_LIMIT
+
         fields = cls.get_cls_model_fields()
         docs = (
             cls.model.select(*[*fields, UserCanvas.title])
@@ -174,7 +183,7 @@ class DocumentService(CommonService):
                 if orderby == "create_time":
                     cursor_order_val = int(cursor_order_val)
                 docs = docs.where((order_field > cursor_order_val) | ((order_field == cursor_order_val) & (id_field > cursor_id)))
-            docs = docs.order_by(order_field.asc(), id_field.asc())
+            docs = docs.order_by(orderby, id_field.asc())
 
         docs = docs.limit(limit)
         docs_list = list(docs.dicts())
@@ -251,6 +260,11 @@ class DocumentService(CommonService):
             docs = docs.order_by(cls.model.getter_by(orderby).asc())
 
         DEFAULT_ITEMS_PER_PAGE = 100
+        MAX_ITEMS_PER_PAGE = 1000  # Prevent memory exhaustion
+
+        # Apply pagination limits
+        if items_per_page:
+            items_per_page = min(items_per_page, MAX_ITEMS_PER_PAGE)
 
         if page_number and items_per_page:
             docs = docs.paginate(page_number, items_per_page)
@@ -288,6 +302,10 @@ class DocumentService(CommonService):
         doc_ids=None,
         return_empty_metadata=False,
     ):
+        # Apply maximum limit to prevent memory exhaustion
+        MAX_LIMIT = 1000
+        limit = min(limit, MAX_LIMIT) if limit else MAX_LIMIT
+
         fields = cls.get_cls_model_fields()
         if keywords:
             docs = (
@@ -302,8 +320,8 @@ class DocumentService(CommonService):
             docs = (
                 cls.model.select(*[*fields, UserCanvas.title.alias("pipeline_name"), User.nickname])
                 .join(File2Document, on=(File2Document.document_id == cls.model.id))
-                .join(UserCanvas, on=(cls.model.pipeline_id == UserCanvas.id), join_type=JOIN.LEFT_OUTER)
                 .join(File, on=(File.id == File2Document.file_id))
+                .join(UserCanvas, on=(cls.model.pipeline_id == UserCanvas.id), join_type=JOIN.LEFT_OUTER)
                 .join(User, on=(cls.model.created_by == User.id), join_type=JOIN.LEFT_OUTER)
                 .where(cls.model.kb_id == kb_id)
             )

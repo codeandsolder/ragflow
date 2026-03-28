@@ -234,7 +234,7 @@ async def create():
         return server_error_response(e)
 
 
-@manager.route("/list", methods=["POST"])  # noqa: F821
+@manager.route("/list", methods=["GET"])  # noqa: F821
 @login_required
 async def list_docs():
     kb_id = request.args.get("kb_id")
@@ -370,7 +370,7 @@ async def list_docs():
         return server_error_response(e)
 
 
-@manager.route("/filter", methods=["POST"])  # noqa: F821
+@manager.route("/filter", methods=["GET"])  # noqa: F821
 @login_required
 async def get_filter():
     req = await get_request_json()
@@ -402,7 +402,7 @@ async def get_filter():
         return server_error_response(e)
 
 
-@manager.route("/infos", methods=["POST"])  # noqa: F821
+@manager.route("/infos", methods=["GET"])  # noqa: F821
 @login_required
 async def doc_infos():
     req = await get_request_json()

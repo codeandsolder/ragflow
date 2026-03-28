@@ -61,7 +61,7 @@ services:
         soft: -1
         hard: -1
     healthcheck:
-      test: ["CMD-SHELL", "curl http://localhost:9201"]
+      test: ["CMD-SHELL", "eval curl http://localhost:9201"]
       interval: 10s
       timeout: 10s
       retries: 120
@@ -90,7 +90,7 @@ services:
     networks:
       - ragflow
     healthcheck:
-      test: ["CMD", "curl", "http://localhost:23820/admin/node/current"]
+      test: ["CMD-SHELL", "eval curl http://localhost:23820/admin/node/current"]
       interval: 10s
       timeout: 10s
       retries: 120
@@ -112,7 +112,7 @@ services:
       - OB_SERVER_IP=127.0.0.1
     mem_limit: ${MEM_LIMIT}
     healthcheck:
-      test: [ 'CMD-SHELL', 'obclient -h127.0.0.1 -P2881 -uroot@${OB_TENANT_NAME:-ragflow} -p${OCEANBASE_PASSWORD} -e "CREATE DATABASE IF NOT EXISTS ${OCEANBASE_DOC_DBNAME:-ragflow_doc};"' ]
+      test: ["CMD-SHELL", "eval obclient -h127.0.0.1 -P2881 -uroot@${OB_TENANT_NAME:-ragflow} -p$OCEANBASE_PASSWORD -e \"CREATE DATABASE IF NOT EXISTS ${OCEANBASE_DOC_DBNAME:-ragflow_doc};\""]
       interval: 10s
       retries: 30
       start_period: 30s
@@ -137,7 +137,7 @@ services:
       - REPORTER=ragflow-seekdb
     mem_limit: ${MEM_LIMIT}
     healthcheck:
-      test: ['CMD-SHELL', 'mysql -h127.0.0.1 -P2881 -uroot -p${SEEKDB_PASSWORD} -e "CREATE DATABASE IF NOT EXISTS ${SEEKDB_DOC_DBNAME:-ragflow_doc};"']
+      test: ["CMD-SHELL", "eval mysql -h127.0.0.1 -P2881 -uroot -p$SEEKDB_PASSWORD -e \"CREATE DATABASE IF NOT EXISTS ${SEEKDB_DOC_DBNAME:-ragflow_doc};\""]
       interval: 5s
       retries: 60
       timeout: 5s
@@ -174,7 +174,7 @@ services:
       - SANDBOX_MAX_MEMORY=${SANDBOX_MAX_MEMORY:-256m}
       - SANDBOX_TIMEOUT=${SANDBOX_TIMEOUT:-10s}
     healthcheck:
-      test: ["CMD", "curl", "http://localhost:9385/healthz"]
+      test: ["CMD-SHELL", "eval curl http://localhost:9385/healthz"]
       interval: 10s
       timeout: 10s
       retries: 120
@@ -202,7 +202,7 @@ services:
     networks:
       - ragflow
     healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-uroot", "-p${MYSQL_PASSWORD}"]
+      test: ["CMD-SHELL", "eval mysqladmin ping -uroot -p$MYSQL_PASSWORD"]
       interval: 10s
       timeout: 10s
       retries: 120
@@ -224,7 +224,7 @@ services:
       - ragflow
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD-SHELL", "eval curl http://localhost:9000/minio/health/live"]
       interval: 10s
       timeout: 10s
       retries: 120
@@ -242,7 +242,7 @@ services:
       - ragflow
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD-SHELL", "eval redis-cli -a $REDIS_PASSWORD ping"]
       interval: 10s
       timeout: 10s
       retries: 120
@@ -296,7 +296,7 @@ services:
       es01:
         condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5601/api/status"]
+      test: ["CMD-SHELL", "eval curl http://localhost:5601/api/status"]
       interval: 10s
       timeout: 10s
       retries: 120

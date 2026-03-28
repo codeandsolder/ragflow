@@ -24,17 +24,21 @@ import ast
 from pathlib import Path
 
 
+_test_dir = Path(__file__).parent
+_project_root = _test_dir.parent.parent.parent
+
+
 class TestTaskExecutorModuleStructure:
     """Test module structure by reading source code."""
 
     def test_task_executor_file_exists(self):
         """Test that task_executor.py exists."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         assert module_path.exists()
 
     def test_task_executor_has_required_functions(self):
         """Test that key functions are defined in the module."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "def set_progress(" in content
@@ -47,7 +51,7 @@ class TestTaskExecutorModuleStructure:
 
     def test_task_executor_has_task_type_mapping(self):
         """Test that TASK_TYPE_TO_PIPELINE_TASK_TYPE is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "TASK_TYPE_TO_PIPELINE_TASK_TYPE" in content
@@ -57,7 +61,7 @@ class TestTaskExecutorModuleStructure:
 
     def test_task_executor_has_parser_factory(self):
         """Test that FACTORY (parser factory) is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "FACTORY = {" in content or "FACTORY =" in content
@@ -65,7 +69,7 @@ class TestTaskExecutorModuleStructure:
 
     def test_task_executor_has_constants(self):
         """Test that module has expected constants."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "BATCH_SIZE" in content
@@ -73,14 +77,14 @@ class TestTaskExecutorModuleStructure:
 
     def test_task_executor_handles_signal(self):
         """Test that signal handler is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "def signal_handler(" in content
 
     def test_task_executor_has_redis_integration(self):
         """Test that Redis connections are used."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "REDIS_CONN" in content
@@ -88,7 +92,7 @@ class TestTaskExecutorModuleStructure:
 
     def test_task_executor_handles_raptor(self):
         """Test that RAPTOR processing is handled."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "run_raptor_for_kb" in content
@@ -96,7 +100,7 @@ class TestTaskExecutorModuleStructure:
 
     def test_task_executor_handles_graphrag(self):
         """Test that GraphRAG processing is handled."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "graphrag" in content.lower()
@@ -104,21 +108,21 @@ class TestTaskExecutorModuleStructure:
 
     def test_task_executor_handles_dataflow(self):
         """Test that dataflow tasks are handled."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "run_dataflow" in content
 
     def test_task_executor_handles_memory(self):
         """Test that memory tasks are handled."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "handle_save_to_memory_task" in content
 
     def test_task_executor_progress_tracking(self):
         """Test that progress tracking is implemented."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "progress" in content
@@ -130,7 +134,7 @@ class TestTaskExecutorConstants:
 
     def test_parse_task_executor_ast(self):
         """Test that task_executor.py can be parsed as valid Python."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         tree = ast.parse(content)
@@ -139,7 +143,7 @@ class TestTaskExecutorConstants:
 
     def test_find_assignments_in_module(self):
         """Test that module contains expected assignments."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         tree = ast.parse(content)
@@ -175,7 +179,7 @@ class TestTaskExecutorImports:
 
     def test_has_required_standard_imports(self):
         """Test that required standard library imports exist."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "import asyncio" in content
@@ -184,21 +188,21 @@ class TestTaskExecutorImports:
 
     def test_has_api_imports(self):
         """Test that API imports are present."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "from api.db" in content
 
     def test_has_rag_imports(self):
         """Test that RAG imports are present."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "from rag." in content
 
     def test_has_common_imports(self):
         """Test that common imports are present."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/task_executor.py")
+        module_path = _project_root / "rag" / "svr" / "task_executor.py"
         content = module_path.read_text()
 
         assert "from common" in content

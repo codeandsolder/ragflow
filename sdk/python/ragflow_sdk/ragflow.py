@@ -57,10 +57,30 @@ class RAGFlow:
         self.user_key = api_key
         self.api_url = f"{base_url}/api/{version}"
         self.authorization_header = {"Authorization": "{} {}".format("Bearer", self.user_key)}
+        self._session = None
+
+    @property
+    def session(self):
+        if self._session is None:
+            self._session = requests.Session()
+            self._session.headers.update(self.authorization_header)
+        return self._session
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+
+    def close(self):
+        if self._session is not None:
+            self._session.close()
+            self._session = None
 
     @_retry_with_backoff(max_retries=3, backoff_factor=1.0)
     def post(self, path, json=None, stream=False, files=None):
-        res = requests.post(url=self.api_url + path, json=json, headers=self.authorization_header, stream=stream, files=files)
+        res = self.session.post(url=self.api_url + path, json=json, headers=self.authorization_header, stream=stream, files=files)
         if not (200 <= res.status_code < 300):
             if res.status_code == 401:
                 raise AuthenticationError("Authentication failed. Please check your API key.", details={"status_code": res.status_code})
@@ -76,7 +96,7 @@ class RAGFlow:
 
     @_retry_with_backoff(max_retries=3, backoff_factor=1.0)
     def get(self, path, params=None, json=None):
-        res = requests.get(url=self.api_url + path, params=params, headers=self.authorization_header, json=json)
+        res = self.session.get(url=self.api_url + path, params=params, headers=self.authorization_header, json=json)
         if not (200 <= res.status_code < 300):
             if res.status_code == 401:
                 raise AuthenticationError("Authentication failed. Please check your API key.", details={"status_code": res.status_code})
@@ -92,7 +112,7 @@ class RAGFlow:
 
     @_retry_with_backoff(max_retries=3, backoff_factor=1.0)
     def delete(self, path, json):
-        res = requests.delete(url=self.api_url + path, json=json, headers=self.authorization_header)
+        res = self.session.delete(url=self.api_url + path, json=json, headers=self.authorization_header)
         if not (200 <= res.status_code < 300):
             if res.status_code == 401:
                 raise AuthenticationError("Authentication failed. Please check your API key.", details={"status_code": res.status_code})
@@ -108,7 +128,7 @@ class RAGFlow:
 
     @_retry_with_backoff(max_retries=3, backoff_factor=1.0)
     def put(self, path, json):
-        res = requests.put(url=self.api_url + path, json=json, headers=self.authorization_header)
+        res = self.session.put(url=self.api_url + path, json=json, headers=self.authorization_header)
         if not (200 <= res.status_code < 300):
             if res.status_code == 401:
                 raise AuthenticationError("Authentication failed. Please check your API key.", details={"status_code": res.status_code})

@@ -50,7 +50,7 @@ class VariableAssigner(ComponentBase, ABC):
         else:
             for item in self._param.variables:
                 if any([not item.get("variable"), not item.get("operator"), not item.get("parameter")]):
-                    assert "Variable is not complete."
+                    raise ValueError(f"Variable assignment is incomplete for item: {item}")
                 variable = item["variable"]
                 operator = item["operator"]
                 parameter = item["parameter"]

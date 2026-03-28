@@ -247,8 +247,7 @@ class TestToolBase:
         tool = MockToolBase(canvas, "test_id", param)
         thoughts = tool.thoughts()
 
-        assert "MockTool" in thoughts
-        assert "running" in thoughts
+        assert "Mock tool is running..." == thoughts
 
     def test_tool_base_output(self):
         canvas = MockCanvas()

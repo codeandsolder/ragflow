@@ -107,31 +107,35 @@ def _load_user():
     if len(auth_parts) == 2 and auth_parts[0].lower() in {"bearer", "token", "jwt"}:
         normalized_authorization = auth_parts[1].strip()
 
-    try:
-        access_token = str(jwt.loads(normalized_authorization))
+        try:
+            access_token = str(jwt.loads(normalized_authorization))
 
-        if not access_token or not access_token.strip():
-            logging.warning("Authentication attempt with empty access token")
-            return None
-
-        # Access tokens should be UUIDs (32 hex characters)
-        if len(access_token.strip()) < 32:
-            logging.warning(f"Authentication attempt with invalid token format: {len(access_token)} chars")
-            return None
-
-        user = UserService.query(access_token=access_token, status=StatusEnum.VALID.value)
-        if user:
-            if not user[0].access_token or not user[0].access_token.strip():
-                logging.warning(f"User {user[0].email} has empty access_token in database")
+            if access_token is None or not access_token.strip():
+                logging.warning("Authentication attempt with None or empty access token")
                 return None
-            g.user = user[0]
-            return user[0]
-    except Exception as e_auth:
-        logging.warning(f"load_user got exception {e_auth}")
+
+            # Access tokens should be UUIDs (32 hex characters)
+            if len(access_token.strip()) < 32:
+                logging.warning(f"Authentication attempt with invalid token format: {len(access_token)} chars")
+                return None
+
+            user = UserService.query(access_token=access_token, status=StatusEnum.VALID.value)
+            if user:
+                if not user[0].access_token or not user[0].access_token.strip():
+                    logging.warning(f"User {user[0].email} has empty access_token in database")
+                    return None
+                g.user = user[0]
+                return user[0]
+        except Exception as e_auth:
+            logging.warning(f"load_user got exception {e_auth}")
         try:
             authorization = request.headers.get("Authorization")
             if authorization and len(authorization.split()) == 2:
-                objs = APIToken.query(token=authorization.split()[1])
+                token = authorization.split()[1]
+                if token is None or not token.strip():
+                    logging.warning("Authentication attempt with None or empty API key")
+                    return None
+                objs = APIToken.query(token=token)
                 if objs:
                     user = UserService.query(id=objs[0].tenant_id, status=StatusEnum.VALID.value)
                     if user:

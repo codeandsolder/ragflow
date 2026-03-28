@@ -14,24 +14,9 @@
 #  limitations under the License.
 #
 
-"""
-Fixtures for graphrag unit tests.
-"""
+import sys
+from pathlib import Path
 
-import pytest
-
-
-def _check_import(module_name: str) -> bool:
-    """Check if a module can be imported."""
-    try:
-        __import__(module_name)
-        return True
-    except (ImportError, SyntaxError):
-        return False
-
-
-skipif_no_quart = pytest.mark.skipif(not _check_import("quart"), reason="quart not installed")
-
-skipif_no_redis = pytest.mark.skipif(not _check_import("redis"), reason="redis not installed")
-
-skipif_no_elasticsearch = pytest.mark.skipif(not _check_import("elasticsearch"), reason="elasticsearch not installed")
+project_root = Path(__file__).parent.parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))

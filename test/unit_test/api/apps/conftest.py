@@ -14,6 +14,8 @@
 #  limitations under the License.
 #
 
+from datetime import datetime
+
 import pytest
 from unittest.mock import Mock
 

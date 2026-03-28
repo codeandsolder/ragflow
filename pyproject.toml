@@ -17,7 +17,6 @@ dependencies = [
     "beartype>=0.20.0,<1.0.0",
     "bio>=1.7.1",
     "boxsdk>=10.1.0",
-    "captcha>=0.7.1",
     "chardet>=5.2.0",
     "cn2an>=0.5.22",
     "cohere>=5.6.2",
@@ -33,23 +32,17 @@ dependencies = [
     "exceptiongroup>=1.3.0,<2.0.0",
     "extract-msg>=0.39.0",
     "ffmpeg-python>=0.2.0",
-    "flasgger>=0.9.7.1,<0.10.0",
-    "flask-cors>=6.0.2",
     "flask-login>=0.6.3",
-    "flask-mail>=0.10.0",
     "flask-session>=0.8.0",
     "google-api-python-client>=2.190.0,<3.0.0",
     "google-auth-oauthlib>=1.2.0,<2.0.0",
     "google-cloud-storage>=2.19.0,<3.0.0",
     "google-genai>=1.41.0,<2.0.0",
     "google-search-results>=2.4.2",
-    "graspologic @ git+https://gitee.com/infiniflow/graspologic.git@38e680cab72bc9fb68a7992c3bcc2d53b24e42fd",
-    "groq>=0.9.0",
+    "graspologic>=3.4.4",
     "grpcio-status>=1.67.1",
-    "html-text>=0.6.2",
     "httpx>=0.28.1",
     "infinity-sdk>=0.7.0-dev2",
-    "infinity-emb>=0.0.66,<0.0.67",
     "jira>=3.10.5",
     "json-repair>=0.35.0",
     "langfuse>=2.60.0",
@@ -58,7 +51,6 @@ dependencies = [
     "markdown-to-json>=2.1.1",
     "markdownify>=1.2.0",
     "mcp>=1.19.0",
-    "mini-racer>=0.12.4,<0.13.0",
     "minio>=7.2.4",
     "mistralai>=0.4.2",
     "mysql-connector-python>=9.0.0,<10.0.0",
@@ -83,7 +75,6 @@ dependencies = [
     "pyodbc>=5.2.0,<6.0.0",
     "pypandoc>=1.16",
     "pypdf>=6.8.0",
-    "python-calamine>=0.4.0",
     "python-docx>=1.1.2,<2.0.0",
     "python-pptx>=1.0.2,<2.0.0",
     # "pywencai>=0.13.1,<1.0.0",  # Temporarily disabled: conflicts with agentrun-sdk (pydash>=8), needed for agent/tools/wencai.py
@@ -91,7 +82,6 @@ dependencies = [
     "quart-auth>=0.11.0",
     "quart-cors>=0.8.0",
     "ranx>=0.3.20",
-    "readability-lxml>=0.8.4,<1.0.0",
     "replicate>=0.31.0",
     "reportlab>=4.4.1",
     "roman-numbers>=1.0.2",
@@ -99,20 +89,16 @@ dependencies = [
     "ruamel-yaml>=0.18.6,<0.19.0",
     "scholarly>=1.7.11",
     "slack-sdk>=3.37.0",
-    "socksio>=1.0.0",
     "agentrun-sdk>=0.0.16,<1.0.0",
     "nest-asyncio>=1.6.0,<2.0.0",  # Needed for agent/component/message.py
-    "sqlglotrs>=0.9.0",
     "strenum>=0.4.15",
     "tavily-python>=0.5.1",
     "tenacity>=8.2.3,<9.0.0",
     "tencentcloud-sdk-python>=3.0.1478",
     "tika>=2.6.0",
     "valkey>=6.0.2",
-    "volcengine>=1.0.194",
     "voyageai>=0.2.3",
     "webdav4>=0.10.0,<0.11.0",
-    "webdriver-manager>=4.0.1",
     "wikipedia>=1.4.0",
     "word2number>=1.1",
     "xgboost>=1.6.0",
@@ -156,7 +142,6 @@ dependencies = [
     "python-gitlab>=7.0.0",
     "alibabacloud-dingtalk>=2.0.0",
     "quart-schema>=0.23.0",
-    "pyarrow>=22.0.0",
     "pytest>=9.0.2",
     "pybreaker>=0.2.1,<1.0.0",
 ]
@@ -185,6 +170,10 @@ constraint-dependencies = [
     # CVE-2026-30922: Denial of Service via unbounded recursion in ASN.1 decoding (CVSS 7.5 HIGH)
     # pyasn1 < 0.6.3 is vulnerable; pulled in transitively via google-auth / rsa / pyasn1-modules
     "pyasn1>=0.6.3",
+    # trio 0.24.0 breaks on Python 3.13 due to pathlib.Path attribute issues
+    # trio is pulled in by selenium as an optional dependency but is not needed for tests
+    # Using asyncio backend instead
+    "trio>=0.25.0,<100",
 ]
 
 [[tool.uv.index]]
@@ -235,6 +224,7 @@ markers = [
 filterwarnings = [
     "error",  # Treat warnings as errors
     "ignore::DeprecationWarning",  # Ignore specific warnings
+    "ignore::UserWarning:sqlglot",  # sqlglot[rs] is deprecated but unavoidable
 ]
 
 # Command line options

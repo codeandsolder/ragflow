@@ -31,15 +31,23 @@ from common import settings
 from common.misc_utils import thread_pool_exec
 
 
+# Threshold for initial citation similarity filtering (higher = more strict initial filtering)
 CITATION_SIMILARITY_THRESHOLD = 0.63
+# Minimum threshold for citation similarity (lower bound for filtering)
 CITATION_SIMILARITY_MIN_THRESHOLD = 0.3
+# Decay rate for threshold reduction when no citations found
 CITATION_THRESHOLD_DECAY = 0.8
+# Minimum score multiplier for citation consideration
 CITATION_MIN_SCORE = 0.99
 MAX_CITATIONS_PER_SENTENCE = 4
 
 
 def index_name(uid):
     return f"ragflow_{uid}"
+
+
+# Default hybrid search weights: token weight, vector weight (e.g., "0.3,0.7")
+DEFAULT_HYBRID_WEIGHT = "0.3,0.7"
 
 
 class Searcher:
@@ -74,7 +82,7 @@ class Searcher:
         orderBy = OrderByExpr()
 
         pg = int(req.get("page", 1)) - 1
-        topk = int(req.get("topk", 1024))
+        topk = int(req.get("topk", 4096))
         ps = int(req.get("size", topk))
         offset, limit = pg * ps, ps
 
@@ -133,7 +141,7 @@ class Searcher:
                 if not settings.DOC_ENGINE_INFINITY:
                     src.append(f"q_{len(q_vec)}_vec")
 
-                fusionExpr = FusionExpr("weighted_sum", topk, {"weights": req.get("hybrid_weight", "0.05,0.95")})
+                fusionExpr = FusionExpr("weighted_sum", topk, {"weights": req.get("hybrid_weight", settings.DEFAULT_HYBRID_WEIGHT or "0.05,0.95")})
                 matchExprs = [matchText, matchDense, fusionExpr]
 
                 res = await thread_pool_exec(self.dataStore.search, src, highlightFields, filters, matchExprs, orderBy, offset, limit, idx_names, kb_ids, rank_feature=rank_feature)
@@ -543,7 +551,7 @@ class Dealer:
         tbl = self.dataStore.sql(sql, fetch_size, format)
         return tbl
 
-    def chunk_list(self, doc_id: str, tenant_id: str, kb_ids: list[str], max_count=1024, offset=0, fields=["docnm_kwd", "content_with_weight", "img_id"], sort_by_position: bool = False):
+    def chunk_list(self, doc_id: str, tenant_id: str, kb_ids: list[str], max_count=4096, offset=0, fields=["docnm_kwd", "content_with_weight", "img_id"], sort_by_position: bool = False):
         condition = {"doc_id": doc_id}
 
         fields_set = set(fields or [])

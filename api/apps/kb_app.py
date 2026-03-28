@@ -133,64 +133,6 @@ async def rename_tags(kb_id):
     return get_json_result(data=True)
 
 
-"""
-Deprecated, todo delete
-@manager.route('/<kb_id>/knowledge_graph', methods=['GET'])  # noqa: F821
-@login_required
-async def knowledge_graph(kb_id):
-    if not KnowledgebaseService.accessible(kb_id, current_user.id):
-        return get_json_result(
-            data=False,
-            message='No authorization.',
-            code=RetCode.AUTHENTICATION_ERROR
-        )
-    _, kb = KnowledgebaseService.get_by_id(kb_id)
-    req = {
-        "kb_id": [kb_id],
-        "knowledge_graph_kwd": ["graph"]
-    }
-
-    obj = {"graph": {}, "mind_map": {}}
-    if not settings.docStoreConn.index_exist(search.index_name(kb.tenant_id), kb_id):
-        return get_json_result(data=obj)
-    sres = await settings.retriever.search(req, search.index_name(kb.tenant_id), [kb_id])
-    if not len(sres.ids):
-        return get_json_result(data=obj)
-
-    for id in sres.ids[:1]:
-        ty = sres.field[id]["knowledge_graph_kwd"]
-        try:
-            content_json = json.loads(sres.field[id]["content_with_weight"])
-        except Exception:
-            continue
-
-        obj[ty] = content_json
-
-    if "nodes" in obj["graph"]:
-        obj["graph"]["nodes"] = sorted(obj["graph"]["nodes"], key=lambda x: x.get("pagerank", 0), reverse=True)[:256]
-        if "edges" in obj["graph"]:
-            node_id_set = { o["id"] for o in obj["graph"]["nodes"] }
-            filtered_edges = [o for o in obj["graph"]["edges"] if o["source"] != o["target"] and o["source"] in node_id_set and o["target"] in node_id_set]
-            obj["graph"]["edges"] = sorted(filtered_edges, key=lambda x: x.get("weight", 0), reverse=True)[:128]
-    return get_json_result(data=obj)
-
-
-@manager.route('/<kb_id>/knowledge_graph', methods=['DELETE'])  # noqa: F821
-@login_required
-def delete_knowledge_graph(kb_id):
-    if not KnowledgebaseService.accessible(kb_id, current_user.id):
-        return get_json_result(
-            data=False,
-            message='No authorization.',
-            code=RetCode.AUTHENTICATION_ERROR
-        )
-    _, kb = KnowledgebaseService.get_by_id(kb_id)
-    settings.docStoreConn.delete({"knowledge_graph_kwd": ["graph", "subgraph", "entity", "relation"]}, search.index_name(kb.tenant_id), kb_id)
-
-    return get_json_result(data=True)
-"""
-
-
 @manager.route("/get_meta", methods=["GET"])  # noqa: F821
 @login_required
 @resource_owner_required
@@ -321,7 +263,6 @@ def pipeline_log_detail():
 
 
 """
-Deprecated, todo delete
 @manager.route("/run_graphrag", methods=["POST"])  # noqa: F821
 @login_required
 async def run_graphrag():

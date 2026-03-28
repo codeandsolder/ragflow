@@ -14,14 +14,7 @@
 #  limitations under the License.
 #
 
-import sys
-from pathlib import Path
-
 import pytest
-
-project_root = Path(__file__).parent.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
 
 
 def _check_import(module_name: str) -> bool:
@@ -31,13 +24,6 @@ def _check_import(module_name: str) -> bool:
         return True
     except (ImportError, SyntaxError):
         return False
-
-
-skipif_no_openai = pytest.mark.skipif(not _check_import("openai"), reason="openai not installed - install with: pip install openai")
-
-skipif_no_tiktoken = pytest.mark.skipif(not _check_import("tiktoken"), reason="tiktoken not installed - install with: pip install tiktoken")
-
-skipif_no_elasticsearch = pytest.mark.skipif(not _check_import("elasticsearch_dsl"), reason="elasticsearch-dsl not installed")
 
 
 def _patch_sqlglot_compatibility():
@@ -52,14 +38,16 @@ def _patch_sqlglot_compatibility():
         pass
 
 
-@pytest.fixture
-def optional_modules():
-    """Fixture providing safe import helpers."""
-    return {
-        "check_import": _check_import,
-    }
+_patch_sqlglot_compatibility()
 
+skipif_no_s3 = pytest.mark.skipif(not _check_import("s3fs"), reason="s3fs not installed")
 
-def pytest_configure(config):
-    """pytest hook that runs before test collection."""
-    _patch_sqlglot_compatibility()
+skipif_no_oss = pytest.mark.skipif(not _check_import("oss2"), reason="oss2 not installed")
+
+skipif_no_azure = pytest.mark.skipif(not _check_import("azure.storage.blob"), reason="azure.storage.blob not installed")
+
+skipif_no_gcs = pytest.mark.skipif(not _check_import("gcloud.storage"), reason="gcloud.storage not installed")
+
+skipif_no_minio = pytest.mark.skipif(not _check_import("minio"), reason="minio not installed")
+
+skipif_no_redis = pytest.mark.skipif(not _check_import("redis"), reason="redis not installed")

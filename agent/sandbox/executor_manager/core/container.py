@@ -188,6 +188,8 @@ async def release_container(name: str, language: SupportLanguage):
 async def allocate_container_blocking(language: SupportLanguage, timeout=10) -> str:
     """Asynchronously allocate an available container"""
     start_time = asyncio.get_running_loop().time()
+    sleep_time = 0.01
+    max_sleep = 0.5
     while asyncio.get_running_loop().time() - start_time < timeout:
         try:
             name = _CONTAINER_QUEUES[language].get_nowait()
@@ -197,7 +199,8 @@ async def allocate_container_blocking(language: SupportLanguage, timeout=10) -> 
 
                 return name
         except Empty:
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(sleep_time)
+            sleep_time = min(sleep_time * 2, max_sleep)
 
     return ""
 

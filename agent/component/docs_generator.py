@@ -2,6 +2,7 @@ import json
 import os
 import re
 import base64
+import tempfile
 from datetime import datetime
 from abc import ABC
 from io import BytesIO
@@ -66,7 +67,7 @@ class PDFGeneratorParam(ComponentParamBase):
 
         # Output settings
         self.filename = ""
-        self.output_directory = "/tmp/pdf_outputs"
+        self.output_directory = tempfile.gettempdir()
         self.add_page_numbers = True
         self.add_timestamp = True
 

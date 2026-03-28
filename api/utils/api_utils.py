@@ -124,14 +124,7 @@ def get_data_error_result(code=RetCode.DATA_ERROR, message="Sorry! Data missing!
         logging.exception(message)
     else:
         logging.error(message)
-    result_dict = {"code": code, "message": message}
-    response = {}
-    for key, value in result_dict.items():
-        if value is None and key != "code":
-            continue
-        else:
-            response[key] = value
-    return _safe_jsonify(response)
+    return _api_response(code=code, message=message)
 
 
 def server_error_response(e):
@@ -143,13 +136,19 @@ def server_error_response(e):
             resp = get_json_result(code=RetCode.UNAUTHORIZED, message="Unauthorized")
             resp.status_code = RetCode.UNAUTHORIZED
             return resp
-    except Exception as ex:
+    except (AttributeError, TypeError) as ex:
         logging.warning(f"error checking authorization: {ex}")
+
+    if isinstance(e, (OperationalError, requests.exceptions.RequestException)):
+        return get_json_result(code=RetCode.EXCEPTION_ERROR, message="Database or external service error occurred")
 
     if repr(e).find("index_not_found_exception") >= 0:
         return get_json_result(code=RetCode.EXCEPTION_ERROR, message="No chunk found, please upload file and parse it.")
 
-    return get_json_result(code=RetCode.EXCEPTION_ERROR, message=repr(e))
+    if isinstance(e, (WerkzeugBadRequest, QuartBadRequest)):
+        return get_json_result(code=RetCode.BAD_REQUEST, message="Invalid request format")
+
+    return get_json_result(code=RetCode.EXCEPTION_ERROR, message="An error occurred")
 
 
 def validate_request(*args, **kwargs):
@@ -279,7 +278,9 @@ def add_tenant_id_to_kwargs(func):
 
 
 def get_json_result(code: RetCode = RetCode.SUCCESS, message="success", data=None):
-    response = {"code": code, "message": message, "data": data}
+    response = {"code": code, "message": message}
+    if data is not None:
+        response["data"] = data
     return _safe_jsonify(response)
 
 
@@ -326,26 +327,19 @@ def get_error_data_result(
     message="Sorry! Data missing!",
     code=RetCode.DATA_ERROR,
 ):
-    result_dict = {"code": code, "message": message}
-    response = {}
-    for key, value in result_dict.items():
-        if value is None and key != "code":
-            continue
-        else:
-            response[key] = value
-    return _safe_jsonify(response)
+    return _api_response(code=code, message=message)
 
 
 def get_error_argument_result(message="Invalid arguments"):
-    return get_result(code=RetCode.ARGUMENT_ERROR, message=message)
+    return _api_response(code=RetCode.ARGUMENT_ERROR, message=message)
 
 
 def get_error_permission_result(message="Permission error"):
-    return get_result(code=RetCode.PERMISSION_ERROR, message=message)
+    return _api_response(code=RetCode.PERMISSION_ERROR, message=message)
 
 
 def get_error_operating_result(message="Operating error"):
-    return get_result(code=RetCode.OPERATING_ERROR, message=message)
+    return _api_response(code=RetCode.OPERATING_ERROR, message=message)
 
 
 def generate_confirmation_token():

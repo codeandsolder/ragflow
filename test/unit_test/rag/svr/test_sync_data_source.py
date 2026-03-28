@@ -23,17 +23,21 @@ import ast
 from pathlib import Path
 
 
+_test_dir = Path(__file__).parent
+_project_root = _test_dir.parent.parent.parent
+
+
 class TestSyncDataSourceFileExists:
     """Test that sync_data_source.py exists and is readable."""
 
     def test_file_exists(self):
         """Test that sync_data_source.py exists."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         assert module_path.exists()
 
     def test_file_is_valid_python(self):
         """Test that sync_data_source.py is valid Python."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         tree = ast.parse(content)
         assert tree is not None
@@ -44,7 +48,7 @@ class TestSyncBaseClass:
 
     def test_sync_base_class_defined(self):
         """Test that SyncBase class is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
 
         assert "class SyncBase:" in content
@@ -53,7 +57,7 @@ class TestSyncBaseClass:
 
     def test_sync_base_has_run_task_logic(self):
         """Test that SyncBase has _run_task_logic method."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
 
         assert "async def _run_task_logic(self, task" in content
@@ -61,7 +65,7 @@ class TestSyncBaseClass:
 
     def test_sync_base_uses_task_limiter(self):
         """Test that SyncBase uses task_limiter for concurrency control."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
 
         assert "task_limiter" in content
@@ -73,127 +77,127 @@ class TestConnectorClasses:
 
     def test_s3_connector_defined(self):
         """Test S3 connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class S3(" in content
 
     def test_r2_connector_defined(self):
         """Test R2 connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class R2(" in content
 
     def test_notion_connector_defined(self):
         """Test Notion connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class Notion(" in content
 
     def test_discord_connector_defined(self):
         """Test Discord connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class Discord(" in content
 
     def test_gmail_connector_defined(self):
         """Test Gmail connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class Gmail(" in content
 
     def test_dropbox_connector_defined(self):
         """Test Dropbox connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class Dropbox(" in content
 
     def test_github_connector_defined(self):
         """Test GitHub connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class Github(" in content
 
     def test_gitlab_connector_defined(self):
         """Test GitLab connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class Gitlab(" in content
 
     def test_jira_connector_defined(self):
         """Test Jira connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class Jira(" in content
 
     def test_confluence_connector_defined(self):
         """Test Confluence connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class Confluence(" in content
 
     def test_google_drive_connector_defined(self):
         """Test Google Drive connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class GoogleDrive(" in content
 
     def test_imap_connector_defined(self):
         """Test IMAP connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class IMAP(" in content
 
     def test_zendesk_connector_defined(self):
         """Test Zendesk connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class Zendesk(" in content
 
     def test_airtable_connector_defined(self):
         """Test Airtable connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class Airtable(" in content
 
     def test_asana_connector_defined(self):
         """Test Asana connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class Asana(" in content
 
     def test_seafile_connector_defined(self):
         """Test SeaFile connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class SeaFile(" in content
 
     def test_webdav_connector_defined(self):
         """Test WebDAV connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class WebDAV(" in content
 
     def test_moodle_connector_defined(self):
         """Test Moodle connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class Moodle(" in content
 
     def test_box_connector_defined(self):
         """Test Box connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class BOX(" in content
 
     def test_mysql_connector_defined(self):
         """Test MySQL connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class MySQL(" in content
 
     def test_postgresql_connector_defined(self):
         """Test PostgreSQL connector is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "class PostgreSQL(" in content
 
@@ -203,14 +207,14 @@ class TestFuncFactory:
 
     def test_func_factory_defined(self):
         """Test func_factory dictionary is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
 
         assert "func_factory = {" in content
 
     def test_func_factory_maps_all_sources(self):
         """Test that func_factory maps all source types."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
 
         # Check that func_factory contains the source types
@@ -236,21 +240,21 @@ class TestDispatchTasksFunction:
 
     def test_dispatch_tasks_defined(self):
         """Test dispatch_tasks function is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
 
         assert "async def dispatch_tasks(" in content
 
     def test_dispatch_tasks_uses_func_factory(self):
         """Test dispatch_tasks uses func_factory."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
 
         assert "func_factory" in content
 
     def test_dispatch_tasks_uses_asyncio_gather(self):
         """Test dispatch_tasks uses asyncio.gather."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
 
         assert "asyncio.gather" in content
@@ -261,7 +265,7 @@ class TestSignalHandler:
 
     def test_signal_handler_defined(self):
         """Test signal handler is defined."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
 
         assert "def signal_handler(" in content
@@ -283,31 +287,31 @@ class TestModuleImports:
 
     def test_has_asyncio_import(self):
         """Test asyncio import."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "import asyncio" in content
 
     def test_has_signal_import(self):
         """Test signal import."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "import signal" in content
 
     def test_has_connector_service_import(self):
         """Test ConnectorService import."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "ConnectorService" in content
 
     def test_has_file_source_import(self):
         """Test FileSource import."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "FileSource" in content
 
     def test_has_task_status_import(self):
         """Test TaskStatus import."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "TaskStatus" in content
 
@@ -317,21 +321,21 @@ class TestErrorHandling:
 
     def test_timeout_handling(self):
         """Test that timeout is handled."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "TimeoutError" in content
         assert "wait_for" in content
 
     def test_exception_handling(self):
         """Test that exceptions are handled."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "except Exception" in content
         assert "error_msg" in content
 
     def test_collation_conflict_handling(self):
         """Test that collation conflicts are handled."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "collation" in content.lower()
 
@@ -341,20 +345,20 @@ class TestDataProcessing:
 
     def test_doc_hash_generation(self):
         """Test document hashing for IDs."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "hash128" in content
 
     def test_batch_processing(self):
         """Test batch processing is supported."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "batch_size" in content.lower()
         assert "INDEX_BATCH_SIZE" in content
 
     def test_sync_logging(self):
         """Test sync progress is logged."""
-        module_path = Path("/mnt/d/ragflow/rag/svr/sync_data_source.py")
+        module_path = _project_root / "rag" / "svr" / "sync_data_source.py"
         content = module_path.read_text()
         assert "SyncLogsService" in content
         assert "start(" in content

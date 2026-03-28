@@ -16,6 +16,8 @@ import sys
 import types
 import json
 import pytest
+import importlib.util
+from pathlib import Path
 
 
 def create_stub(name, attrs=None):
@@ -45,6 +47,10 @@ sys.modules["rag.llm.chat_model"].ERROR_PREFIX = "ERROR:"
 create_stub("common")
 create_stub("common.constants")
 sys.modules["common.constants"].LLMType = types.SimpleNamespace(CHAT="chat")
+
+create_stub("common.misc_utils")
+sys.modules["common.misc_utils"].hash_str2int = lambda x: hash(x)
+sys.modules["common.misc_utils"].get_uuid = lambda: "test-uuid"
 
 create_stub("rag.nlp")
 sys.modules["rag.nlp"].is_english = lambda x: True
@@ -85,6 +91,70 @@ create_stub("rag.prompts")
 create_stub("rag.prompts.generator")
 sys.modules["rag.prompts.generator"].chunks_format = lambda x: []
 
+create_stub("common.exceptions")
+sys.modules["common.exceptions"].TaskCanceledException = Exception
+
+create_stub("agent")
+create_stub("agent.component")
+sys.modules["agent.component"].component_class = lambda name: type(name, (), {})
+
+create_stub("agent.component.base")
+
+
+class StubComponentParamBase:
+    def __init__(self):
+        self.message_history_window_size = 13
+        self.inputs = {}
+        self.outputs = {}
+        self.description = ""
+        self.max_retries = 0
+        self.delay_after_error = 2.0
+        self._is_raw_conf = True
+
+    def update(self, conf, allow_redundant=False):
+        for key, value in conf.items():
+            setattr(self, key, value)
+
+    def check(self):
+        pass
+
+
+sys.modules["agent.component.base"].ComponentBase = type("ComponentBase", (), {})
+sys.modules["agent.component.base"].ComponentParamBase = StubComponentParamBase
+
+# Update component_class to return a class that inherits from ComponentParamBase
+_original_component_class = sys.modules["agent.component"].component_class
+
+
+def _wrapped_component_class(class_name):
+    if class_name.endswith("Param"):
+
+        class DynamicParam(StubComponentParamBase):
+            pass
+
+        DynamicParam.__name__ = class_name
+        return DynamicParam
+    else:
+
+        class DynamicComponent:
+            def __init__(self, canvas, id, param):
+                self._canvas = canvas
+                self._id = id
+                self._param = param
+                self.component_name = class_name
+
+            def output(self, key):
+                return None
+
+            def thoughts(self):
+                return ""
+
+        DynamicComponent.__name__ = class_name
+        return DynamicComponent
+
+
+sys.modules["agent.component"].component_class = _wrapped_component_class
+
 create_stub("api")
 create_stub("api.db")
 create_stub("api.db.services")
@@ -94,7 +164,15 @@ sys.modules["api.db.services.llm_service"].LLMBundle = type("LLMBundle", (), {})
 create_stub("api.db.services.file_service")
 sys.modules["api.db.services.file_service"].FileService = type("FileService", (), {"get_blob": lambda *args, **kwargs: b"", "parse": lambda *args, **kwargs: None})
 
-from agent.canvas import Canvas, Graph
+_test_dir = Path(__file__).parent
+_project_root = _test_dir.parent.parent.parent
+_canvas_path = _project_root / "agent" / "canvas.py"
+_canvas_spec = importlib.util.spec_from_file_location("agent.canvas", str(_canvas_path))
+_canvas_mod = importlib.util.module_from_spec(_canvas_spec)
+sys.modules["agent.canvas"] = _canvas_mod
+_canvas_spec.loader.exec_module(_canvas_mod)
+Canvas = _canvas_mod.Canvas
+Graph = _canvas_mod.Graph
 
 
 class TestDSLParsing:

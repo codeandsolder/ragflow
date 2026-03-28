@@ -35,7 +35,7 @@ class TestNormalizeStr:
         result = validation_utils.normalize_str("  Admin  ")
         assert result == "admin"
 
-    def test_validation_utils.normalize_string_uppercase(self):
+    def test_normalize_string_uppercase(self):
         """Test normalization converts to lowercase"""
         result = validation_utils.normalize_str("UPPERCASE")
         assert result == "uppercase"
@@ -429,7 +429,7 @@ class TestValidateAndParseJsonRequest:
         assert "optional" not in result  # Not set, should be excluded
 
 
-class Testvalidation_utils.CreateDatasetReq:
+class TestCreateDatasetReq:
     """Test cases for validation_utils.CreateDatasetReq validation"""
 
     def test_valid_dataset_creation(self):
@@ -528,7 +528,7 @@ class Testvalidation_utils.CreateDatasetReq:
             )
 
 
-class Testvalidation_utils.UpdateDatasetReq:
+class TestUpdateDatasetReq:
     """Test cases for validation_utils.UpdateDatasetReq validation"""
 
     def test_valid_update_request(self):
@@ -569,7 +569,7 @@ class Testvalidation_utils.UpdateDatasetReq:
             )
 
 
-class Testvalidation_utils.DeleteDatasetReq:
+class TestDeleteDatasetReq:
     """Test cases for validation_utils.DeleteDatasetReq validation"""
 
     def test_valid_delete_request(self):
@@ -605,7 +605,7 @@ class Testvalidation_utils.DeleteDatasetReq:
         assert req.ids is None
 
 
-class Testvalidation_utils.ListDatasetReq:
+class TestListDatasetReq:
     """Test cases for validation_utils.ListDatasetReq validation"""
 
     def test_default_values(self):
@@ -643,7 +643,7 @@ class Testvalidation_utils.ListDatasetReq:
             validation_utils.ListDatasetReq(orderby="invalid_field")
 
 
-class Testvalidation_utils.ParserConfig:
+class TestParserConfig:
     """Test cases for validation_utils.ParserConfig validation"""
 
     def test_default_parser_config(self):
@@ -675,7 +675,7 @@ class Testvalidation_utils.ParserConfig:
         assert config.raptor.max_token == 512
 
 
-class Testvalidation_utils.RaptorConfig:
+class TestRaptorConfig:
     """Test cases for validation_utils.RaptorConfig validation"""
 
     def test_default_raptor_config(self):
@@ -700,7 +700,7 @@ class Testvalidation_utils.RaptorConfig:
             validation_utils.RaptorConfig(threshold=1.5)  # Max is 1.0
 
 
-class Testvalidation_utils.GraphragConfig:
+class TestGraphragConfig:
     """Test cases for validation_utils.GraphragConfig validation"""
 
     def test_default_graphrag_config(self):

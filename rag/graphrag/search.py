@@ -106,7 +106,7 @@ class KGSearch(Dealer):
             return {}
         filters = deepcopy(filters)
         filters["knowledge_graph_kwd"] = "entity"
-        matchDense = self.get_vector(", ".join(keywords), emb_mdl, 1024, sim_thr)
+        matchDense = self.get_vector(", ".join(keywords), emb_mdl, 4096, sim_thr)
         es_res = self.dataStore.search(["content_with_weight", "entity_kwd", "rank_flt"], [], filters, [matchDense], OrderByExpr(), 0, N, idxnms, kb_ids)
         return self._ent_info_from_(es_res, sim_thr)
 
@@ -115,7 +115,7 @@ class KGSearch(Dealer):
             return {}
         filters = deepcopy(filters)
         filters["knowledge_graph_kwd"] = "relation"
-        matchDense = self.get_vector(txt, emb_mdl, 1024, sim_thr)
+        matchDense = self.get_vector(txt, emb_mdl, 4096, sim_thr)
         es_res = self.dataStore.search(["content_with_weight", "_score", "from_entity_kwd", "to_entity_kwd", "weight_int"], [], filters, [matchDense], OrderByExpr(), 0, N, idxnms, kb_ids)
         return self._relation_info_from_(es_res, sim_thr)
 

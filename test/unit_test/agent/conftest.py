@@ -15,6 +15,13 @@
 import sys
 import types
 import enum
+import importlib
+from pathlib import Path
+
+_conftest_dir = Path(__file__).parent
+_project_root = _conftest_dir.parent.parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
 
 
 def create_stub(name, attrs=None):
@@ -47,6 +54,17 @@ def _setup_mocks():
     sys.modules["common.constants"].SANDBOX_ARTIFACT_BUCKET = "test"
     sys.modules["common.constants"].SANDBOX_ARTIFACT_EXPIRE_DAYS = 7
 
+    class LLMType(str, enum.Enum):
+        CHAT = "chat"
+        EMBEDDING = "embedding"
+        SPEECH2TEXT = "speech2text"
+        IMAGE2TEXT = "image2text"
+        RERANK = "rerank"
+        TTS = "tts"
+        OCR = "ocr"
+
+    sys.modules["common.constants"].LLMType = LLMType
+
     # Connection utils timeout decorator
     def timeout_decorator(*args, **kwargs):
         def decorator(func):
@@ -74,8 +92,21 @@ def _setup_mocks():
 
     # Create api stubs
     create_stub("api")
+    # Make api a package so it can have submodules
+    api = sys.modules["api"]
+    api.__path__ = [str(_project_root / "api")]
+    api.__package__ = "api"
     create_stub("api.db")
+    # Make api.db a package so it can have submodules
+    api_db = sys.modules["api.db"]
+    api_db.__path__ = [str(_project_root / "api" / "db")]
+    api_db.__package__ = "api.db"
     create_stub("api.db.services")
+    # Make api.db.services a package so submodules can be imported
+    api_db_services = sys.modules["api.db.services"]
+    api_db_services.__path__ = [str(_project_root / "api" / "db" / "services")]
+    api_db_services.__package__ = "api.db.services"
+    create_stub("api.db.joint_services")
     create_stub("api.db.services.file_service")
 
     # Mock FileService
@@ -93,7 +124,21 @@ def _setup_mocks():
     sys.modules["agent.settings"].PARAM_MAXDEPTH = 5
 
     # Create agent.component stubs
+    # agent.component needs to be a package-like object to allow importing submodules
     create_stub("agent.component")
+    agent_component_stub = sys.modules["agent.component"]
+    agent_component_stub.__path__ = [str(_project_root / "agent" / "component")]
+    agent_component_stub.__package__ = "agent.component"
+
+    def component_class(class_name):
+        class DynamicParam(ComponentParamBase):
+            pass
+
+        DynamicParam.__name__ = class_name
+        return DynamicParam
+
+    agent_component_stub.component_class = component_class
+
     create_stub("agent.component.base")
 
     class ComponentParamBase:
@@ -104,6 +149,11 @@ def _setup_mocks():
             self.description = ""
             self.max_retries = 0
             self.delay_after_error = 2.0
+            self._is_raw_conf = True
+
+        def update(self, conf, allow_redundant=False):
+            for key, value in conf.items():
+                setattr(self, key, value)
             self.exception_method = None
             self.exception_default_value = None
             self.exception_goto = None
@@ -208,9 +258,12 @@ _setup_mocks()
 # Import code_exec module directly to avoid __init__.py auto-import of all tools
 # which causes timeout issues due to heavy dependencies
 import importlib.util
+from pathlib import Path
 
-_code_exec_path = "/mnt/d/ragflow/agent/tools/code_exec.py"
-_spec = importlib.util.spec_from_file_location("agent.tools.code_exec", _code_exec_path)
+_conftest_dir = Path(__file__).parent
+_project_root = _conftest_dir.parent.parent.parent
+_code_exec_path = _project_root / "agent" / "tools" / "code_exec.py"
+_spec = importlib.util.spec_from_file_location("agent.tools.code_exec", str(_code_exec_path))
 _code_exec = importlib.util.module_from_spec(_spec)
 sys.modules["agent.tools.code_exec"] = _code_exec
 _spec.loader.exec_module(_code_exec)

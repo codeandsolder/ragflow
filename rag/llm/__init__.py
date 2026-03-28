@@ -129,6 +129,8 @@ LITELLM_PROVIDER_PREFIX = {
     SupportedLiteLLMProvider.Avian: "openai/",
 }
 
+from rag.llm.remote_model_base import RemoteModelBase, LLMErrorCode
+
 ChatModel = globals().get("ChatModel", {})
 CvModel = globals().get("CvModel", {})
 EmbeddingModel = globals().get("EmbeddingModel", {})

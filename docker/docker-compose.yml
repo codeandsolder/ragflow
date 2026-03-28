@@ -134,6 +134,12 @@ services:
       - /tmp
       - /var/log/nginx
       - /var/run
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
+      nproc: 4096
+      core: 0
 
   # RAGFlow GPU service (modified to use LiteLLM proxy)
   ragflow-gpu:
@@ -187,6 +193,12 @@ services:
       - /tmp
       - /var/log/nginx
       - /var/run
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
+      nproc: 4096
+      core: 0
 
 networks:
   ragflow:

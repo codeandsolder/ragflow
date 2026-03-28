@@ -67,7 +67,24 @@ def _install_cv2_stub_if_unavailable():
 
 _install_cv2_stub_if_unavailable()
 
-import api.db.services.dialog_service as dialog_service
+
+# Lazy import fixture - don't import at module level
+_dialog_service_module = None
+
+
+def get_dialog_service():
+    """Lazy-load dialog_service module on first use."""
+    global _dialog_service_module
+    if _dialog_service_module is None:
+        import api.db.services.dialog_service as dialog_service
+        _dialog_service_module = dialog_service
+    return _dialog_service_module
+
+
+@pytest.fixture
+def dialog_service():
+    """Pytest fixture providing lazy-loaded dialog_service module."""
+    return get_dialog_service()
 
 
 class _StubChatModel:
@@ -120,13 +137,13 @@ class _StubAsyncRetriever:
 
 
 @pytest.fixture
-def force_es_engine(monkeypatch):
+def force_es_engine(monkeypatch, dialog_service):
     monkeypatch.setattr(dialog_service.settings, "DOC_ENGINE_INFINITY", False)
     monkeypatch.setattr(dialog_service.settings, "DOC_ENGINE_OCEANBASE", False)
 
 
 @pytest.mark.p2
-def test_use_sql_repairs_missing_source_columns_for_non_aggregate(monkeypatch, force_es_engine):
+def test_use_sql_repairs_missing_source_columns_for_non_aggregate(monkeypatch, force_es_engine, dialog_service):
     retriever = _StubRetriever(
         [
             {
@@ -165,7 +182,7 @@ def test_use_sql_repairs_missing_source_columns_for_non_aggregate(monkeypatch, f
 
 
 @pytest.mark.p2
-def test_use_sql_keeps_aggregate_flow_without_source_repair(monkeypatch, force_es_engine):
+def test_use_sql_keeps_aggregate_flow_without_source_repair(monkeypatch, force_es_engine, dialog_service):
     retriever = _StubRetriever(
         [
             {
@@ -200,7 +217,7 @@ def test_use_sql_keeps_aggregate_flow_without_source_repair(monkeypatch, force_e
 
 
 @pytest.mark.p2
-def test_use_sql_source_repair_is_bounded_to_single_retry(monkeypatch, force_es_engine):
+def test_use_sql_source_repair_is_bounded_to_single_retry(monkeypatch, force_es_engine, dialog_service):
     retriever = _StubRetriever(
         [
             {
@@ -240,7 +257,7 @@ def test_use_sql_source_repair_is_bounded_to_single_retry(monkeypatch, force_es_
 
 
 @pytest.mark.p2
-def test_async_chat_uses_all_docs_when_no_doc_ids_selected(monkeypatch):
+def test_async_chat_uses_all_docs_when_no_doc_ids_selected(monkeypatch, dialog_service):
     retriever = _StubAsyncRetriever(
         {
             "total": 1,
@@ -321,7 +338,7 @@ def test_async_chat_uses_all_docs_when_no_doc_ids_selected(monkeypatch):
 
 
 @pytest.mark.p2
-def test_async_ask_uses_all_docs_when_search_config_has_no_doc_ids(monkeypatch):
+def test_async_ask_uses_all_docs_when_search_config_has_no_doc_ids(monkeypatch, dialog_service):
     retriever = _StubAsyncRetriever(
         {
             "total": 1,
@@ -392,7 +409,7 @@ def test_async_ask_uses_all_docs_when_search_config_has_no_doc_ids(monkeypatch):
 
 
 @pytest.mark.p2
-def test_gen_mindmap_uses_all_docs_when_search_config_has_no_doc_ids(monkeypatch):
+def test_gen_mindmap_uses_all_docs_when_search_config_has_no_doc_ids(monkeypatch, dialog_service):
     retriever = _StubAsyncRetriever(
         {
             "total": 1,

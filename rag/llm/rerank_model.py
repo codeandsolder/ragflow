@@ -126,8 +126,8 @@ class LocalAIRerank(Base):
         self.model_name = model_name.split("___")[0]
 
     def similarity(self, query: str, texts: list):
-        # noway to config Ragflow , use fix setting
-        texts = [truncate(t, 500) for t in texts]
+        # Configurable truncation length from settings
+        texts = [truncate(t, settings.RERANK_MAX_LENGTH or 500) for t in texts]
         data = {
             "model": self.model_name,
             "query": query,
@@ -222,8 +222,8 @@ class OpenAI_APIRerank(Base):
         self.model_name = model_name.split("___")[0]
 
     def similarity(self, query: str, texts: list):
-        # noway to config Ragflow , use fix setting
-        texts = [truncate(t, 500) for t in texts]
+        # Configurable truncation length from settings
+        texts = [truncate(t, settings.RERANK_MAX_LENGTH or 500) for t in texts]
         data = {
             "model": self.model_name,
             "query": query,
@@ -315,7 +315,7 @@ class SILICONFLOWRerank(Base):
             "documents": texts,
             "top_n": len(texts),
             "return_documents": False,
-            "max_chunks_per_doc": 1024,
+            "max_chunks_per_doc": 4096,
             "overlap_tokens": 80,
         }
 
@@ -552,8 +552,8 @@ class RAGconRerank(Base):
         self.model_name = model_name
 
     def similarity(self, query: str, texts: list):
-        # noway to config Ragflow , use fix setting
-        texts = [truncate(t, 500) for t in texts]
+        # Configurable truncation length from settings
+        texts = [truncate(t, settings.RERANK_MAX_LENGTH or 500) for t in texts]
         data = {
             "model": self.model_name,
             "query": query,

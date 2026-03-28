@@ -17,6 +17,7 @@ import asyncio
 import base64
 import json
 import os
+import tempfile
 import time
 import uuid
 
@@ -42,7 +43,7 @@ async def execute_code(req: CodeExecutionRequest):
         )
 
     task_id = str(uuid.uuid4())
-    workdir = f"/tmp/sandbox_{task_id}"
+    workdir = os.path.join(tempfile.gettempdir(), f"sandbox_{task_id}")
     os.makedirs(workdir, mode=0o700, exist_ok=True)
 
     try:

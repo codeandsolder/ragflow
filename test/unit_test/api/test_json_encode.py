@@ -91,7 +91,7 @@ class Testjson_encode_BaseTypeToDict:
         assert result["text"] == "test"
 
 
-class Testjson_encode.BaseTypeToDictWithType:
+class TestBaseTypeToDictWithType:
     """Test cases for json_encode.BaseType.to_dict_with_type method"""
 
     def test_includes_type_information(self):
@@ -171,7 +171,7 @@ class Testjson_encode.BaseTypeToDictWithType:
         assert config_data["type"] == "dict"
 
 
-class Testjson_encode.CustomJSONEncoder:
+class TestCustomJSONEncoder:
     """Test cases for json_encode.CustomJSONEncoder class"""
 
     def test_encode_datetime(self):
@@ -286,7 +286,7 @@ class Testjson_encode.CustomJSONEncoder:
 class TestJsonDumps:
     """Test cases for json_encode.json_dumps function"""
 
-    def test_json_encode.json_dumps_basic(self):
+    def test_json_dumps_basic(self):
         """Test basic json_encode.json_dumps functionality"""
         data = {"key": "value", "number": 42}
         result = json_encode.json_dumps(data)
@@ -294,21 +294,21 @@ class TestJsonDumps:
         assert isinstance(result, str)
         assert json.loads(result) == data
 
-    def test_json_encode.json_dumps_with_byte_false(self):
+    def test_json_dumps_with_byte_false(self):
         """Test json_encode.json_dumps with byte=False returns string"""
         data = {"test": "data"}
         result = json_encode.json_dumps(data, byte=False)
 
         assert isinstance(result, str)
 
-    def test_json_encode.json_dumps_with_byte_true(self):
+    def test_json_dumps_with_byte_true(self):
         """Test json_encode.json_dumps with byte=True returns bytes"""
         data = {"test": "data"}
         result = json_encode.json_dumps(data, byte=True)
 
         assert isinstance(result, bytes)
 
-    def test_json_encode.json_dumps_with_indent(self):
+    def test_json_dumps_with_indent(self):
         """Test json_encode.json_dumps with indentation"""
         data = {"key": "value"}
         result = json_encode.json_dumps(data, indent=2)
@@ -316,7 +316,7 @@ class TestJsonDumps:
         assert isinstance(result, str)
         assert "\n" in result  # Indented JSON has newlines
 
-    def test_json_encode.json_dumps_with_type_false(self):
+    def test_json_dumps_with_type_false(self):
         """Test json_encode.json_dumps with with_type=False"""
 
         class TestType(json_encode.BaseType):
@@ -330,7 +330,7 @@ class TestJsonDumps:
         assert "type" not in decoded
         assert decoded["value"] == "test"
 
-    def test_json_encode.json_dumps_with_type_true(self):
+    def test_json_dumps_with_type_true(self):
         """Test json_encode.json_dumps with with_type=True"""
 
         class TestType(json_encode.BaseType):
@@ -344,7 +344,7 @@ class TestJsonDumps:
         assert "type" in decoded
         assert "data" in decoded
 
-    def test_json_encode.json_dumps_datetime(self):
+    def test_json_dumps_datetime(self):
         """Test json_encode.json_dumps with datetime objects"""
         data = {"timestamp": datetime.datetime(2025, 12, 3, 15, 30, 0)}
         result = json_encode.json_dumps(data)
@@ -356,7 +356,7 @@ class TestJsonDumps:
 class TestJsonLoads:
     """Test cases for json_encode.json_loads function"""
 
-    def test_json_encode.json_loads_string_input(self):
+    def test_json_loads_string_input(self):
         """Test json_encode.json_loads with string input"""
         json_string = '{"key": "value", "number": 42}'
         result = json_encode.json_loads(json_string)
@@ -365,7 +365,7 @@ class TestJsonLoads:
         assert result["key"] == "value"
         assert result["number"] == 42
 
-    def test_json_encode.json_loads_bytes_input(self):
+    def test_json_loads_bytes_input(self):
         """Test json_encode.json_loads with bytes input"""
         json_bytes = b'{"key": "value"}'
         result = json_encode.json_loads(json_bytes)
@@ -373,7 +373,7 @@ class TestJsonLoads:
         assert isinstance(result, dict)
         assert result["key"] == "value"
 
-    def test_json_encode.json_loads_with_object_hook(self):
+    def test_json_loads_with_object_hook(self):
         """Test json_encode.json_loads with object_hook parameter"""
 
         def custom_hook(obj):
@@ -386,14 +386,14 @@ class TestJsonLoads:
 
         assert result["processed"] is True
 
-    def test_json_encode.json_loads_empty_object(self):
+    def test_json_loads_empty_object(self):
         """Test json_encode.json_loads with empty object"""
         result = json_encode.json_loads("{}")
 
         assert isinstance(result, dict)
         assert len(result) == 0
 
-    def test_json_encode.json_loads_array(self):
+    def test_json_loads_array(self):
         """Test json_encode.json_loads with array"""
         result = json_encode.json_loads("[1, 2, 3, 4, 5]")
 
