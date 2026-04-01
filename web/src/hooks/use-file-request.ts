@@ -69,7 +69,7 @@ export const useUploadFile = () => {
           });
         }
         return ret?.data?.code;
-      } catch (error) {}
+      } catch (error) { console.error("File upload error:", error); }
     },
   });
 

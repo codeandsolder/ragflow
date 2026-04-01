@@ -20,6 +20,7 @@ from configs import CHAT_ASSISTANT_NAME_LIMIT
 from ragflow_sdk import Chat
 from utils import encode_avatar
 from utils.file_utils import create_image_file
+from test.testcases.conftest import DEFAULT_LLM_ID
 
 
 class TestChatAssistantUpdate:
@@ -146,7 +147,7 @@ class TestChatAssistantUpdate:
                 excepted_value = Chat.LLM(
                     client,
                     {
-                        "model_name": "glm-4-flash@ZHIPU-AI",
+                        "model_name": DEFAULT_LLM_ID,
                         "temperature": 0.1,
                         "top_p": 0.3,
                         "presence_penalty": 0.4,

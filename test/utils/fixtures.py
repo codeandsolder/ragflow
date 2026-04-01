@@ -17,7 +17,7 @@
 
 import os
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 
 @pytest.fixture
@@ -146,17 +146,41 @@ def mock_es_client():
 
 
 @pytest.fixture
-def disable_tiktoken():
-    """Fixture to disable tiktoken for tests."""
-    with patch.dict("sys.modules", {"tiktoken": MagicMock()}):
-        yield
+def mock_tiktoken():
+    """Fixture providing a mock tiktoken encoder.
+
+    Use this fixture for tests that need deterministic token counts.
+    For real tokenization testing, use @pytest.mark.real_tokenizer.
+    """
+    mock_encoding = MagicMock()
+    mock_encoding.encode = MagicMock(return_value=[1, 2, 3, 4, 5])
+    mock_encoding.decode = MagicMock(return_value="decoded text")
+    mock_encoding.encode_batch = MagicMock(return_value=[[1, 2, 3], [4, 5, 6]])
+
+    mock_tiktoken = MagicMock()
+    mock_tiktoken.get_encoding = MagicMock(return_value=mock_encoding)
+
+    return mock_tiktoken
 
 
 @pytest.fixture
-def disable_openai():
-    """Fixture to disable OpenAI client for tests."""
-    with patch.dict("sys.modules", {"openai": MagicMock()}):
-        yield
+def mock_openai_client():
+    """Fixture providing a mock OpenAI client.
+
+    Use this fixture for tests that need mock API responses.
+    """
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock(message=MagicMock(content="Mock response"))]
+    mock_response.usage = MagicMock(prompt_tokens=10, completion_tokens=5, total_tokens=15)
+    mock_client.chat.completions.create = MagicMock(return_value=mock_response)
+
+    mock_embedding = MagicMock()
+    mock_embedding.data = [MagicMock(embedding=[0.1, 0.2, 0.3])]
+    mock_embedding.usage = MagicMock(total_tokens=10)
+    mock_client.embeddings.create = MagicMock(return_value=mock_embedding)
+
+    return mock_client
 
 
 @pytest.fixture

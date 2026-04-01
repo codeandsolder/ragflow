@@ -19,6 +19,7 @@ import functools
 import inspect
 import json
 import logging
+import re
 import sys
 import time
 from copy import deepcopy
@@ -124,7 +125,7 @@ def get_data_error_result(code=RetCode.DATA_ERROR, message="Sorry! Data missing!
         logging.exception(message)
     else:
         logging.error(message)
-    return _api_response(code=code, message=message)
+    return get_json_result(code=code, message=message)
 
 
 def server_error_response(e):
@@ -149,6 +150,39 @@ def server_error_response(e):
         return get_json_result(code=RetCode.BAD_REQUEST, message="Invalid request format")
 
     return get_json_result(code=RetCode.EXCEPTION_ERROR, message="An error occurred")
+
+
+def sanitize_string(value: str, field_name: str) -> str:
+    sanitization_errors = []
+    original_value = value
+
+    value = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', value)
+
+    if re.search(r'<script[^>]*>.*?</script>', value, re.IGNORECASE | re.DOTALL):
+        sanitization_errors.append(f"'{field_name}' contains script tags")
+    if re.search(r'javascript:', value, re.IGNORECASE):
+        sanitization_errors.append(f"'{field_name}' contains javascript: protocol")
+    if re.search(r'on\w+\s*=', value, re.IGNORECASE):
+        sanitization_errors.append(f"'{field_name}' contains inline event handlers")
+
+    sql_patterns = [
+        (r'(\bunion\b.*\bselect\b)', 'UNION SELECT'),
+        (r'(\bselect\b.*\bfrom\b)', 'SELECT FROM'),
+        (r'(\binsert\b.*\binto\b)', 'INSERT INTO'),
+        (r'(\bdelete\b.*\bfrom\b)', 'DELETE FROM'),
+        (r'(\bdrop\b.*\btable\b)', 'DROP TABLE'),
+        (r'(--\s*$)', 'SQL comment'),
+        (r'(;\s*drop\b)', 'DROP statement'),
+        (r'(\bexec\b\s*\(|\bexecute\b\s*\()', 'EXEC/EXECUTE'),
+    ]
+    for pattern, name in sql_patterns:
+        if re.search(pattern, value, re.IGNORECASE):
+            sanitization_errors.append(f"'{field_name}' contains suspicious SQL pattern: {name}")
+
+    if sanitization_errors:
+        raise ValueError("; ".join(sanitization_errors))
+
+    return value
 
 
 def validate_request(*args, **kwargs):
@@ -176,6 +210,7 @@ def validate_request(*args, **kwargs):
                 max_length = v.get("max_length")
                 min_length = v.get("min_length")
                 allowed_values = v.get("allowed_values")
+                sanitize = v.get("sanitize", True)
 
                 if expected_type is not None:
                     if not isinstance(config_value, expected_type):
@@ -185,6 +220,11 @@ def validate_request(*args, **kwargs):
                             type_errors.append(f"'{k}' length must be at least {min_length}")
                         if max_length is not None and len(config_value) > max_length:
                             type_errors.append(f"'{k}' length must not exceed {max_length}")
+                        if sanitize:
+                            try:
+                                input_arguments[k] = sanitize_string(config_value, k)
+                            except ValueError as e:
+                                type_errors.append(str(e))
 
                 if allowed_values is not None and config_value not in allowed_values:
                     error_arguments.append((k, allowed_values))
@@ -255,7 +295,7 @@ def active_required(func):
         user_id = current_user.id
         usr = UserService.filter_by_id(user_id)
         # check is_active
-        if not usr or not usr.is_active == ActiveEnum.ACTIVE.value:
+        if not usr or usr.is_active != ActiveEnum.ACTIVE.value:
             return get_json_result(code=RetCode.FORBIDDEN, message="User isn't active, please activate first.")
         if inspect.iscoroutinefunction(func):
             return await func(*args, **kwargs)
@@ -327,19 +367,19 @@ def get_error_data_result(
     message="Sorry! Data missing!",
     code=RetCode.DATA_ERROR,
 ):
-    return _api_response(code=code, message=message)
+    return get_json_result(code=code, message=message)
 
 
 def get_error_argument_result(message="Invalid arguments"):
-    return _api_response(code=RetCode.ARGUMENT_ERROR, message=message)
+    return get_json_result(code=RetCode.ARGUMENT_ERROR, message=message)
 
 
 def get_error_permission_result(message="Permission error"):
-    return _api_response(code=RetCode.PERMISSION_ERROR, message=message)
+    return get_json_result(code=RetCode.PERMISSION_ERROR, message=message)
 
 
 def get_error_operating_result(message="Operating error"):
-    return _api_response(code=RetCode.OPERATING_ERROR, message=message)
+    return get_json_result(code=RetCode.OPERATING_ERROR, message=message)
 
 
 def generate_confirmation_token():

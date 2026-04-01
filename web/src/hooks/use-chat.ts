@@ -61,7 +61,7 @@ export const useSendMessageWithSse = (
   const [done, setDone] = useState(true);
   const { doneRecord, clearDoneRecord, setDoneRecordById, allDone } =
     useSetDoneRecord();
-  const timer = useRef<any>();
+  const timer = useRef<ReturnType<typeof setTimeout>>();
   const sseRef = useRef<AbortController>();
 
   const initializeSseRef = useCallback(() => {
@@ -71,6 +71,9 @@ export const useSendMessageWithSse = (
   useEffect(() => {
     return () => {
       sseRef.current?.abort();
+      if (timer.current) {
+        clearTimeout(timer.current);
+      }
     };
   }, []);
 
@@ -166,7 +169,6 @@ export const useSendMessageWithSse = (
             }
           } catch (e) {
             if (e instanceof DOMException && e.name === 'AbortError') {
-              console.log('Request was aborted by user or logic.');
               break;
             }
           }

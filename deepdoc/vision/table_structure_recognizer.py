@@ -27,6 +27,9 @@ from .block_type import block_type_for_dict
 from .recognizer import Recognizer
 
 
+# Distance threshold constant
+DISTANCE_THRESHOLD = 100000
+
 class TableStructureRecognizer(Recognizer):
     labels = [
         "table",
@@ -35,12 +38,14 @@ class TableStructureRecognizer(Recognizer):
         "table column header",
         "table projected row header",
         "table spanning cell",
+        "table nested",
     ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         try:
             super().__init__(self.labels, "tsr", os.path.join(get_project_base_directory(), "rag/res/deepdoc"))
-        except Exception:
+        except (OSError, IOError) as e:
+            logging.warning(f"Failed to load table structure recognizer model from local directory: {e}. Trying HuggingFace.")
             super().__init__(
                 self.labels,
                 "tsr",
@@ -122,6 +127,51 @@ class TableStructureRecognizer(Recognizer):
         return block_type_for_dict(b)
 
     @staticmethod
+    def _detect_nested_table(boxes):
+        """Detect if a cell or region contains a nested table structure.
+
+        Nested tables occur when a table cell contains its own table-like
+        structure. This is detected by finding multiple distinct text clusters
+        within a bounding region that have table-like characteristics.
+
+        Returns a list of box indices that form nested table structures.
+        """
+        if len(boxes) < 4:
+            return []
+
+        nested_indices = []
+        for i, b in enumerate(boxes):
+            cell_text = b.get("text", "")
+            if not cell_text or len(cell_text.strip()) < 5:
+                continue
+
+            if b.get("colspan", 1) > 1 or b.get("rowspan", 1) > 1:
+                continue
+
+            cell_width = b.get("x1", 0) - b.get("x0", 0)
+            cell_height = b.get("bottom", 0) - b.get("top", 0)
+
+            if cell_width <= 0 or cell_height <= 0:
+                continue
+
+            similar_cells = [
+                j for j, other in enumerate(boxes)
+                if i != j
+                and abs((other.get("bottom", 0) - other.get("top", 0)) - cell_height) < cell_height * 0.3
+                and abs((other.get("x1", 0) - other.get("x0", 0)) - cell_width) < cell_width * 0.3
+                and other.get("top", 0) >= b.get("top", 0)
+                and other.get("bottom", 0) <= b.get("bottom", 0)
+            ]
+
+            if len(similar_cells) >= 3:
+                nested_indices.append(i)
+                for j in similar_cells:
+                    if j not in nested_indices:
+                        nested_indices.append(j)
+
+        return nested_indices
+
+    @staticmethod
     def construct_table(boxes, is_english=False, html=True, **kwargs):
         cap = ""
         i = 0
@@ -136,6 +186,11 @@ class TableStructureRecognizer(Recognizer):
 
         if not boxes:
             return []
+
+        nested_indices = TableStructureRecognizer._detect_nested_table(boxes)
+        for idx in nested_indices:
+            boxes[idx]["nested_table"] = True
+
         for b in boxes:
             b["btype"] = TableStructureRecognizer.blockType(b)
         max_type = Counter([b["btype"] for b in boxes]).items()
@@ -209,7 +264,7 @@ class TableStructureRecognizer(Recognizer):
                 bx = tbl[ii][j][0]
                 logging.debug("Relocate column single: " + bx["text"])
                 # j column only has one value
-                left, right = 100000, 100000
+                left, right = DISTANCE_THRESHOLD, DISTANCE_THRESHOLD
                 if j > 0 and not f:
                     for i in range(len(tbl)):
                         if tbl[i][j - 1]:
@@ -218,7 +273,7 @@ class TableStructureRecognizer(Recognizer):
                     for i in range(len(tbl)):
                         if tbl[i][j + 1]:
                             right = min(right, np.min([a["x0"] - bx["x1"] for a in tbl[i][j + 1]]))
-                assert left < 100000 or right < 100000
+                assert left < DISTANCE_THRESHOLD or right < DISTANCE_THRESHOLD
                 if left < right:
                     for jj in range(j, len(tbl[0])):
                         for i in range(len(tbl)):
@@ -337,15 +392,22 @@ class TableStructureRecognizer(Recognizer):
                     row += "<td></td>" if i not in hdset else "<th></th>"
                     continue
                 txt = ""
+                nested_content = ""
                 if arr:
                     h = min(np.min([c["bottom"] - c["top"] for c in arr]) / 2, 10)
-                    txt = " ".join([c["text"] for c in Recognizer.sort_Y_firstly(arr, h)])
+                    if arr[0].get("nested_table"):
+                        nested_content = "<table class='nested-table'>" + " ".join([c["text"] for c in arr]) + "</table>"
+                        txt = nested_content
+                    else:
+                        txt = " ".join([c["text"] for c in Recognizer.sort_Y_firstly(arr, h)])
                 txts.append(txt)
                 sp = ""
                 if arr[0].get("colspan"):
                     sp = "colspan={}".format(arr[0]["colspan"])
                 if arr[0].get("rowspan"):
                     sp += " rowspan={}".format(arr[0]["rowspan"])
+                if arr[0].get("nested_table"):
+                    sp += " class='nested-table-cell'"
                 if i in hdset:
                     row += f"<th {sp} >" + txt + "</th>"
                 else:

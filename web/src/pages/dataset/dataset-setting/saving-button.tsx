@@ -94,7 +94,7 @@ export function SavingButton() {
               })();
             }
           } catch (e) {
-            console.log(e);
+            console.error('Save error:', e);
           }
         })();
       }}

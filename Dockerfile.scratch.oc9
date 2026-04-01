@@ -1,5 +1,4 @@
 FROM opencloudos/opencloudos:9.0
-USER root
 
 WORKDIR /ragflow
 
@@ -24,16 +23,18 @@ RUN dnf install -y nodejs
 
 RUN dnf install -y nginx
 
-ADD ./web ./web
-ADD ./api ./api
-ADD ./docs ./docs
-ADD ./conf ./conf
-ADD ./deepdoc ./deepdoc
-ADD ./rag ./rag
-ADD ./requirements.txt ./requirements.txt
-ADD ./agent ./agent
-ADD ./graphrag ./graphrag
-ADD ./plugin ./plugin
+RUN useradd -m ragflow
+
+COPY ./web ./web
+COPY ./api ./api
+COPY ./docs ./docs
+COPY ./conf ./conf
+COPY ./deepdoc ./deepdoc
+COPY ./rag ./rag
+COPY ./requirements.txt ./requirements.txt
+COPY ./agent ./agent
+COPY ./graphrag ./graphrag
+COPY ./plugin ./plugin
 
 RUN dnf install -y openmpi openmpi-devel python3-openmpi
 ENV C_INCLUDE_PATH /usr/include/openmpi-x86_64:$C_INCLUDE_PATH
@@ -55,7 +56,9 @@ ENV PYTHONPATH=/ragflow/
 ENV HF_ENDPOINT=https://hf-mirror.com
 
 COPY docker/service_conf.yaml.template ./conf/service_conf.yaml.template
-ADD docker/entrypoint.sh ./entrypoint.sh
+COPY docker/entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
+
+USER ragflow
 
 ENTRYPOINT ["./entrypoint.sh"]

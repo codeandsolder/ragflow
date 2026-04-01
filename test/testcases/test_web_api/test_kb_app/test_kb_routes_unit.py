@@ -913,7 +913,7 @@ def test_check_embedding_similarity_threshold_matrix_unit(monkeypatch):
         ),
     )
 
-    _set_request_json(monkeypatch, module, {"kb_id": "kb-1", "embd_id": "emb-1", "check_num": 6})
+    _set_request_json(monkeypatch, module, {"kb_id": "kb-1", "embd_id": "emb-1", "check_num": EMBEDDING_CHECK_SAMPLE_SIZE + 1})
     res = _run(route())
     assert res["code"] == module.RetCode.NOT_EFFECTIVE, res
     assert "average similarity" in res["message"], res
@@ -942,7 +942,7 @@ def test_check_embedding_similarity_threshold_matrix_unit(monkeypatch):
         "docStoreConn",
         _DocStore(total=1, ids_by_offset={0: ["chunk-high"]}, docs=high_docs),
     )
-    _set_request_json(monkeypatch, module, {"kb_id": "kb-1", "embd_id": "emb-1", "check_num": 1})
+    _set_request_json(monkeypatch, module, {"kb_id": "kb-1", "embd_id": "emb-1", "check_num": EMBEDDING_CHECK_SAMPLE_SIZE})
     res = _run(route())
     assert res["code"] == module.RetCode.SUCCESS, res
     assert res["data"]["summary"]["avg_cos_sim"] > 0.9, res
@@ -1005,7 +1005,7 @@ def test_check_embedding_error_and_empty_sample_paths_unit(monkeypatch):
             },
         ),
     )
-    _set_request_json(monkeypatch, module, {"kb_id": "kb-1", "embd_id": "emb-1", "check_num": 1})
+    _set_request_json(monkeypatch, module, {"kb_id": "kb-1", "embd_id": "emb-1", "check_num": EMBEDDING_CHECK_SAMPLE_SIZE})
     res = _run(route())
     assert res["code"] == module.RetCode.DATA_ERROR, res
     assert "Embedding failure." in res["message"], res
@@ -1017,6 +1017,6 @@ def test_check_embedding_error_and_empty_sample_paths_unit(monkeypatch):
 
     monkeypatch.setattr(module, "LLMBundle", lambda *_args, **_kwargs: _OkEmbModel())
     monkeypatch.setattr(module.settings, "docStoreConn", _DocStore(total=0, ids_by_offset={}, docs={}))
-    _set_request_json(monkeypatch, module, {"kb_id": "kb-1", "embd_id": "emb-1", "check_num": 1})
+    _set_request_json(monkeypatch, module, {"kb_id": "kb-1", "embd_id": "emb-1", "check_num": EMBEDDING_CHECK_SAMPLE_SIZE})
     with pytest.raises(UnboundLocalError):
         _run(route())

@@ -86,7 +86,12 @@ class Graph:
         self.path = []
         self.components = {}
         self.error = ""
-        self.dsl = json.loads(dsl)
+        try:
+            self.dsl = json.loads(dsl)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in DSL: {e}")
+        if not isinstance(self.dsl, dict):
+            raise ValueError("DSL must be a JSON object")
         self._tenant_id = tenant_id
         self.task_id = task_id if task_id else get_uuid()
         self.custom_header = custom_header
@@ -347,7 +352,6 @@ class Canvas(Graph):
             self.history = []
             self.retrieval = []
             self.memory = []
-        print(self.variables)
         for k in self.globals.keys():
             if k.startswith("sys."):
                 if isinstance(self.globals[k], str):

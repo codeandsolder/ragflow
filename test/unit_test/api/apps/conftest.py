@@ -20,6 +20,33 @@ import pytest
 from unittest.mock import Mock
 
 
+class MockResponse:
+    """Mock Flask/Quart response object"""
+
+    def __init__(self, data, code=0, message=""):
+        self._data = data
+        self._code = code
+        self._message = message
+
+    def get_json(self):
+        return {"code": self._code, "message": self._message, "data": self._data}
+
+
+def get_json_result(data=None, message="", code=0):
+    """Mock get_json_result helper"""
+    return MockResponse(data, code, message)
+
+
+def get_data_error_result(message="", code=2):
+    """Mock get_data_error_result helper"""
+    return MockResponse(None, code, message)
+
+
+def get_error_data_result(message="", code=1):
+    """Mock get_error_data_result helper"""
+    return MockResponse(None, code, message)
+
+
 @pytest.fixture
 def mock_tenant():
     tenant = Mock()

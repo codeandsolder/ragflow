@@ -37,12 +37,7 @@ const LinkDataPipelineModal = ({
   });
   //   const [open, setOpen] = useState(false);
   const { navigateToAgents } = useNavigatePage();
-  const handleFormSubmit = (values: any) => {
-    console.log(values, data);
-    // const param = {
-    //   ...data,
-    //   ...values,
-    // };
+  const handleFormSubmit = (values: z.infer<typeof pipelineFormSchema>) => {
     const pipeline = list?.find((item) => item.id === values.pipeline_id);
     onSubmit?.(pipeline);
   };

@@ -248,6 +248,11 @@ class EntityResolution(Extractor):
         return any(any(c.isdigit() for c in pair) for pair in diff)
 
     def is_similarity(self, a, b):
+        if not a and not b:
+            return True
+        if not a or not b:
+            return False
+
         if self._has_digit_in_2gram_diff(a, b):
             return False
 

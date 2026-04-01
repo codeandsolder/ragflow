@@ -15,159 +15,221 @@ Generated from comprehensive code review of all major modules.
 ## 1. api/ - Backend API Server
 
 ### Performance
-- [🟠 **HIGH**] N+1 query pattern - `document_service.py:111-114`
-- Batch-fetch all metadata at once
-- [🟡 **MEDIUM**] No pagination limits - `document_service.py:173-174`
-- Add default limits to prevent memory exhaustion
+- [🟠 **HIGH**] N+1 query patterns - Multiple locations:
+  - `dialog_app.py:163-171` - get_kb_names() loops calling get_by_id()
+  - `dialog_app.py:180-181` - list_dialogs() calls get_kb_names() per conversation
+  - `kb_app.py:92-96` - list_tags() loops through tenants
+- [🟡 **MEDIUM**] Missing pagination limits in list endpoints
+
+### Security
+- [🔴 **CRITICAL**] `user_app.py:437` - GitHub API token exposed in URL query string
+- [🔴 **CRITICAL**] `user_app.py:256,269` - Open redirect via redirect(f"/?error={str(e)}")
+- [🟠 **HIGH**] `document_app.py:824-827` - Path traversal risk with image_id.split("-")
+- [🟠 **HIGH**] Missing `@resource_owner_required` in `chunk_app.py:503`
 
 ### Code Quality
-- [🔴 **CRITICAL**] Extensive dead code (275+ lines commented) - `kb_app.py:49-324`
-- Remove or properly deprecate
-- [🟠 **HIGH**] OAuth callback duplication - `user_app.py:272-461`
-- Extract common handler logic
-- [🟠 **HIGH**] Inconsistent response formats - `api_utils.py`
-- Consolidate to single pattern: `{"code", "message", "data"}`
-- [🟡 **MEDIUM**] Weak input validation - `api_utils.py:156-203`
-- Add type, length, and sanitization validation
-- [🟡 **MEDIUM**] REST convention violations - `document_app.py`
-- Use GET for list/infos, POST only for mutations
+- [🟡 **MEDIUM**] Inconsistent error handling - Uses `raise LookupError()` instead of error response
+- [🟡 **MEDIUM**] `kb_app.py:402` - Passes string to server_error_response() instead of Exception
+- [🟡 **MEDIUM**] Direct `request.args["..."]` access without validation (KeyError risk)
 
-### Testing
-- [🔴 **CRITICAL**] No test infrastructure in api/
-- Add pytest configuration and mock fixtures
+### REST Conventions
+- [🟡 **MEDIUM**] POST used for read operations: `/filter`, `/completion`, `/ask`, `/next`, `/list`
 
 ---
 
 ## 2. rag/ - Core RAG Logic
 
-### Architecture
-- [🔴 **CRITICAL**] `do_handle_task` is 246 lines - `task_executor.py:966-1211`
-- Split into handler classes using Strategy pattern
-- [🔴 **CRITICAL**] LLM provider code duplication (40+ classes) - `chat_model.py`
-- Use template method pattern for common code
-
-### Performance
-- [🟠 **HIGH**] `hybrid_similarity` creates sklearn model on every call - `query.py:159-167`
-- Cache the model instance
-- [🟡 **MEDIUM**] Magic threshold `0.63` with no explanation - `search.py:232-241`
-- [🟡 **MEDIUM**] Hardcoded fusion weights `0.05,0.95` - `search.py:141`
+### Code Quality
+- [🟡 **MEDIUM**] Hardcoded magic numbers:
+  - `search.py:35-42` - CITATION_SIMILARITY_THRESHOLD=0.63, MIN_THRESHOLD=0.3, DECAY=0.8
+  - `search.py:571` - bs=128 batch size
+  - `search.py:654,708` - vector_size=1024 hardcoded
+  - `query.py:44` - min_match=0.6 hardcoded
+- [🟡 **MEDIUM**] Unused parameters in search.py:587,593 ('S' parameter)
+- [🟡 **MEDIUM**] Code duplication in tag_content()/tag_query():607,622
 
 ### Configuration
-- [🟡 **MEDIUM**] No config validation throughout
+- [🟡 **MEDIUM**] No bounds validation for similarity_threshold, vector_similarity_weight
+
+### Type Hints
+- [🟡 **MEDIUM**] Missing type hints throughout rag/nlp/
 
 ---
 
 ## 3. deepdoc/ - Document Parsing & OCR
 
-### Critical Bugs
-- [🔴 **CRITICAL**] No streaming for large documents - entire PDF loaded
-- Implement page-by-page processing
-- [🔴 **CRITICAL**] Page images at full resolution `72*zoomin` DPI - `pdf_parser.py:1545`
-- Add memory monitoring and adaptive processing
-- [🟠 **HIGH**] No explicit memory cleanup after processing each page
+### Memory Issues
+- [🟠 **HIGH**] `figure_parser.py:198` - Global ThreadPoolExecutor never shut down
+- [🟠 **HIGH**] `pdf_parser.py:2380-2386` - pdfplumber not closed on exception
+
+### Validation
+- [🟡 **MEDIUM**] No file size validation in txt_parser, html_parser, docx_parser, ppt_parser, epub_parser
 
 ### Error Handling
-- [🟠 **HIGH**] No PDF validation or file size limits
-- Malformed PDFs could cause indefinite blocking
-- [🟠 **HIGH**] No timeouts on PDF/image operations
+- [🟡 **MEDIUM**] `pdf_parser.py:1803-1804` - Generic `except Exception` swallows errors
+- [🟡 **MEDIUM**] `docx_parser.py:46-70` - Bare except hides issues
 
-### Edge Cases
-- [🟠 **HIGH**] Password-protected PDFs not handled
-- [🟡 **MEDIUM**] Right-to-left languages not handled
-- [🟡 **MEDIUM**] Vertical text incomplete support
-- [🟡 **MEDIUM**] Nested tables basic only
-- [🟡 **MEDIUM**] Footnotes/endnotes merged with body text
+### Timeouts
+- [🟡 **MEDIUM**] `pdf_parser.py:2388-2420` - No timeout on VisionParser vision model calls
+- [🟡 **MEDIUM**] `figure_parser.py:282-288` - Future results without timeout
 
 ---
 
 ## 4. agent/ - Canvas Workflow Engine
 
-### Code Quality
-- [🟡 **MEDIUM**] Silent JSON validation failure - `component/base.py:215-217`
+### Silent Failures
+- [🟠 **HIGH**] `component/message.py:197-198` - Silent exception swallowing with `except Exception: pass`
 
-### Sandbox
-- [🟡 **MEDIUM**] Sandbox executor uses `privileged: true` - `docker-compose-base.yml:148-174`
+### Large Classes
+- [🟡 **MEDIUM**] `canvas.py` 896 lines, `component/docs_generator.py` 1514 lines
+- [🟡 **MEDIUM**] `component/message.py` 440 lines, `component/llm.py` 443 lines
+
+### Security
+- [🟡 **MEDIUM**] `sandbox/executor_manager/services/security.py:172-173` - Node.js security "defaulted to SAFE"
+- [🟡 **MEDIUM**] `sandbox/executor_manager/services/security.py:167` - Dangerous code logged but not blocked
+
+### Debug Code
+- [🟡 **MEDIUM**] `canvas.py:350` - Debug print statement in production code
 
 ---
 
 ## 5. web/ - React Frontend
 
-### Performance
-- [🟡 **MEDIUM**] Large Zustand store (659 lines) - `agent/store.ts:122-656`
-- [🟡 **MEDIUM**] Large `useSelectDerivedMessages` hook (200 lines) - `logic-hooks.ts:447-644`
-- [🟡 **MEDIUM**] No `React.memo()` on list item components
-
-### Code Quality
-- [🟠 **HIGH**] Redundant auth cleanup calls - `request.ts:165-166`
-- [🟡 **MEDIUM**] `console.log` instead of proper error logging - `next-request.ts:149`
-- [🟡 **MEDIUM**] `eslint-disable-next-line eqeqeq` needs justification - `agent/store.ts:575`
+### Console Statements
+- [🟡 **MEDIUM**] 100+ console.log/debug statements in production code
 
 ### Accessibility
-- [🟠 **HIGH**] Limited `aria-*` attributes
-- [🟡 **MEDIUM**] No skip links for keyboard navigation
-- [🟡 **MEDIUM**] Missing focus management in modals
+- [🟡 **MEDIUM**] Deprecated onKeyPress usage - should use onKeyDown/onKeyUp
+- [🟡 **MEDIUM**] Missing keyboard handlers on clickable divs
+- [🟡 **MEDIUM**] Missing aria-labels on icon-only buttons (100+ occurrences)
+- [🟡 **MEDIUM**] Empty alt attributes on images
+
+### TypeScript
+- [🟡 **MEDIUM**] Excessive 'any' usage (828+ instances)
+- [🟡 **MEDIUM**] UseRef<any> types should be specific
+
+### Large Components
+- [🟡 **MEDIUM**] admin/users.tsx 812 lines, admin/sandbox-settings.tsx 577 lines
+
+### Memory Leaks
+- [🟡 **MEDIUM**] use-chat.ts:77-85 - resetAnswer timer not cleared on unmount
 
 ---
 
-## 6. docker/ - Docker Deployment
-
-### Container Hardening
-- [🟡 **MEDIUM**] Sandbox executor uses `privileged: true` - `docker-compose-base.yml:148-174`
-
----
-
-## 7. sdk/ - Python SDK
+## 6. sdk/ - Python SDK
 
 ### Documentation
-- [🟠 **HIGH**] Minimal docstrings except one parameter
-- [🟠 **HIGH**] `hello_ragflow.py` only prints version, no real usage
-- [🟡 **MEDIUM**] No README.md in SDK directory
+- [🟡 **MEDIUM**] Missing docstrings: session.py methods, dataset.py update_auto_metadata()
+- [🟡 **MEDIUM**] modules/__init__.py - Empty file, no documentation
+
+### Type Hints
+- [🟡 **MEDIUM**] Missing type hints in session.py, dataset.py, memory.py multiple methods
+
+### Error Handling
+- [🟡 **MEDIUM**] session.py:50-97 - ask() lacks exception handling for stream failures
+- [🟡 **MEDIUM**] dataset.py:255-261 - parse_documents() swallows potential errors
 
 ---
 
-## 8. test/ - Testing Infrastructure
+## 7. docker/ - Docker Deployment
 
-### Test Quality
-- [🟡 **MEDIUM**] Some test files too large (>300 lines)
+### Missing Health Checks
+- [🟡 **MEDIUM**] tei-cpu, tei-gpu no healthcheck defined
+- [🟡 **MEDIUM**] ragflow-cpu, ragflow-gpu no healthcheck
 
-### Coverage Gaps
-- [🟠 **HIGH**] No unit tests for `api/apps/` endpoints
-- [🟠 **HIGH**] No tests for `rag/llm/` (only 1 test file)
-- [🟠 **HIGH**] No tests for `rag/nlp/`, `agent/tool/`, `deepdoc/ocr/`, `rag/svr/`
-- [🟡 **MEDIUM**] No E2E tests for agent workflow builder
+### Resource Limits
+- [🟡 **MEDIUM**] tei-cpu, tei-gpu no deploy.resources.limits
+- [🟡 **MEDIUM**] ragflow services missing CPU/memory limits
 
-### E2E Reliability
-- [🟠 **HIGH**] No retry mechanisms for flaky tests
-- [🟡 **MEDIUM**] Hardcoded timeouts (`RESULT_TIMEOUT_MS = 15000`)
-- [🟡 **MEDIUM**] Hardcoded model names: `"glm-4-flash@ZHIPU-AI"`
+### Security
+- [🟡 **MEDIUM**] .env:304 - Hardcoded default LITELLM_MASTER_KEY
 
-### Test Data
-- [🟠 **HIGH**] No test data factories (like Factory Boy)
-- [🟡 **MEDIUM**] Creates files on-the-fly, no fixtures
-- [🟡 **MEDIUM**] Hardcoded credentials: `"qa@infiniflow.org"`, `"123"`
+---
 
-### Benchmarking
-- [🟡 **MEDIUM**] No baseline comparison for regressions
-- [🟡 **MEDIUM**] Limited metrics (only latency, no throughput)
-- [🟡 **MEDIUM**] No trend visualization or alerting
+## 8. rag/llm/ - LLM Models
+
+### Missing Retry Logic
+- [🟠 **HIGH**] 15+ encode() methods lack retry despite Base inheritance
+
+### Error Handling
+- [🟠 **HIGH**] Multiple encode() methods have no try/catch or status checking
+
+### Type Hints
+- [🟡 **MEDIUM**] Missing type hints on encode(), encode_queries() throughout
+
+### Code Duplication
+- [🟡 **MEDIUM**] Highly similar encode() patterns across OpenAIEmbed, LocalAIEmbed, etc.
+
+---
+
+## 9. rag/graphrag/ - GraphRAG
+
+### Error Handling
+- [🟠 **HIGH**] `utils.py:236` - Potential KeyError in graph_merge without existence check
+
+### Test Coverage
+- [🟠 **HIGH**] No unit tests for entity_resolution.py
+- [🟡 **MEDIUM**] No integration tests for graph extraction pipeline
+
+### Debug Code
+- [🟡 **MEDIUM**] `general/index.py:178-189` - Hardcoded "FIX" comments and debug strings
+
+### Resource Leaks
+- [🟡 **MEDIUM**] `general/graph_extractor.py:80-86` - tiktoken encoding never closed
+
+---
+
+## 10. test/ - Testing Infrastructure
+
+### Test Isolation
+- [🟡 **MEDIUM**] configs.py:27 - Comment reveals plaintext password "123"
+
+### Over-mocking
+- [🟠 **HIGH**] test/unit_test/api/tests mock entire services hiding interaction bugs
+
+### Weak Assertions
+- [🟡 **MEDIUM**] test/unit_test/rag/ - Weak assertions like `assert len(chunks) <= expected_count + 1`
+
+### Flaky Tests
+- [🟡 **MEDIUM**] test_retry_mechanism.py:204 - `assert wait1 != wait2 or True` always passes
+
+### Missing Coverage
+- [🟠 **HIGH**] No tests for agent component: Begin, LLM, Message, DataOperations, etc.
+- [🟠 **HIGH**] No tests for agent tools: Google, Tavily, DuckDuckGo, etc.
+
+---
+
+## 11. web/hooks and stores
+
+### Type Safety
+- [🟡 **MEDIUM**] web/src/hooks/use-chat.ts:64 - UseRef<any> should be specific
+- [🟡 **MEDIUM**] web/src/hooks/common-hooks.tsx:84 - any type in callbacks
+
+### Memory Leaks
+- [🟡 **MEDIUM**] use-chat.ts:77-85 - timer not cleared
+
+### Large Files
+- [🟡 **MEDIUM**] use-chat.ts 527 lines, use-chat-request.ts 554 lines
+
+---
+
+## Planning Documents Created
+
+1. `docs/TEST_MOCKING_PLAN.md` - Mocking rework architecture and migration plan
+2. `test/TEST_DATA_FACTORIES_PLAN.md` - Test data factories implementation plan
 
 ---
 
 ## Long-term Improvements
 
-1. **Refactor large classes**:
-- `Dealer` (334 lines) → Searcher, Reranker, CitationInserter
-- `do_handle_task` (246 lines) → Task handlers
-- `Canvas` store (659 lines) → Multiple stores
+1. **OpenAPI documentation**: Add route decorators to generate OpenAPI docs
 
-2. **Implement streaming** for large document processing
+2. **Test data factories**: Implement factory_boy pattern
 
-3. **Add comprehensive type hints** and enable strict TypeScript
+3. **Mocking rework**: Follow TEST_MOCKING_PLAN.md
 
-4. **Create test data factories** for consistent test data
+4. **Reduce console.log**: Replace with proper logging throughout web/
 
-5. **Implement memory monitoring** and adaptive processing
+5. **TypeScript strictness**: Replace 'any' types with proper types
 
-6. **Add OpenAPI documentation** using existing QuartSchema
-
-7. **Create baseline metrics** for benchmarking regressions
+(End of file - total 214 lines)

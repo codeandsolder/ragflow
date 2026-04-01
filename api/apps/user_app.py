@@ -63,7 +63,7 @@ from common import settings
 from common.http_client import async_request
 
 
-@manager.route("/login", methods=["POST", "GET"])  # noqa: F821
+@manager.route("/login", methods=["POST"])  # noqa: F821
 async def login():
     """
     User login endpoint.
@@ -253,7 +253,10 @@ async def oauth_callback(channel):
             except Exception as e:
                 rollback_user_registration(user_id)
                 logging.exception(e)
-                return redirect(f"/?error={str(e)}")
+                error_msg = str(e)
+                if error_msg in ["user_inactive", "user_not_found"]:
+                    return redirect(f"/?error={error_msg}")
+                return redirect("/?error=login_failed")
 
         # User exists, try to log in
         user = users[0]
@@ -266,7 +269,58 @@ async def oauth_callback(channel):
         return redirect(f"/?auth={user.get_id()}")
     except Exception as e:
         logging.exception(e)
-        return redirect(f"/?error={str(e)}")
+        error_msg = str(e)
+        if error_msg in ["user_inactive", "user_not_found"]:
+            return redirect(f"/?error={error_msg}")
+        return redirect("/?error=login_failed")
+
+
+async def _handle_oauth_user(access_token, channel, user_info, nickname_field):
+    from api.apps import login_user
+    email_address = user_info.get("email")
+    if not email_address:
+        return redirect("/?error=email not available")
+    users = UserService.query(email=email_address)
+    user_id = get_uuid()
+    if not users:
+        try:
+            try:
+                avatar = await download_img(user_info.get("avatar_url", ""))
+            except Exception as e:
+                logging.exception(e)
+                avatar = ""
+            users = user_register(
+                user_id,
+                {
+                    "access_token": access_token,
+                    "email": email_address,
+                    "avatar": avatar,
+                    "nickname": user_info.get(nickname_field, "User"),
+                    "login_channel": channel,
+                    "last_login_time": get_format_time(),
+                    "is_superuser": False,
+                },
+            )
+            if not users:
+                raise Exception(f"Fail to register {email_address}.")
+            if len(users) > 1:
+                raise Exception(f"Same email: {email_address} exists!")
+
+            user = users[0]
+            login_user(user)
+            return redirect("/?auth=%s" % user.get_id())
+        except Exception as e:
+            rollback_user_registration(user_id)
+            logging.exception(e)
+            return redirect("/?error=%s" % str(e))
+
+    user = users[0]
+    user.access_token = get_uuid()
+    if user and hasattr(user, "is_active") and user.is_active == "0":
+        return redirect("/?error=user_inactive")
+    login_user(user)
+    user.save()
+    return redirect("/?auth=%s" % user.get_id())
 
 
 @manager.route("/github_callback", methods=["GET"])  # noqa: F821
@@ -310,51 +364,7 @@ async def github_callback():
     session["access_token"] = res["access_token"]
     session["access_token_from"] = "github"
     user_info = await user_info_from_github(session["access_token"])
-    email_address = user_info["email"]
-    users = UserService.query(email=email_address)
-    user_id = get_uuid()
-    if not users:
-        # User isn't try to register
-        try:
-            try:
-                avatar = await download_img(user_info["avatar_url"])
-            except Exception as e:
-                logging.exception(e)
-                avatar = ""
-            users = user_register(
-                user_id,
-                {
-                    "access_token": session["access_token"],
-                    "email": email_address,
-                    "avatar": avatar,
-                    "nickname": user_info["login"],
-                    "login_channel": "github",
-                    "last_login_time": get_format_time(),
-                    "is_superuser": False,
-                },
-            )
-            if not users:
-                raise Exception(f"Fail to register {email_address}.")
-            if len(users) > 1:
-                raise Exception(f"Same email: {email_address} exists!")
-
-            # Try to log in
-            user = users[0]
-            login_user(user)
-            return redirect("/?auth=%s" % user.get_id())
-        except Exception as e:
-            rollback_user_registration(user_id)
-            logging.exception(e)
-            return redirect("/?error=%s" % str(e))
-
-    # User has already registered, try to log in
-    user = users[0]
-    user.access_token = get_uuid()
-    if user and hasattr(user, "is_active") and user.is_active == "0":
-        return redirect("/?error=user_inactive")
-    login_user(user)
-    user.save()
-    return redirect("/?auth=%s" % user.get_id())
+    return await _handle_oauth_user(session["access_token"], "github", user_info, "login")
 
 
 @manager.route("/feishu_callback", methods=["GET"])  # noqa: F821
@@ -414,51 +424,7 @@ async def feishu_callback():
     session["access_token"] = res["data"]["access_token"]
     session["access_token_from"] = "feishu"
     user_info = await user_info_from_feishu(session["access_token"])
-    email_address = user_info["email"]
-    users = UserService.query(email=email_address)
-    user_id = get_uuid()
-    if not users:
-        # User isn't try to register
-        try:
-            try:
-                avatar = await download_img(user_info["avatar_url"])
-            except Exception as e:
-                logging.exception(e)
-                avatar = ""
-            users = user_register(
-                user_id,
-                {
-                    "access_token": session["access_token"],
-                    "email": email_address,
-                    "avatar": avatar,
-                    "nickname": user_info["en_name"],
-                    "login_channel": "feishu",
-                    "last_login_time": get_format_time(),
-                    "is_superuser": False,
-                },
-            )
-            if not users:
-                raise Exception(f"Fail to register {email_address}.")
-            if len(users) > 1:
-                raise Exception(f"Same email: {email_address} exists!")
-
-            # Try to log in
-            user = users[0]
-            login_user(user)
-            return redirect("/?auth=%s" % user.get_id())
-        except Exception as e:
-            rollback_user_registration(user_id)
-            logging.exception(e)
-            return redirect("/?error=%s" % str(e))
-
-    # User has already registered, try to log in
-    user = users[0]
-    if user and hasattr(user, "is_active") and user.is_active == "0":
-        return redirect("/?error=user_inactive")
-    user.access_token = get_uuid()
-    login_user(user)
-    user.save()
-    return redirect("/?auth=%s" % user.get_id())
+    return await _handle_oauth_user(session["access_token"], "feishu", user_info, "en_name")
 
 
 async def user_info_from_feishu(access_token):
@@ -474,11 +440,11 @@ async def user_info_from_feishu(access_token):
 
 async def user_info_from_github(access_token):
     headers = {"Accept": "application/json", "Authorization": f"token {access_token}"}
-    res = await async_request("GET", f"https://api.github.com/user?access_token={access_token}", headers=headers)
+    res = await async_request("GET", "https://api.github.com/user", headers=headers)
     user_info = res.json()
     email_info_response = await async_request(
         "GET",
-        f"https://api.github.com/user/emails?access_token={access_token}",
+        "https://api.github.com/user/emails",
         headers=headers,
     )
     email_info = email_info_response.json()
@@ -542,7 +508,7 @@ async def setting_user():
     request_data = await get_request_json()
     if request_data.get("password"):
         new_password = request_data.get("new_password")
-        if not check_password_hash(current_user.password, request_data["password"]):
+        if not check_password_hash(str(current_user.password), request_data["password"]):
             return get_json_result(
                 data=False,
                 code=RetCode.AUTHENTICATION_ERROR,

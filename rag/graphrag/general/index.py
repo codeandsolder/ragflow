@@ -175,19 +175,18 @@ async def run_graphrag_for_kb(
         chunks = []
         current_chunk = ""
 
-        # DEBUG: Obtener todos los chunks primero
         raw_chunks = list(
             settings.retriever.chunk_list(
                 doc_id,
                 tenant_id,
                 [kb_id],
-                max_count=10000,  # FIX: Aumentar límite para procesar todos los chunks
+                max_count=10000,
                 fields=fields_for_chunks,
                 sort_by_position=True,
             )
         )
 
-        callback(msg=f"[DEBUG] chunk_list() returned {len(raw_chunks)} raw chunks for doc {doc_id}")
+        callback(msg=f"chunk_list() returned {len(raw_chunks)} raw chunks for doc {doc_id}")
 
         for d in raw_chunks:
             content = d["content_with_weight"]

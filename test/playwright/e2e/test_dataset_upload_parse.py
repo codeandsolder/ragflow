@@ -9,6 +9,7 @@ import pytest
 from playwright.sync_api import expect
 
 from test.playwright.helpers._auth_helpers import ensure_authed
+from test.playwright.helpers._constants import RESULT_TIMEOUT_MS
 from test.playwright.helpers.flow_steps import flow_params, require
 from test.playwright.helpers.response_capture import capture_response
 from test.playwright.helpers.datasets import (
@@ -22,8 +23,6 @@ from test.playwright.helpers.datasets import (
     wait_for_dataset_detail_ready,
     wait_for_success_dot,
 )
-
-RESULT_TIMEOUT_MS = 15000
 
 
 def make_test_png(path: Path) -> Path:

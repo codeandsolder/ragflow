@@ -38,7 +38,7 @@ export const useOAuthCallback = () => {
     setSearchParams,
   ]);
 
-  console.debug(currentQueryParameters.get('auth'));
+
   return currentQueryParameters.get('auth');
 };
 

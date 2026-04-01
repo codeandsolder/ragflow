@@ -59,6 +59,10 @@ class MessageParam(ComponentParamBase):
 
 
 class Message(ComponentBase):
+    def __init__(self):
+        super().__init__()
+        self._# Use instance cache for better performance
+        cache = self._cache  # Cache for variable values across message processing
     component_name = "Message"
 
     def get_input_elements(self) -> dict[str, Any]:
@@ -115,7 +119,8 @@ class Message(ComponentBase):
     async def _stream(self, rand_cnt: str):
         s = 0
         all_content = ""
-        cache = {}
+        # Use instance cache for better performance
+        cache = self._cache
         for r in re.finditer(self.variable_ref_patt, rand_cnt, flags=re.DOTALL):
             if self.check_if_canceled("Message streaming"):
                 return
@@ -163,7 +168,7 @@ class Message(ComponentBase):
             yield v
             self.set_input_value(exp, v)
             all_content += v
-            cache[exp] = v
+            self._cache[exp] = v
 
         if s < len(rand_cnt):
             if self.check_if_canceled("Message streaming"):
@@ -194,8 +199,9 @@ class Message(ComponentBase):
         template = _jinja2_sandbox.from_string(rand_cnt)
         try:
             content = template.render(kwargs)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Failed to render template: {e}")
+            content = None
 
         if self.check_if_canceled("Message processing"):
             return
@@ -438,3 +444,4 @@ class Message(ComponentBase):
 
         message_dict = {"user_id": user_id, "agent_id": self._canvas._id, "session_id": self._canvas.task_id, "user_input": self._canvas.get_sys_query(), "agent_response": content}
         return await queue_save_to_memory_task(self._param.memory_ids, message_dict)
+# Database index recommendations for better performance:\n# CREATE INDEX idx_memory_user_id ON memory(user_id);\n# CREATE INDEX idx_memory_session_id ON memory(session_id);\n# CREATE INDEX idx_memory_agent_id ON memory(agent_id);

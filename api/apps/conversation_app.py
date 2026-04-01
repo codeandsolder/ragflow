@@ -81,6 +81,7 @@ async def set_conversation():
 
 @manager.route("/get", methods=["GET"])  # noqa: F821
 @login_required
+@resource_owner_required
 async def get():
     conv_id = request.args["conversation_id"]
     try:
@@ -242,6 +243,52 @@ async def completion():
             resp.headers.add_header("X-Accel-Buffering", "no")
             resp.headers.add_header("Content-Type", "text/event-stream; charset=utf-8")
             return resp
+        else:
+            e, ans = async_chat(dia, msg, False, **req)
+            if not e:
+                return get_data_error_result(message=str(ans))
+            ans = structure_answer(conv, ans, message_id, conv.id)
+            return get_json_result(data=ans)
+
+    except Exception as e:
+        return server_error_response(e)
+
+
+@manager.route("/ask", methods=["GET"])  # noqa: F821
+@login_required
+async def ask_about():
+    uid = current_user.id
+    question = request.args.get("question", "")
+    kb_ids_str = request.args.get("kb_ids", "")
+    if not question or not kb_ids_str:
+        return get_json_result(data=False, message='Lack of "question" or "kb_ids"', code=RetCode.ARGUMENT_ERROR)
+    kb_ids = [kb_id.strip() for kb_id in kb_ids_str.split(",") if kb_id.strip()]
+    if not kb_ids:
+        return get_json_result(data=False, message='Lack of "question" or "kb_ids"', code=RetCode.ARGUMENT_ERROR)
+
+    search_id = request.args.get("search_id", "")
+    search_app = None
+    search_config = {}
+    if search_id:
+        search_app = SearchService.get_detail(search_id)
+    if search_app:
+        search_config = search_app.get("search_config", {})
+
+    async def stream():
+        nonlocal question, kb_ids, uid
+        try:
+            async for ans in async_ask(question, kb_ids, uid, search_config=search_config):
+                yield "data:" + json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
+        except Exception as e:
+            yield "data:" + json.dumps({"code": 500, "message": str(e), "data": {"answer": "**ERROR**: " + str(e), "reference": []}}, ensure_ascii=False) + "\n\n"
+        yield "data:" + json.dumps({"code": 0, "message": "", "data": True}, ensure_ascii=False) + "\n\n"
+
+    resp = Response(stream(), mimetype="text/event-stream")
+    resp.headers.add_header("Cache-control", "no-cache")
+    resp.headers.add_header("Connection", "keep-alive")
+    resp.headers.add_header("X-Accel-Buffering", "no")
+    resp.headers.add_header("Content-Type", "text/event-stream; charset=utf-8")
+    return resp
 
         else:
             answer = None
@@ -385,14 +432,19 @@ async def thumbup():
     return get_json_result(data=conv)
 
 
-@manager.route("/ask", methods=["POST"])  # noqa: F821
+@manager.route("/ask", methods=["GET"])  # noqa: F821
 @login_required
-@validate_request("question", "kb_ids")
 async def ask_about():
-    req = await get_request_json()
     uid = current_user.id
+    question = request.args.get("question", "")
+    kb_ids_str = request.args.get("kb_ids", "")
+    if not question or not kb_ids_str:
+        return get_json_result(data=False, message='Lack of "question" or "kb_ids"', code=RetCode.ARGUMENT_ERROR)
+    kb_ids = [kb_id.strip() for kb_id in kb_ids_str.split(",") if kb_id.strip()]
+    if not kb_ids:
+        return get_json_result(data=False, message='Lack of "question" or "kb_ids"', code=RetCode.ARGUMENT_ERROR)
 
-    search_id = req.get("search_id", "")
+    search_id = request.args.get("search_id", "")
     search_app = None
     search_config = {}
     if search_id:
@@ -401,9 +453,9 @@ async def ask_about():
         search_config = search_app.get("search_config", {})
 
     async def stream():
-        nonlocal req, uid
+        nonlocal question, kb_ids, uid
         try:
-            async for ans in async_ask(req["question"], req["kb_ids"], uid, search_config=search_config):
+            async for ans in async_ask(question, kb_ids, uid, search_config=search_config):
                 yield "data:" + json.dumps({"code": 0, "message": "", "data": ans}, ensure_ascii=False) + "\n\n"
         except Exception as e:
             yield "data:" + json.dumps({"code": 500, "message": str(e), "data": {"answer": "**ERROR**: " + str(e), "reference": []}}, ensure_ascii=False) + "\n\n"

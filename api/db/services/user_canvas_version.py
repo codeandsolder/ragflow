@@ -52,7 +52,7 @@ class UserCanvasVersionService(CommonService):
     def get_all_canvas_version_by_canvas_ids(cls, canvas_ids):
         fields = [cls.model.id]
         versions = cls.model.select(*fields).where(cls.model.user_canvas_id.in_(canvas_ids))
-        limit = 100
+        limit = DEFAULT_LIST_LIMIT
         res = []
         last_id = None
         while True:

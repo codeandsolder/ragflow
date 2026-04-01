@@ -25,7 +25,7 @@ const YiyanModal = ({
 }: IModalProps<IAddLlmRequestBody> & {
   llmFactory: string;
   onVerify?: (
-    postBody: any,
+    postBody: IAddLlmRequestBody,
   ) => Promise<boolean | void | VerifyResult | undefined>;
 }) => {
   const { t } = useTranslate('setting');
@@ -97,8 +97,6 @@ const YiyanModal = ({
       max_tokens: values.max_tokens as number,
     };
 
-    console.info(data);
-
     await onOk?.(data);
   };
 
@@ -121,7 +119,7 @@ const YiyanModal = ({
   }, [llmFactory]);
 
   const handleVerify = useCallback(
-    async (params: any) => {
+    async (params: IAddLlmRequestBody) => {
       const verifyParams = verifyParamsFunc();
       const res = await onVerify?.({ ...params, ...verifyParams });
       return (res || { isValid: null, logs: '' }) as VerifyResult;
@@ -144,7 +142,7 @@ const YiyanModal = ({
         fields={fields}
         ref={formRef}
         onSubmit={(data) => {
-          console.log(data);
+          // Form submission handled by submitFunc
         }}
         defaultValues={
           {

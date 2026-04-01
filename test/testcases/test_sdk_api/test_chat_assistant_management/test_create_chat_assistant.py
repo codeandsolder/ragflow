@@ -21,6 +21,7 @@ from configs import CHAT_ASSISTANT_NAME_LIMIT
 from ragflow_sdk import Chat
 from utils import encode_avatar
 from utils.file_utils import create_image_file
+from test.testcases.conftest import DEFAULT_LLM_ID
 
 
 @pytest.mark.usefixtures("clear_chat_assistants")
@@ -130,7 +131,7 @@ class TestChatAssistantCreate:
                 for k, v in llm.items():
                     assert attrgetter(k)(chat_assistant.llm) == v
             else:
-                assert attrgetter("model_name")(chat_assistant.llm) == "glm-4-flash@ZHIPU-AI"
+                assert attrgetter("model_name")(chat_assistant.llm) == DEFAULT_LLM_ID
                 assert attrgetter("temperature")(chat_assistant.llm) == 0.1
                 assert attrgetter("top_p")(chat_assistant.llm) == 0.3
                 assert attrgetter("presence_penalty")(chat_assistant.llm) == 0.4

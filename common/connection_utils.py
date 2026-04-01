@@ -20,14 +20,40 @@ import threading
 from typing import Any, Callable, Coroutine, Optional, Type, Union
 import asyncio
 from functools import wraps
-from quart import make_response, jsonify
+
+from quart import make_response as quart_make_response, jsonify as quart_jsonify
 from common.constants import RetCode
 
 TimeoutException = Union[Type[BaseException], BaseException]
 OnTimeoutCallback = Union[Callable[..., Any], Coroutine[Any, Any, Any]]
 
 
+def _build_response_dict(code: int, message: str, data: Any) -> dict[str, Any]:
+    """Build response dictionary, excluding None values except for 'code'."""
+    result_dict = {"code": code, "message": message, "data": data}
+    return {key: value for key, value in result_dict.items() if value is not None or key == "code"}
+
+
+def _add_cors_headers(response) -> None:
+    """Add CORS headers to the response object."""
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Method"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Expose-Headers"] = "Authorization"
+
+
 def timeout(seconds: float | int | str = None, attempts: int = 2, *, exception: Optional[TimeoutException] = None, on_timeout: Optional[OnTimeoutCallback] = None):
+    """Decorator that applies a timeout to a function.
+
+    Args:
+        seconds: Timeout in seconds. Can be float, int, or string that can be converted to float.
+        attempts: Number of attempts to retry.
+        exception: Optional exception to raise on timeout.
+        on_timeout: Optional callback to call on timeout.
+
+    Returns:
+        Decorated function with timeout applied.
+    """
     if isinstance(seconds, str):
         seconds = float(seconds)
 
@@ -100,41 +126,43 @@ def timeout(seconds: float | int | str = None, attempts: int = 2, *, exception: 
     return decorator
 
 
-async def construct_response(code=RetCode.SUCCESS, message="success", data=None, auth=None):
-    result_dict = {"code": code, "message": message, "data": data}
-    response_dict = {}
-    for key, value in result_dict.items():
-        if value is None and key != "code":
-            continue
-        else:
-            response_dict[key] = value
-    response = await make_response(jsonify(response_dict))
+async def construct_response(code: int = RetCode.SUCCESS, message: str = "success", data: Any = None, auth: Optional[str] = None):
+    """Construct an async HTTP response.
+
+    Args:
+        code: Response code (default: RetCode.SUCCESS)
+        message: Response message (default: "success")
+        data: Response data (default: None)
+        auth: Optional authorization header value
+
+    Returns:
+        Quart response object with JSON body and CORS headers
+    """
+    response_dict = _build_response_dict(code, message, data)
+    response = await quart_make_response(quart_jsonify(response_dict))
     if auth:
         response.headers["Authorization"] = auth
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Method"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    response.headers["Access-Control-Expose-Headers"] = "Authorization"
+    _add_cors_headers(response)
     return response
 
 
-def sync_construct_response(code=RetCode.SUCCESS, message="success", data=None, auth=None):
+def sync_construct_response(code: int = RetCode.SUCCESS, message: str = "success", data: Any = None, auth: Optional[str] = None):
+    """Construct a sync HTTP response.
+
+    Args:
+        code: Response code (default: RetCode.SUCCESS)
+        message: Response message (default: "success")
+        data: Response data (default: None)
+        auth: Optional authorization header value
+
+    Returns:
+        Flask response object with JSON body and CORS headers
+    """
     import flask
 
-    result_dict = {"code": code, "message": message, "data": data}
-    response_dict = {}
-    for key, value in result_dict.items():
-        if value is None and key != "code":
-            continue
-        else:
-            response_dict[key] = value
+    response_dict = _build_response_dict(code, message, data)
     response = flask.make_response(flask.jsonify(response_dict))
     if auth:
         response.headers["Authorization"] = auth
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Method"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    response.headers["Access-Control-Expose-Headers"] = "Authorization"
+    _add_cors_headers(response)
     return response

@@ -18,6 +18,8 @@ import enum
 import importlib
 from pathlib import Path
 
+import pytest
+
 _conftest_dir = Path(__file__).parent
 _project_root = _conftest_dir.parent.parent.parent
 if str(_project_root) not in sys.path:
@@ -40,6 +42,10 @@ def create_stub(name, attrs=None):
 
 def _setup_mocks():
     """Set up mock modules before importing the real modules."""
+
+    # Define project root first
+    _conftest_dir = Path(__file__).parent
+    _project_root = _conftest_dir.parent.parent.parent
 
     # Create common stubs
     create_stub("common")
@@ -251,30 +257,27 @@ def _setup_mocks():
     sys.modules["common.mcp_tool_call_conn"].ToolCallSession = ToolCallSession
     sys.modules["common.mcp_tool_call_conn"].MCPToolCallSession = MCPToolCallSession
 
+    # Import code_exec module directly to avoid __init__.py auto-import of all tools
+    # which causes timeout issues due to heavy dependencies
+    import importlib.util
 
-# Set up mocks before any test imports
-_setup_mocks()
+    _code_exec_path = _project_root / "agent" / "tools" / "code_exec.py"
+    _spec = importlib.util.spec_from_file_location("agent.tools.code_exec", str(_code_exec_path))
+    _code_exec = importlib.util.module_from_spec(_spec)
+    sys.modules["agent.tools.code_exec"] = _code_exec
+    _spec.loader.exec_module(_code_exec)
 
-# Import code_exec module directly to avoid __init__.py auto-import of all tools
-# which causes timeout issues due to heavy dependencies
-import importlib.util
-from pathlib import Path
+    # Create mock modules that were causing hangs
+    create_stub("agent.tools.retrieval")
 
-_conftest_dir = Path(__file__).parent
-_project_root = _conftest_dir.parent.parent.parent
-_code_exec_path = _project_root / "agent" / "tools" / "code_exec.py"
-_spec = importlib.util.spec_from_file_location("agent.tools.code_exec", str(_code_exec_path))
-_code_exec = importlib.util.module_from_spec(_spec)
-sys.modules["agent.tools.code_exec"] = _code_exec
-_spec.loader.exec_module(_code_exec)
+    # Add mock classes for component system
+    class MockRetrieval:
+        pass
 
-# Create mock modules that were causing hangs
-create_stub("agent.tools.retrieval")
-
-
-# Add mock classes for component system
-class MockRetrieval:
-    pass
+    sys.modules["agent.tools.retrieval"].Retrieval = MockRetrieval
 
 
-sys.modules["agent.tools.retrieval"].Retrieval = MockRetrieval
+@pytest.fixture(scope="session", autouse=True)
+def setup_mocks():
+    """Set up mock modules before importing the real modules."""
+    _setup_mocks()

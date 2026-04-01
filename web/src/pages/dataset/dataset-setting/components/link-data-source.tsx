@@ -156,7 +156,6 @@ const LinkDataSource = (props: ILinkDataSourceProps) => {
   }, [data]);
 
   const openLinkModalFunc = (open: boolean, data?: IDataSourceNodeProps) => {
-    console.log('open', open, data);
     setOpenLinkModal(open);
     // if (data) {
     //   setCurrentDataSource(data);
@@ -166,7 +165,6 @@ const LinkDataSource = (props: ILinkDataSourceProps) => {
   };
 
   const handleLinkOrEditSubmit = (data: IDataSourceBase[] | undefined) => {
-    console.log('handleLinkOrEditSubmit', data);
     submit?.(data);
     setOpenLinkModal(false);
   };

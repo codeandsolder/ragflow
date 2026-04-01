@@ -5,6 +5,7 @@ import {
   TimelineItem,
   TimelineSeparator,
 } from '@/components/originui/timeline';
+import { memo } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -44,30 +45,33 @@ const changeToolName = (toolName: any) => {
   const name = 'Agent ' + capitalizeWords(toolName).join(' ');
   return name;
 };
-const ToolTimelineItem = ({
-  tools,
-  sendLoading = false,
-  isShare = false,
-}: {
+const parentName = (str: string, separator: string = '-->'): string => {
+  if (!str) return '';
+  const strs = str.split(separator);
+  if (strs.length > 1) {
+    return strs[strs.length - 1];
+  } else {
+    return str;
+  }
+};
+
+interface ToolTimelineItemProps {
   tools: Record<string, any>[];
   sendLoading: boolean;
   isShare?: boolean;
-}) => {
+}
+
+const ToolTimelineItemContent = ({
+  tools,
+  sendLoading = false,
+  isShare = false,
+}: ToolTimelineItemProps) => {
   if (!tools || tools.length === 0 || !Array.isArray(tools)) return null;
   const blackList = ['add_memory', 'gen_citations'];
   const filteredTools = tools.filter(
     (tool) => !blackList.includes(tool.tool_name),
   );
 
-  const parentName = (str: string, separator: string = '-->') => {
-    if (!str) return '';
-    const strs = str.split(separator);
-    if (strs.length > 1) {
-      return strs[strs.length - 1];
-    } else {
-      return str;
-    }
-  };
   return (
     <>
       {filteredTools?.map((tool, idx) => {
@@ -85,7 +89,7 @@ const ToolTimelineItem = ({
                 style={{
                   background:
                     idx < filteredTools.length - 1
-                      ? 'repeating-linear-gradient( to bottom, rgba(76, 164, 231, 1), rgba(76, 164, 231, 1) 5px, transparent 5px, transparent 10px'
+                      ? 'repeating-linear-gradient( to bottom, rgba(76, 164, 231, 1), rgba(76, 164, 231, 1) 5px, transparent 5px, transparent 10px)'
                       : 'rgba(76, 164, 231, 1)',
                   width: '1px',
                 }}
@@ -155,7 +159,6 @@ const ToolTimelineItem = ({
                           </span>
                         )}
                         <span className="text-text-secondary text-xs">
-                          {/* 0:00*/}
                           {tool.elapsed_time?.toString().slice(0, 6) || ''}
                           {tool.elapsed_time ? 's' : ''}
                         </span>
@@ -209,5 +212,7 @@ const ToolTimelineItem = ({
     </>
   );
 };
+
+const ToolTimelineItem = memo(ToolTimelineItemContent);
 
 export default ToolTimelineItem;

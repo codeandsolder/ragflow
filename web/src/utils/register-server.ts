@@ -1,4 +1,4 @@
-/* eslint-disable guard-for-in */
+ 
 import { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { isObject } from 'lodash';
 import omit from 'lodash/omit';
@@ -17,7 +17,7 @@ const registerServer = <T extends string>(
   request: RequestMethod,
 ) => {
   const server: Service<T> = {} as Service<T>;
-  for (let key in opt) {
+  for (const key in opt) {
     server[key] = (params?: unknown, urlAppendix?: string) => {
       let url = opt[key].url;
       const requestOptions = opt[key];

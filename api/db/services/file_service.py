@@ -174,7 +174,7 @@ class FileService(CommonService):
     def get_all_file_ids_by_tenant_id(cls, tenant_id):
         fields = [cls.model.id]
         files = cls.model.select(*fields).where(cls.model.tenant_id == tenant_id)
-        limit = 100
+        limit = DEFAULT_LIST_LIMIT
         res = []
         last_id = None
         while True:
@@ -306,7 +306,9 @@ class FileService(CommonService):
 
         for kb in Knowledgebase.select(*[Knowledgebase.id, Knowledgebase.name]).where(Knowledgebase.tenant_id == tenant_id):
             kb_folder = cls.new_a_file_from_kb(tenant_id, kb.name, folder["id"])
-            for doc in DocumentService.query(kb_id=kb.id):
+            # Get all documents for this knowledgebase in a single query
+            docs = DocumentService.query(kb_id=kb.id)
+            for doc in docs:
                 FileService.add_file_from_kb(doc.to_dict(), kb_folder["id"], tenant_id)
 
     @classmethod

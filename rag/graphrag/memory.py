@@ -74,12 +74,18 @@ class GraphMemoryMonitor:
         return graph.number_of_nodes() > self.chunk_size or graph.number_of_edges() > self.chunk_size * 5
 
     def get_current_memory_usage_mb(self) -> float:
-        """Get current memory usage in MB (Linux only)."""
+        """Get current memory usage in MB."""
         try:
             with open("/proc/self/status", "r") as f:
                 for line in f:
                     if line.startswith("VmRSS:"):
                         return int(line.split()[1]) / 1024
+        except Exception:
+            pass
+        try:
+            import psutil
+            process = psutil.Process()
+            return process.memory_info().rss / (1024 * 1024)
         except Exception:
             pass
         return 0.0

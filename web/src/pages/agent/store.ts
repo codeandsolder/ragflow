@@ -1,5 +1,13 @@
-import type { IAgentForm } from '@/interfaces/database/agent';
-import { RAGFlowNodeType } from '@/interfaces/database/agent';
+/**
+ * RAGFlow Agent Graph Store - Facade
+ *
+ * This store maintains backward compatibility by delegating to the new modular stores.
+ * For new code, import directly from the modular stores:
+ * - useGraphStore: Graph state, node/edge management
+ * - useSelectionStore: Selection state for nodes/edges
+ * - useNodeFormStore: Form data management, validation, node operations
+ */
+import type { IAgentForm, IAgentFormType, RAGFlowNodeType } from '@/interfaces/database/agent';
 import type {} from '@redux-devtools/extension';
 import {
   Connection,
@@ -12,18 +20,9 @@ import {
   OnSelectionChangeFunc,
   OnSelectionChangeParams,
   addEdge,
-  applyEdgeChanges,
-  applyNodeChanges,
 } from '@xyflow/react';
 import humanId from 'human-id';
-import {
-  cloneDeep,
-  differenceWith,
-  intersectionWith,
-  get as lodashGet,
-  set as lodashSet,
-  omit,
-} from 'lodash';
+import { cloneDeep, get as lodashGet, set as lodashSet } from 'lodash';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
@@ -34,10 +33,10 @@ import {
   generateNodeNamesWithIncreasingIndex,
   getAgentNodeTools,
   getOperatorIndex,
-  isEdgeEqual,
   mapEdgeMouseEvent,
 } from './utils';
 import { deleteAllDownstreamAgentsAndTool } from './utils/delete-node';
+import { useGraphStore, useSelectionStore, useNodeFormStore } from './store';
 
 type IAgentTool = IAgentForm['tools'][number];
 
@@ -57,12 +56,11 @@ export type RFState = {
   edges: Edge[];
   selectedNodeIds: string[];
   selectedEdgeIds: string[];
-  clickedNodeId: string; // currently selected node
-  clickedToolId: string; // currently selected tool id
+  clickedNodeId: string;
+  clickedToolId: string;
   onNodesChange: OnNodesChange<RAGFlowNodeType>;
   onEdgesChange: OnEdgesChange;
   onEdgeMouseEnter?: EdgeMouseHandler<Edge>;
-  /** This event handler is called when mouse of a user leaves an edge */
   onEdgeMouseLeave?: EdgeMouseHandler<Edge>;
   onConnect: OnConnect;
   setNodes: (nodes: RAGFlowNodeType[]) => void;
@@ -112,14 +110,13 @@ export type RFState = {
   deleteEdgesBySourceAndSourceHandle: (
     source: string,
     sourceHandle: string
-  ) => void; // Deleting a condition of a classification operator will delete the related edge
+  ) => void;
   findAgentToolNodeById: (id: string | null) => string | undefined;
   selectNodeIds: (nodeIds: string[]) => void;
   hasChildNode: (nodeId: string) => boolean;
 };
 
-// this is our useStore hook that we can use in our components to get parts of the store and call actions
-const useGraphStore = create<RFState>()(
+const useStore = create<RFState>()(
   devtools(
     immer((set, get) => ({
       nodes: [] as RAGFlowNodeType[],
@@ -129,219 +126,106 @@ const useGraphStore = create<RFState>()(
       clickedNodeId: '',
       clickedToolId: '',
       onNodesChange: (changes) => {
-        set({
-          nodes: applyNodeChanges(
-            changes, // The issue of errors when using templates was resolved by using cloneDeep.
-            cloneDeep(get().nodes) as RAGFlowNodeType[], //   Cannot assign to read only property 'width' of object '#<Object>'
-          ),
-        });
+        useGraphStore.getState().onNodesChange(changes);
+        set({ nodes: useGraphStore.getState().nodes });
       },
       onEdgesChange: (changes: EdgeChange[]) => {
-        set({
-          edges: applyEdgeChanges(changes, get().edges),
-        });
+        useGraphStore.getState().onEdgesChange(changes);
+        set({ edges: useGraphStore.getState().edges });
       },
       onEdgeMouseEnter: (event, edge) => {
-        const { edges, setEdges } = get();
-        const edgeId = edge.id;
-
-        // Updates edge
-        setEdges(mapEdgeMouseEvent(edges, edgeId, true));
+        useGraphStore.getState().onEdgeMouseEnter?.(event, edge);
+        set({ edges: useGraphStore.getState().edges });
       },
       onEdgeMouseLeave: (event, edge) => {
-        const { edges, setEdges } = get();
-        const edgeId = edge.id;
-
-        // Updates edge
-        setEdges(mapEdgeMouseEvent(edges, edgeId, false));
+        useGraphStore.getState().onEdgeMouseLeave?.(event, edge);
+        set({ edges: useGraphStore.getState().edges });
       },
-      onConnect: (connection: Connection) => {
-        const { updateFormDataOnConnect } = get();
-        const newEdges = addEdge(connection, get().edges);
-        set({
-          edges: newEdges,
-        });
+      onConnect: (connection) => {
+        const { updateFormDataOnConnect } = useNodeFormStore.getState();
+        const newEdges = addEdge(connection, useGraphStore.getState().edges);
+        useGraphStore.getState().setEdges(newEdges);
+        set({ edges: newEdges });
         updateFormDataOnConnect(connection);
       },
       onSelectionChange: ({ nodes, edges }: OnSelectionChangeParams) => {
+        useSelectionStore.getState().onSelectionChange({ nodes, edges });
         set({
-          selectedEdgeIds: edges.map((x) => x.id),
           selectedNodeIds: nodes.map((x) => x.id),
+          selectedEdgeIds: edges.map((x) => x.id),
         });
       },
-      setNodes: (nodes: RAGFlowNodeType[]) => {
+      setNodes: (nodes) => {
+        useGraphStore.getState().setNodes(nodes);
         set({ nodes });
       },
-      setEdges: (edges: Edge[]) => {
+      setEdges: (edges) => {
+        useGraphStore.getState().setEdges(edges);
         set({ edges });
       },
-      setEdgesByNodeId: (nodeId: string, currentDownstreamEdges: Edge[]) => {
-        const { edges, setEdges } = get();
-        // the previous downstream edge of this node
-        const previousDownstreamEdges = edges.filter(
-          (x) => x.source === nodeId,
-        );
-        const isDifferent =
-          previousDownstreamEdges.length !== currentDownstreamEdges.length ||
-          !previousDownstreamEdges.every((x) =>
-            currentDownstreamEdges.some(
-              (y) =>
-                y.source === x.source &&
-                y.target === x.target &&
-                y.sourceHandle === x.sourceHandle,
-            ),
-          ) ||
-          !currentDownstreamEdges.every((x) =>
-            previousDownstreamEdges.some(
-              (y) =>
-                y.source === x.source &&
-                y.target === x.target &&
-                y.sourceHandle === x.sourceHandle,
-            ),
-          );
-
-        const intersectionDownstreamEdges = intersectionWith(
-          previousDownstreamEdges,
-          currentDownstreamEdges,
-          isEdgeEqual,
-        );
-        if (isDifferent) {
-          // other operator's edges
-          const irrelevantEdges = edges.filter((x) => x.source !== nodeId);
-          // the added downstream edges
-          const selfAddedDownstreamEdges = differenceWith(
-            currentDownstreamEdges,
-            intersectionDownstreamEdges,
-            isEdgeEqual,
-          );
-          setEdges([
-            ...irrelevantEdges,
-            ...intersectionDownstreamEdges,
-            ...selfAddedDownstreamEdges,
-          ]);
-        }
+      setEdgesByNodeId: (nodeId, edges) => {
+        useGraphStore.getState().setEdgesByNodeId(nodeId, edges);
+        set({ edges: useGraphStore.getState().edges });
       },
-      addNode: (node: RAGFlowNodeType) => {
-        set({ nodes: get().nodes.concat(node) });
+      updateNodeForm: (nodeId, values, path) => {
+        const result = useNodeFormStore.getState().updateNodeForm(nodeId, values, path);
+        set({ nodes: result });
+        return result;
       },
+      replaceNodeForm: (nodeId, values) => {
+        useNodeFormStore.getState().replaceNodeForm(nodeId, values);
+        set({ nodes: useGraphStore.getState().nodes });
+      },
+      addNode: (node) => {
+        useGraphStore.getState().addNode(node);
+        set({ nodes: useGraphStore.getState().nodes });
+      },
+      getNode: (id) => useGraphStore.getState().getNode(id),
       updateNode: (node) => {
-        const { nodes } = get();
-        const nextNodes = nodes.map((x) => {
-          if (x.id === node.id) {
-            return node;
-          }
-          return x;
-        });
-        set({ nodes: nextNodes });
+        useGraphStore.getState().updateNode(node);
+        set({ nodes: useGraphStore.getState().nodes });
       },
-      getNode: (id?: string | null) => {
-        // console.log('getNode', id, get().nodes);
-        return get().nodes.find((x) => x.id === id);
+      addEdge: (connection) => {
+        const { updateFormDataOnConnect } = useNodeFormStore.getState();
+        const newEdges = addEdge(connection, useGraphStore.getState().edges);
+        useGraphStore.getState().setEdges(newEdges);
+        updateFormDataOnConnect(connection);
+        set({ edges: newEdges });
       },
-      getOperatorTypeFromId: (id?: string | null) => {
-        return get().getNode(id)?.data?.label;
+      getEdge: (id) => useGraphStore.getState().getEdge(id),
+      updateFormDataOnConnect: (connection) => {
+        useNodeFormStore.getState().updateFormDataOnConnect(connection);
       },
-      getParentIdById: (id?: string | null) => {
-        return get().getNode(id)?.parentId;
+      updateSwitchFormData: (source, sourceHandle, target, isConnecting) => {
+        useNodeFormStore.getState().updateSwitchFormData(source, sourceHandle, target, isConnecting);
+        set({ nodes: useGraphStore.getState().nodes });
       },
-      addEdge: (connection: Connection) => {
-        set({
-          edges: addEdge(connection, get().edges),
-        });
-        //  TODO: This may not be reasonable. You need to choose between listening to changes in the form.
-        get().updateFormDataOnConnect(connection);
+      duplicateNode: (id, name) => {
+        useNodeFormStore.getState().duplicateNode(id, name);
+        set({ nodes: useGraphStore.getState().nodes });
       },
-      getEdge: (id: string) => {
-        return get().edges.find((x) => x.id === id);
-      },
-      updateFormDataOnConnect: (connection: Connection) => {
-        const { getOperatorTypeFromId, updateSwitchFormData } = get();
-        const { source, target, sourceHandle } = connection;
-        const operatorType = getOperatorTypeFromId(source);
-        if (source) {
-          switch (operatorType) {
-            case Operator.Switch: {
-              updateSwitchFormData(source, sourceHandle, target, true);
-              break;
-            }
-            default:
-              break;
-          }
-        }
-      },
-      duplicateNode: (id: string, name: string) => {
-        const { getNode, addNode, generateNodeName, duplicateIterationNode } =
-          get();
-        const node = getNode(id);
-
-        if (node?.data.label === Operator.Iteration) {
-          duplicateIterationNode(id, name);
-          return;
-        }
-
-        addNode({
-          ...(node || {}),
-          data: {
-            ...duplicateNodeForm(node?.data),
-            name: generateNodeName(name),
-          },
-          ...generateDuplicateNode(node?.position, node?.data?.label),
-        });
-      },
-      duplicateIterationNode: (id: string, name: string) => {
-        const { getNode, generateNodeName, nodes } = get();
-        const node = getNode(id);
-
-        const iterationNode: RAGFlowNodeType = {
-          ...(node || {}),
-          data: {
-            ...(node?.data || { label: Operator.Iteration, form: {} }),
-            name: generateNodeName(name),
-          },
-          ...generateDuplicateNode(node?.position, node?.data?.label),
-        };
-
-        const children = nodes
-          .filter((x) => x.parentId === node?.id)
-          .map((x) => ({
-            ...(x || {}),
-            data: {
-              ...duplicateNodeForm(x?.data),
-              name: generateNodeName(x.data.name),
-            },
-            ...omit(generateDuplicateNode(x?.position, x?.data?.label), [
-              'position',
-            ]),
-            parentId: iterationNode.id,
-          }));
-
-        set({ nodes: nodes.concat(iterationNode, ...children) });
+      duplicateIterationNode: (id, name) => {
+        useNodeFormStore.getState().duplicateIterationNode(id, name);
+        set({ nodes: useGraphStore.getState().nodes });
       },
       deleteEdge: () => {
-        const { edges, selectedEdgeIds } = get();
-        set({
-          edges: edges.filter((edge) =>
-            selectedEdgeIds.every((x) => x !== edge.id),
-          ),
-        });
+        const { selectedEdgeIds, edges } = {
+          selectedEdgeIds: useSelectionStore.getState().selectedEdgeIds,
+          edges: useGraphStore.getState().edges,
+        };
+        const newEdges = edges.filter((edge) => !selectedEdgeIds.includes(edge.id));
+        useGraphStore.getState().setEdges(newEdges);
+        set({ edges: newEdges });
       },
-      deleteEdgeById: (id: string) => {
-        const { edges, getOperatorTypeFromId, updateSwitchFormData } = get();
-        const currentEdge = edges.find((x) => x.id === id);
+      deleteEdgeById: (id) => {
+        const { getOperatorTypeFromId } = useGraphStore.getState();
+        const { updateSwitchFormData } = useNodeFormStore.getState();
+        const currentEdge = useGraphStore.getState().getEdge(id);
 
         if (currentEdge) {
           const { source, sourceHandle, target } = currentEdge;
           const operatorType = getOperatorTypeFromId(source);
-          // After deleting the edge, set the corresponding field in the node's form field to undefined
           switch (operatorType) {
-            // case Operator.Categorize:
-            //   if (sourceHandle)
-            //     updateNodeForm(source, undefined, [
-            //       'category_description',
-            //       sourceHandle,
-            //       'to',
-            //     ]);
-            //   break;
             case Operator.Switch: {
               updateSwitchFormData(source, sourceHandle, target, false);
               break;
@@ -350,310 +234,84 @@ const useGraphStore = create<RFState>()(
               break;
           }
         }
+        useGraphStore.getState().deleteEdgeById(id);
         set({
-          edges: edges.filter((edge) => edge.id !== id),
+          edges: useGraphStore.getState().edges,
+          nodes: useGraphStore.getState().nodes,
         });
       },
-      deleteNodeById: (id: string) => {
-        const {
-          nodes,
-          edges,
-          getOperatorTypeFromId,
-          deleteAgentDownstreamNodesById,
-        } = get();
+      deleteNodeById: (id) => {
+        const { getOperatorTypeFromId } = useGraphStore.getState();
         if (getOperatorTypeFromId(id) === Operator.Agent) {
-          deleteAgentDownstreamNodesById(id);
-          return;
+          useNodeFormStore.getState().deleteAgentDownstreamNodesById(id);
+        } else {
+          useGraphStore.getState().deleteNodeById(id);
         }
         set({
-          nodes: nodes.filter((node) => node.id !== id),
-          edges: edges
-            .filter((edge) => edge.source !== id)
-            .filter((edge) => edge.target !== id),
+          nodes: useGraphStore.getState().nodes,
+          edges: useGraphStore.getState().edges,
         });
       },
       deleteAgentDownstreamNodesById: (id) => {
-        const { edges, nodes } = get();
-
-        const { downstreamAgentAndToolNodeIds, downstreamAgentAndToolEdges } =
-          deleteAllDownstreamAgentsAndTool(id, edges);
-
+        useNodeFormStore.getState().deleteAgentDownstreamNodesById(id);
         set({
-          nodes: nodes.filter(
-            (node) =>
-              !downstreamAgentAndToolNodeIds.some((x) => x === node.id) &&
-              node.id !== id,
-          ),
-          edges: edges.filter(
-            (edge) =>
-              edge.source !== id &&
-              edge.target !== id &&
-              !downstreamAgentAndToolEdges.some((x) => x.id === edge.id),
-          ),
+          nodes: useGraphStore.getState().nodes,
+          edges: useGraphStore.getState().edges,
         });
       },
       deleteAgentToolNodeById: (id) => {
-        const { edges, deleteEdgeById, deleteNodeById } = get();
-
-        const edge = edges.find(
-          (x) => x.source === id && x.sourceHandle === NodeHandleId.Tool,
-        );
-
-        if (edge) {
-          deleteEdgeById(edge.id);
-          deleteNodeById(edge.target);
-        }
-      },
-      deleteIterationNodeById: (id: string) => {
-        const { nodes, edges } = get();
-        const children = nodes.filter((node) => node.parentId === id);
+        useNodeFormStore.getState().deleteAgentToolNodeById(id);
         set({
-          nodes: nodes.filter((node) => node.id !== id && node.parentId !== id),
-          edges: edges.filter(
-            (edge) =>
-              edge.source !== id &&
-              edge.target !== id &&
-              !children.some(
-                (child) => edge.source === child.id && edge.target === child.id,
-              ),
-          ),
+          nodes: useGraphStore.getState().nodes,
+          edges: useGraphStore.getState().edges,
         });
       },
-      findNodeByName: (name: Operator) => {
-        return get().nodes.find((x) => x.data.label === name);
-      },
-      updateNodeForm: (
-        nodeId: string,
-        values: Partial<IAgentFormType> | Record<string, unknown>,
-        path: (string | number)[] = [],
-      ) => {
-        const nextNodes = get().nodes.map((node) => {
-          if (node.id === nodeId) {
-            let nextForm: Record<string, unknown> = { ...node.data.form };
-            if (path.length === 0) {
-              nextForm = Object.assign(nextForm, values);
-            } else {
-              lodashSet(nextForm, path, values);
-            }
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                form: nextForm,
-              },
-            } as any;
-          }
-
-          return node;
-        });
+      deleteIterationNodeById: (id) => {
+        useNodeFormStore.getState().deleteIterationNodeById(id);
         set({
-          nodes: nextNodes,
+          nodes: useGraphStore.getState().nodes,
+          edges: useGraphStore.getState().edges,
         });
-
-        return nextNodes;
       },
-      replaceNodeForm(nodeId, values) {
-        if (nodeId) {
-          set((state) => {
-            for (const node of state.nodes) {
-              if (node.id === nodeId) {
-                //cloneDeep Solving the issue of react-hook-form errors
-                node.data.form = cloneDeep(values); // TypeError: Cannot assign to read only property '0' of object '[object Array]'
-                break;
-              }
-            }
-          });
-        }
+      findNodeByName: (name) => useGraphStore.getState().findNodeByName(name),
+      updateMutableNodeFormItem: (id, field, value) => {
+        useNodeFormStore.getState().updateMutableNodeFormItem(id, field, value);
+        set({ nodes: useGraphStore.getState().nodes });
       },
-      updateSwitchFormData: (source, sourceHandle, target, isConnecting) => {
-        const { updateNodeForm, edges, getOperatorTypeFromId } = get();
-        if (sourceHandle) {
-          // A handle will connect to multiple downstream nodes
-          let currentHandleTargets = edges
-            .filter(
-              (x) =>
-                x.source === source &&
-                x.sourceHandle === sourceHandle &&
-                typeof x.target === 'string' &&
-                getOperatorTypeFromId(x.target) !== Operator.Placeholder,
-            )
-            .map((x) => x.target);
-
-          let targets: string[] = currentHandleTargets;
-          if (target) {
-            if (!isConnecting) {
-              targets = currentHandleTargets.filter((x) => x !== target);
-            }
-          }
-
-          if (sourceHandle === SwitchElseTo) {
-            updateNodeForm(source, targets, [SwitchElseTo]);
-          } else {
-            const operatorIndex = getOperatorIndex(sourceHandle);
-            if (operatorIndex) {
-              updateNodeForm(source, targets, [
-                'conditions',
-                Number(operatorIndex) - 1, // The index is the conditions form index
-                'to',
-              ]);
-            }
-          }
-        }
-      },
-      updateMutableNodeFormItem: (id: string, field: string, value: Record<string, unknown>) => {
-        const { nodes } = get();
-        const idx = nodes.findIndex((x) => x.id === id);
-        if (idx) {
-          lodashSet(nodes, [idx, 'data', 'form', field], value);
-        }
-      },
+      getOperatorTypeFromId: (id) => useGraphStore.getState().getOperatorTypeFromId(id),
+      getParentIdById: (id) => useGraphStore.getState().getParentIdById(id),
       updateNodeName: (id, name) => {
-        if (id) {
-          set((state) => {
-            for (const node of state.nodes) {
-              if (node.id === id) {
-                node.data.name = name;
-                break;
-              }
-            }
-          });
-        }
+        useNodeFormStore.getState().updateNodeName(id, name);
+        set({ nodes: useGraphStore.getState().nodes });
       },
-      setClickedNodeId: (id?: string) => {
-        set({ clickedNodeId: id });
+      generateNodeName: (name) => useNodeFormStore.getState().generateNodeName(name),
+      generateAgentToolName: (id, name) => useNodeFormStore.getState().generateAgentToolName(id, name),
+      generateAgentToolId: (prefix) => useNodeFormStore.getState().generateAgentToolId(prefix),
+      getAllAgentTools: () => useNodeFormStore.getState().getAllAgentTools(),
+      getAgentToolById: (id, agentNode) => useNodeFormStore.getState().getAgentToolById(id, agentNode as any),
+      updateAgentToolById: (agentNode, id, value) => useNodeFormStore.getState().updateAgentToolById(agentNode as any, id, value),
+      setClickedNodeId: (id) => {
+        useNodeFormStore.getState().setClickedNodeId(id);
+        set({ clickedNodeId: id ?? '' });
       },
-      generateNodeName: (name: string) => {
-        const { nodes } = get();
-
-        return generateNodeNamesWithIncreasingIndex(name, nodes);
+      setClickedToolId: (id) => {
+        useNodeFormStore.getState().setClickedToolId(id);
+        set({ clickedToolId: id ?? '' });
       },
-      generateAgentToolName: (id: string, name: string) => {
-        const node = get().nodes.find((x) => x.id === id) as RAGFlowNodeType;
-
-        if (!node) {
-          return '';
-        }
-
-        const tools = (node.data.form!.tools as any[]).filter(
-          (x) => x.component_name === name,
-        );
-        const lastIndex = tools.length
-          ? (tools
-              .map((x) => {
-                const idx = x.name.match(/(\d+)$/)?.[1];
-                return idx && isNaN(idx) ? -1 : Number(idx);
-              })
-              .sort((a, b) => a - b)
-              .at(-1) ?? -1)
-          : -1;
-
-        return `${name}_${lastIndex + 1}`;
-      },
-      generateAgentToolId: (prefix: string) => {
-        const allAgentToolIds = get()
-          .getAllAgentTools()
-          .map((t) => t.id || t.component_name);
-
-        let id: string;
-
-        // Loop for avoiding id collisions
-        do {
-          id = `${prefix}:${humanId()}`;
-        } while (allAgentToolIds.includes(id));
-
-        return id;
-      },
-      getAllAgentTools: () => {
-        return get()
-          .nodes.filter((n) => n?.data?.label === Operator.Agent)
-          .flatMap((n) => n?.data?.form?.tools);
-      },
-      getAgentToolById: (
-        id: string,
-        nodeOrNodeId?: RAGFlowNodeType | string,
-      ) => {
-        // eslint-disable-next-line eqeqeq
-        const tools =
-          nodeOrNodeId != null
-            ? getAgentNodeTools(
-                typeof nodeOrNodeId === 'string'
-                  ? get().getNode(nodeOrNodeId)
-                  : nodeOrNodeId,
-              )
-            : get().getAllAgentTools();
-
-        // For backward compatibility
-        return tools.find((t) => (t.id || t.component_name) === id);
-      },
-      updateAgentToolById: (
-        nodeOrNodeId: RAGFlowNodeType | string,
-        id: string,
-        value?: Partial<IAgentTool>,
-      ) => {
-        const { getNode, updateNodeForm } = get();
-
-        const agentNode =
-          typeof nodeOrNodeId === 'string'
-            ? getNode(nodeOrNodeId)
-            : nodeOrNodeId;
-
-        if (!agentNode) {
-          return;
-        }
-
-        const toolIndex = getAgentNodeTools(agentNode).findIndex(
-          (t) => (t.id || t.component_name) === id,
-        );
-
-        updateNodeForm(
-          agentNode.id,
-          {
-            ...lodashGet(agentNode.data.form, ['tools', toolIndex], {}),
-            ...(value ?? {}),
-          },
-          ['tools', toolIndex],
-        );
-      },
-      setClickedToolId: (id?: string) => {
-        set({ clickedToolId: id });
-      },
-      findUpstreamNodeById: (id) => {
-        const { edges, getNode } = get();
-        const edge = edges.find((x) => x.target === id);
-        return getNode(edge?.source);
-      },
+      findUpstreamNodeById: (id) => useGraphStore.getState().findUpstreamNodeById(id),
       deleteEdgesBySourceAndSourceHandle: (source, sourceHandle) => {
-        const { edges, setEdges } = get();
-        setEdges(
-          edges.filter(
-            (edge) =>
-              !(edge.source === source && edge.sourceHandle === sourceHandle),
-          ),
-        );
+        useGraphStore.getState().deleteEdgesBySourceAndSourceHandle(source, sourceHandle);
+        set({ edges: useGraphStore.getState().edges });
       },
-      findAgentToolNodeById: (id) => {
-        const { edges } = get();
-        return edges.find(
-          (edge) =>
-            edge.source === id && edge.sourceHandle === NodeHandleId.Tool,
-        )?.target;
-      },
+      findAgentToolNodeById: (id) => useNodeFormStore.getState().findAgentToolNodeById(id),
       selectNodeIds: (nodeIds) => {
-        const { nodes, setNodes } = get();
-        setNodes(
-          nodes.map((node) => ({
-            ...node,
-            selected: nodeIds.includes(node.id),
-          })),
-        );
+        useSelectionStore.getState().selectNodeIds(nodeIds);
+        set({ selectedNodeIds: nodeIds });
       },
-      hasChildNode: (nodeId) => {
-        const { edges } = get();
-        return edges.some((edge) => edge.source === nodeId);
-      },
+      hasChildNode: (nodeId) => useGraphStore.getState().hasChildNode(nodeId),
     })),
     { name: 'graph', trace: true },
   ),
 );
 
-export default useGraphStore;
+export default useStore;

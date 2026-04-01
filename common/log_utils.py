@@ -14,74 +14,123 @@
 #  limitations under the License.
 #
 
-import os
-import os.path
 import logging
+import os
 from logging.handlers import RotatingFileHandler
+from typing import Any
+
 from common.file_utils import get_project_base_directory
 
-initialized_root_logger = False
+_initialized_root_logger = False
 
 
-def init_root_logger(logfile_basename: str, log_format: str = "%(asctime)-15s %(levelname)-8s %(process)d %(message)s"):
-    global initialized_root_logger
-    if initialized_root_logger:
+def init_root_logger(logfile_basename: str, log_format: str = "%(asctime)-15s %(levelname)-8s %(process)d %(message)s") -> None:
+    """Initialize the root logger with file and console handlers.
+
+    Args:
+        logfile_basename: Base name for the log file (without extension)
+        log_format: Log message format string
+    """
+    global _initialized_root_logger
+    if _initialized_root_logger:
         return
-    initialized_root_logger = True
+    _initialized_root_logger = True
 
     logger = logging.getLogger()
     logger.handlers.clear()
-    log_path = os.path.abspath(os.path.join(get_project_base_directory(), "logs", f"{logfile_basename}.log"))
+    
+    # Create logs directory if it doesn't exist
+    log_dir = os.path.join(get_project_base_directory(), "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = os.path.join(log_dir, f"{logfile_basename}.log")
 
-    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    # Configure formatter
     formatter = logging.Formatter(log_format)
 
-    handler1 = RotatingFileHandler(log_path, maxBytes=10 * 1024 * 1024, backupCount=5)
-    handler1.setFormatter(formatter)
-    logger.addHandler(handler1)
+    # File handler with rotation
+    file_handler = RotatingFileHandler(
+        log_path, maxBytes=10 * 1024 * 1024, backupCount=5
+    )
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
 
-    handler2 = logging.StreamHandler()
-    handler2.setFormatter(formatter)
-    logger.addHandler(handler2)
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
 
+    # Capture warnings
     logging.captureWarnings(True)
 
+    # Configure log levels from environment
+    _configure_log_levels()
+
+    # Log initialization
+    logger.info(f"{logfile_basename} log path: {log_path}, log levels: {dict(_get_log_levels())}")
+
+
+def _configure_log_levels() -> None:
+    """Configure log levels from LOG_LEVELS environment variable."""
     LOG_LEVELS = os.environ.get("LOG_LEVELS", "")
     pkg_levels = {}
+
     for pkg_name_level in LOG_LEVELS.split(","):
         terms = pkg_name_level.split("=")
         if len(terms) != 2:
             continue
-        pkg_name, pkg_level = terms[0], terms[1]
-        pkg_name = pkg_name.strip()
-        pkg_level = logging.getLevelName(pkg_level.strip().upper())
-        if not isinstance(pkg_level, int):
-            pkg_level = logging.INFO
-        pkg_levels[pkg_name] = logging.getLevelName(pkg_level)
+        pkg_name, pkg_level = terms[0].strip(), terms[1].strip()
+        
+        try:
+            level = logging.getLevelName(pkg_level.upper())
+            if not isinstance(level, int):
+                level = logging.INFO
+            pkg_levels[pkg_name] = level
+        except Exception:
+            continue
 
-    for pkg_name in ["peewee", "pdfminer"]:
+    # Set default levels for common libraries
+    default_levels = {
+        "peewee": logging.WARNING,
+        "pdfminer": logging.WARNING,
+        "root": logging.INFO
+    }
+
+    for pkg_name, default_level in default_levels.items():
         if pkg_name not in pkg_levels:
-            pkg_levels[pkg_name] = logging.getLevelName(logging.WARNING)
-    if "root" not in pkg_levels:
-        pkg_levels["root"] = logging.getLevelName(logging.INFO)
+            pkg_levels[pkg_name] = default_level
 
+    # Apply log levels
     for pkg_name, pkg_level in pkg_levels.items():
         pkg_logger = logging.getLogger(pkg_name)
         pkg_logger.setLevel(pkg_level)
 
-    msg = f"{logfile_basename} log path: {log_path}, log levels: {pkg_levels}"
-    logger.info(msg)
+
+def _get_log_levels() -> dict[str, int]:
+    """Get current log levels for all loggers."""
+    loggers = {}
+    for name in logging.root.manager.loggerDict:
+        logger = logging.getLogger(name)
+        loggers[name] = logger.level
+    return loggers
 
 
-def log_exception(e, *args):
+def log_exception(e: Exception, *args: Any) -> None:
+    """Log an exception and any additional arguments, then re-raise the exception.
+
+    Args:
+        e: The exception to log
+        *args: Additional arguments to log
+    """
     logging.exception(e)
-    for a in args:
+
+    for arg in args:
         try:
-            text = getattr(a, "text")
+            text = getattr(arg, "text", None)
+            if text is not None:
+                logging.error(text)
+                raise Exception(text)
         except Exception:
-            text = None
-        if text is not None:
-            logging.error(text)
-            raise Exception(text)
-        logging.error(str(a))
+            pass
+        logging.error(str(arg))
+
     raise e

@@ -233,7 +233,9 @@ def graph_merge(g1: nx.Graph, g2: nx.Graph, change: GraphChange):
         edge["source_id"] += attr["source_id"]
 
     for node_degree in g1.degree:
-        g1.nodes[str(node_degree[0])]["rank"] = int(node_degree[1])
+        node_id = str(node_degree[0])
+        if node_id in g1.nodes:
+            g1.nodes[node_id]["rank"] = int(node_degree[1])
     # A graph's source_id indicates which documents it came from.
     if "source_id" not in g1.graph:
         g1.graph["source_id"] = []

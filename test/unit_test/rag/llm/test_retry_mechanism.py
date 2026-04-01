@@ -201,7 +201,7 @@ class TestRetryWaitCalculation:
         wait1 = model._get_retry_wait(retry_state)
         wait2 = model._get_retry_wait(retry_state)
 
-        assert wait1 != wait2 or True
+        assert wait1 != wait2
 
 
 class TestProviderFallback:
@@ -600,5 +600,79 @@ class TestEdgeCaseConfiguration:
 
         with pytest.raises(Exception):
             model._run_with_retry(always_fail)
+
+        assert model.circuit_breaker.state == CircuitState.OPEN
+
+
+class TestProviderFallbackBehavior:
+    """Tests for provider fallback behavior when retries are exhausted.
+
+    These tests document the current behavior: RemoteModelBase retries on
+    transient errors (429, 5xx, timeouts) but does NOT automatically
+    failover to secondary providers. The `allow_fallbacks` flag in
+    litellm integration is explicitly set to False.
+    """
+
+    @pytest.fixture
+    def model(self):
+        """Create model for testing."""
+        return ConcreteRemoteModel(max_retries=3, retry_interval=0.0)
+
+    def test_retry_exhaustion_raises_exception(self, model):
+        """Verify that exhausting retries raises the final exception."""
+        call_count = 0
+
+        def always_fail():
+            nonlocal call_count
+            call_count += 1
+            raise Exception("429 Too Many Requests")
+
+        with pytest.raises(Exception) as exc_info:
+            model._run_with_retry(always_fail)
+
+        assert "429 Too Many Requests" in str(exc_info.value)
+        assert call_count == model.max_retries + 1
+
+    def test_no_automatic_provider_switch_on_exhaustion(self, model):
+        """Document that no automatic provider fallback occurs.
+
+        RemoteModelBase implements retry logic with circuit breaker protection,
+        but does not include logic to switch to alternative providers when
+        all retries are exhausted. This is intentional - provider selection
+        is handled at a higher architectural level.
+        """
+        attempt_count = 0
+
+        def count_attempts():
+            nonlocal attempt_count
+            attempt_count += 1
+            raise Exception("429 Rate Limit")
+
+        with pytest.raises(Exception):
+            model._run_with_retry(count_attempts)
+
+        assert attempt_count == model.max_retries + 1
+
+    def test_circuit_breaker_prevents_further_calls_after_open(self, model):
+        """Verify circuit breaker prevents calls when in OPEN state."""
+        LLMCircuitBreaker.reset_all()
+        model = ConcreteRemoteModel(
+            max_retries=2,
+            retry_interval=0.0,
+            failure_threshold=2,
+            recovery_timeout=60,
+        )
+
+        def fail_once_then_succeed():
+            raise Exception("429")
+
+        with pytest.raises((Exception, CircuitBreakerError)):
+            for _ in range(model.failure_threshold + 2):
+                try:
+                    model._run_with_retry(fail_once_then_succeed)
+                except CircuitBreakerError:
+                    raise
+                except Exception:
+                    pass
 
         assert model.circuit_breaker.state == CircuitState.OPEN

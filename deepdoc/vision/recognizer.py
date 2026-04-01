@@ -27,8 +27,11 @@ from . import operators
 from .ocr import load_model
 
 
+# Distance threshold constant
+MAX_DISTANCE = 1000000
+
 class Recognizer:
-    def __init__(self, label_list, task_name, model_dir=None):
+    def __init__(self, label_list: list, task_name: str, model_dir: str | None = None) -> None:
         """
         If you have trouble downloading HuggingFace models, -_^ this might help!!
 
@@ -232,7 +235,7 @@ class Recognizer:
     def find_horizontally_tightest_fit(box, boxes):
         if not boxes:
             return
-        min_dis, min_i = 1000000, None
+        min_dis, min_i = MAX_DISTANCE, None
         for i, b in enumerate(boxes):
             if box.get("layoutno", "0") != b.get("layoutno", "0"):
                 continue

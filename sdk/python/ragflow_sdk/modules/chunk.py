@@ -13,12 +13,33 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ragflow_sdk.ragflow import RAGFlow
 
 from .base import Base
 
 
 class ChunkUpdateError(Exception):
+    """Exception raised when chunk update fails.
+
+    Attributes:
+        code: Error code from the API.
+        message: Error message.
+        details: Additional error details.
+    """
+
     def __init__(self, code=None, message=None, details=None):
+        """Initialize ChunkUpdateError.
+
+        Args:
+            code: Error code from the API.
+            message: Error message.
+            details: Additional error details.
+        """
         self.code = code
         self.message = message
         self.details = details
@@ -26,7 +47,37 @@ class ChunkUpdateError(Exception):
 
 
 class Chunk(Base):
-    def __init__(self, rag, res_dict):
+    """Represents a chunk extracted from a document.
+
+    A chunk is a piece of text extracted from a document during parsing.
+    Chunks are used for retrieval and can have associated metadata like
+    important keywords and questions.
+
+    Attributes:
+        id: Unique identifier of the chunk.
+        content: The text content of the chunk.
+        important_keywords: Keywords associated with this chunk.
+        questions: Questions this chunk can answer.
+        create_time: Creation timestamp string.
+        create_timestamp: Creation timestamp as Unix time.
+        dataset_id: ID of the parent dataset.
+        document_name: Name of the source document.
+        document_keyword: Keyword identifier for the document.
+        document_id: ID of the source document.
+        available: Whether the chunk is available for retrieval.
+        similarity: Overall similarity score from retrieval.
+        vector_similarity: Vector-based similarity score.
+        term_similarity: Keyword-based similarity score.
+        positions: Positions in the document.
+        doc_type: Document type.
+
+    Example:
+        >>> chunks = document.list_chunks()
+        >>> chunk = chunks[0]
+        >>> chunk.update({"content": "Updated content"})
+    """
+
+    def __init__(self, rag: RAGFlow, res_dict: dict) -> None:
         self.id = ""
         self.content = ""
         self.important_keywords = []
@@ -54,6 +105,14 @@ class Chunk(Base):
             self.document_name = self.document_keyword
 
     def update(self, update_message: dict):
+        """Update the chunk with new information.
+
+        Args:
+            update_message: Dictionary containing fields to update.
+
+        Raises:
+            ChunkUpdateError: If the update fails.
+        """
         res = self.put(f"/datasets/{self.dataset_id}/documents/{self.document_id}/chunks/{self.id}", update_message)
         res = res.json()
         if res.get("code") != 0:

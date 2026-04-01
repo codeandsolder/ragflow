@@ -20,6 +20,7 @@ from configs import CHAT_ASSISTANT_NAME_LIMIT, INVALID_API_TOKEN
 from libs.auth import RAGFlowHttpApiAuth
 from utils import encode_avatar
 from utils.file_utils import create_image_file
+from test.testcases.conftest import DEFAULT_LLM_ID
 
 
 @pytest.mark.p1
@@ -146,7 +147,7 @@ class TestChatAssistantCreate:
                 for k, v in llm.items():
                     assert res["data"]["llm"][k] == v
             else:
-                assert res["data"]["llm"]["model_name"] == "glm-4-flash@ZHIPU-AI"
+                assert res["data"]["llm"]["model_name"] == DEFAULT_LLM_ID
                 assert res["data"]["llm"]["temperature"] == 0.1
                 assert res["data"]["llm"]["top_p"] == 0.3
                 assert res["data"]["llm"]["presence_penalty"] == 0.4

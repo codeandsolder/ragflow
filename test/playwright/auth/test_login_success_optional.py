@@ -17,8 +17,8 @@ from test.playwright.helpers.auth_waits import wait_for_login_complete
 from test.playwright.helpers.env_utils import env_bool
 from test.playwright.helpers.flow_steps import flow_params, require
 
-DEMO_EMAIL = "qa@infiniflow.com"
-DEMO_PASSWORD = "123"
+DEMO_EMAIL = os.getenv("DEMO_EMAIL", "test@example.com")
+DEMO_PASSWORD = os.getenv("DEMO_PASSWORD", "changeme")
 
 
 def _resolve_creds():

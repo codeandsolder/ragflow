@@ -176,7 +176,8 @@ request.interceptors.response.use(
     return response;
   },
   function (error) {
-    console.error('Request error:', error);
+    // Log error for debugging without exposing sensitive info to console
+    console.warn('Request error:', error?.message || error);
 
     // Handle HTTP 401 (token expired / invalid)
     const status = error?.response?.status;

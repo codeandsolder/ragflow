@@ -30,6 +30,19 @@ from io import BytesIO
 from timeit import default_timer as timer
 
 import numpy as np
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
+PDF_MAX_FILE_SIZE_MB = int(os.getenv("PDF_MAX_FILE_SIZE_MB", "500"))
+PDF_BATCH_SIZE = int(os.getenv("PDF_BATCH_SIZE", "10"))
+MEMORY_THRESHOLD_PERCENT = float(os.getenv("MEMORY_THRESHOLD_PERCENT", "80.0"))
+MEMORY_CRITICAL_PERCENT = float(os.getenv("MEMORY_CRITICAL_PERCENT", "90.0"))
+ADAPTIVE_RESOLUTION_ENABLED = os.getenv("ADAPTIVE_RESOLUTION_ENABLED", "true").lower() in ("true", "1", "yes")
+MEMORY_ADAPTIVE_ZOOM_REDUCTION_FACTOR = float(os.getenv("MEMORY_ADAPTIVE_ZOOM_REDUCTION_FACTOR", "0.5"))
+
 import pdfplumber
 import xgboost as xgb
 from huggingface_hub import snapshot_download
@@ -43,9 +56,13 @@ from sklearn.metrics import silhouette_score
 from common.file_utils import get_project_base_directory
 from common.misc_utils import pip_install_torch
 from deepdoc.vision import OCR, AscendLayoutRecognizer, LayoutRecognizer, Recognizer, TableStructureRecognizer
+
+# Magic number constants for commonly used values
+
 from rag.nlp import rag_tokenizer
 from rag.prompts.generator import vision_llm_describe_prompt
 from common import settings
+from common.connection_utils import timeout
 
 
 from common.misc_utils import thread_pool_exec
@@ -54,9 +71,13 @@ LOCK_KEY_pdfplumber = "global_shared_lock_pdfplumber"
 if LOCK_KEY_pdfplumber not in sys.modules:
     sys.modules[LOCK_KEY_pdfplumber] = threading.Lock()
 
+# Magic number constants for commonly used values
+DEFAULT_ZOOM_LEVEL = 3
+MAX_TABLE_ORIENTATION_SAMPLES = 0.3
+
 
 class RAGFlowPdfParser:
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         """
         If you have trouble downloading HuggingFace models, -_^ this might help!!
 
@@ -109,6 +130,112 @@ class RAGFlowPdfParser:
 
         self.page_from = 0
         self.column_num = 1
+        self._current_resolution = None
+        self._memory_adaptive_triggered = False
+        self.vertical_text_pages = set()
+
+    def _detect_vertical_text(self, page_chars, page_num):
+        """Detect if a page contains vertical text (common in East Asian documents).
+
+        Vertical text is detected by analyzing character orientations and positions.
+        Returns True if vertical text is detected.
+        """
+        if not page_chars or len(page_chars) < 10:
+            return False
+
+        char_orientations = []
+        for c in page_chars:
+            orientation = c.get("orientation", "")
+            if orientation:
+                char_orientations.append(orientation)
+
+        if char_orientations:
+            vertical_count = sum(1 for o in char_orientations if o in ("+90", "-90", "90", "270", "r90", "r270"))
+            if vertical_count / len(char_orientations) > 0.5:
+                self.vertical_text_pages.add(page_num)
+                return True
+
+        x_positions = [c.get("x0", 0) for c in page_chars[:100] if c.get("text", "").strip()]
+        if len(x_positions) >= 10:
+            x_range = max(x_positions) - min(x_positions)
+            y_positions = [c.get("top", 0) for c in page_chars[:100] if c.get("text", "").strip()]
+            y_range = max(y_positions) - min(y_positions)
+
+            if x_range > 0 and y_range > x_range * 2:
+                self.vertical_text_pages.add(page_num)
+                return True
+
+        return False
+
+    def _detect_footnote(self, box):
+        """Detect if a text box is likely a footnote or endnote.
+
+        Footnotes/endnotes are typically:
+        - Located at the bottom of a page
+        - Smaller font size than body text
+        - Contain superscript numbers or symbols
+        - Marked with specific layout types from the recognizer
+        """
+        if box.get("layout_type") in ("footnote", "reference"):
+            return True
+
+        text = box.get("text", "").strip()
+        if not text:
+            return False
+
+        if re.match(r"^\d+[\.\)]\s", text) and len(text) < 100:
+            return True
+
+        if re.match(r"^\*[a-zA-Z0-9]+", text):
+            return True
+
+        return False
+
+    def _check_memory_and_get_resolution(self, requested_zoomin: float) -> float:
+        """Check memory and return adaptive resolution.
+
+        Implements adaptive resolution based on current memory usage.
+        When memory is high, reduces resolution to prevent OOM errors.
+
+        Args:
+            requested_zoomin: The originally requested zoom factor.
+
+        Returns:
+            Adjusted zoom factor based on memory conditions.
+        """
+        if not ADAPTIVE_RESOLUTION_ENABLED:
+            return requested_zoomin
+
+        if not psutil:
+            return requested_zoomin
+
+        try:
+            mem = psutil.virtual_memory()
+            mem_percent = mem.percent
+
+            if mem_percent >= MEMORY_CRITICAL_PERCENT:
+                adaptive_zoomin = max(1.0, requested_zoomin * MEMORY_ADAPTIVE_ZOOM_REDUCTION_FACTOR)
+                logging.warning(
+                    f"Memory critical ({mem_percent:.1f}%), reducing resolution from {requested_zoomin}x to {adaptive_zoomin}x"
+                )
+                self._memory_adaptive_triggered = True
+                self._current_resolution = adaptive_zoomin
+                return adaptive_zoomin
+            elif mem_percent >= MEMORY_THRESHOLD_PERCENT:
+                adaptive_zoomin = max(2.0, requested_zoomin * (MEMORY_ADAPTIVE_ZOOM_REDUCTION_FACTOR + 0.25))
+                logging.warning(
+                    f"Memory high ({mem_percent:.1f}%), reducing resolution from {requested_zoomin}x to {adaptive_zoomin}x"
+                )
+                self._memory_adaptive_triggered = True
+                self._current_resolution = adaptive_zoomin
+                return adaptive_zoomin
+
+            self._current_resolution = requested_zoomin
+            return requested_zoomin
+
+        except Exception as e:
+            logging.debug(f"Memory check failed: {e}")
+            return requested_zoomin
 
     def __char_width(self, c):
         return (c["x1"] - c["x0"]) // max(len(c["text"]), 1)
@@ -964,6 +1091,10 @@ class RAGFlowPdfParser:
                     i += 1
                     continue
 
+                if self._detect_footnote(b_) and not self._detect_footnote(b):
+                    i += 1
+                    continue
+
                 if b_["top"] - b["bottom"] > mh * 1.5:
                     i += 1
                     continue
@@ -1532,6 +1663,22 @@ class RAGFlowPdfParser:
             logging.exception("total_page_number")
 
     def __images__(self, fnm, zoomin=3, page_from=0, page_to=299, callback=None):
+        if isinstance(fnm, str):
+            if not os.path.exists(fnm):
+                raise ValueError(f"PDF file not found: {fnm}")
+            file_size = os.path.getsize(fnm)
+            max_size_bytes = PDF_MAX_FILE_SIZE_MB * 1024 * 1024
+            if file_size > max_size_bytes:
+                raise ValueError(f"PDF file size ({file_size / (1024*1024):.2f} MB) exceeds maximum allowed size ({PDF_MAX_FILE_SIZE_MB} MB)")
+        elif isinstance(fnm, bytes):
+            if len(fnm) > PDF_MAX_FILE_SIZE_MB * 1024 * 1024:
+                raise ValueError(f"PDF data size ({len(fnm) / (1024*1024):.2f} MB) exceeds maximum allowed size ({PDF_MAX_FILE_SIZE_MB} MB)")
+        else:
+            raise ValueError("PDF must be a file path (str) or bytes data")
+
+        PDF_OPEN_TIMEOUT = int(os.getenv("PDF_OPEN_TIMEOUT", "120"))
+        PDF_PAGE_TIMEOUT = int(os.getenv("PDF_PAGE_TIMEOUT", "30"))
+
         self.lefted_chars = []
         self.mean_height = []
         self.mean_width = []
@@ -1541,17 +1688,79 @@ class RAGFlowPdfParser:
         self.page_layout = []
         self.page_from = page_from
         start = timer()
+
+        effective_zoomin = self._check_memory_and_get_resolution(zoomin)
+        logging.debug(f"Using resolution {effective_zoomin}x (requested: {zoomin}x, memory adaptive: {self._memory_adaptive_triggered})")
+
+        def _convert_page_to_image(page, zoom, timeout_sec):
+            def _convert():
+                return page.to_image(resolution=72 * zoom, antialias=True).annotated
+
+            if timeout_sec <= 0:
+                return _convert()
+
+            result_queue = queue.Queue(maxsize=1)
+
+            def target():
+                try:
+                    result = _convert()
+                    result_queue.put(("success", result))
+                except Exception as e:
+                    result_queue.put(("error", e))
+
+            thread = threading.Thread(target=target)
+            thread.daemon = True
+            thread.start()
+            thread.join(timeout=timeout_sec)
+
+            if thread.is_alive():
+                raise TimeoutError(f"Page image conversion timed out after {timeout_sec} seconds")
+
+            if result_queue.empty():
+                raise TimeoutError(f"Page image conversion timed out after {timeout_sec} seconds")
+
+            status, result = result_queue.get()
+            if status == "error":
+                raise result
+            return result
+
+        import queue
         try:
             with sys.modules[LOCK_KEY_pdfplumber]:
                 with pdfplumber.open(fnm) if isinstance(fnm, str) else pdfplumber.open(BytesIO(fnm)) as pdf:
                     self.pdf = pdf
-                    self.page_images = [p.to_image(resolution=72 * zoomin, antialias=True).annotated for i, p in enumerate(self.pdf.pages[page_from:page_to])]
+                    pages = list(self.pdf.pages[page_from:page_to])
+                    num_pages = len(pages)
+                    self.page_images = []
+                    for batch_start in range(0, num_pages, PDF_BATCH_SIZE):
+                        batch_end = min(batch_start + PDF_BATCH_SIZE, num_pages)
+                        batch_pages = pages[batch_start:batch_end]
+                        batch_images = []
+                        for page in batch_pages:
+                            img = _convert_page_to_image(page, effective_zoomin, PDF_PAGE_TIMEOUT)
+                            batch_images.append(img)
+                        self.page_images.extend(batch_images)
+                        if psutil:
+                            mem_percent = psutil.virtual_memory().percent
+                            if mem_percent >= MEMORY_CRITICAL_PERCENT:
+                                logging.error(
+                                    f"Memory critical ({mem_percent:.1f}%), clearing batch images and forcing aggressive cleanup"
+                                )
+                                batch_images.clear()
+                                gc.collect(2)
+                            elif mem_percent > MEMORY_THRESHOLD_PERCENT:
+                                logging.warning(
+                                    f"Memory usage high ({mem_percent:.1f}%), forcing garbage collection during PDF processing"
+                                )
+                                gc.collect()
+                        del batch_images
+                        gc.collect()
 
                     try:
                         self.page_chars = [[c for c in page.dedupe_chars().chars if self._has_color(c)] for page in self.pdf.pages[page_from:page_to]]
                     except Exception as e:
                         logging.warning(f"Failed to extract characters for pages {page_from}-{page_to}: {str(e)}")
-                        self.page_chars = [[] for _ in range(page_to - page_from)]  # If failed to extract, using empty list instead.
+                        self.page_chars = [[] for _ in range(page_to - page_from)]
 
                     # Detect garbled pages and clear their chars so the OCR
                     # path will be used instead. Two detection strategies:
@@ -1599,8 +1808,12 @@ class RAGFlowPdfParser:
         except PdfStreamError as e:
             logging.error(f"RAGFlowPdfParser __images__, PDF stream error: {e}")
             raise ValueError("PDF stream is corrupted or truncated") from e
+        except (ValueError, TypeError) as e:
+            logging.error(f"RAGFlowPdfParser __images__, value/type error: {e}")
+        except RuntimeError as e:
+            logging.error(f"RAGFlowPdfParser __images__, runtime error: {e}")
         except Exception as e:
-            logging.exception(f"RAGFlowPdfParser __images__, exception: {e}")
+            logging.exception(f"RAGFlowPdfParser __images__, unexpected exception: {e}")
         logging.info(f"__images__ dedupe_chars cost {timer() - start}s")
 
         self.outlines = []
@@ -1774,11 +1987,13 @@ class RAGFlowPdfParser:
         self.__images__(fnm, zoomin, callback=callback)
         if callback:
             callback(0.40, "OCR finished ({:.2f}s)".format(timer() - start))
+        gc.collect()
 
         start = timer()
         self._layouts_rec(zoomin)
         if callback:
             callback(0.63, "Layout analysis ({:.2f}s)".format(timer() - start))
+        gc.collect()
 
         # Read table auto-rotation setting from environment variable
         auto_rotate_tables = os.getenv("TABLE_AUTO_ROTATE", "true").lower() in ("true", "1", "yes")
@@ -1787,6 +2002,7 @@ class RAGFlowPdfParser:
         self._table_transformer_job(zoomin, auto_rotate=auto_rotate_tables)
         if callback:
             callback(0.83, "Table analysis ({:.2f}s)".format(timer() - start))
+        gc.collect()
 
         start = timer()
         self._text_merge()
@@ -1794,6 +2010,7 @@ class RAGFlowPdfParser:
         self._naive_vertical_merge(zoomin)
         if callback:
             callback(0.92, "Text merged ({:.2f}s)".format(timer() - start))
+        gc.collect()
 
         start = timer()
         tbls, figs = self._extract_table_figure(True, zoomin, True, True, True)
@@ -2015,6 +2232,119 @@ class RAGFlowPdfParser:
             poss.append((pn, bx["x0"], bx["x1"], top, min(bott, self.page_images[pn - 1].size[1] / ZM)))
         return poss
 
+    def stream_parse(self, fnm, zoomin=3, page_from=0, page_to=None, callback=None):
+        """Stream-parse a PDF file page by page to reduce memory usage.
+
+        This generator yields parsed results one page at a time, releasing memory
+        after each page. Suitable for processing very large PDF documents.
+
+        Args:
+            fnm: PDF file path or binary content
+            zoomin: Zoom factor for image rendering
+            page_from: Starting page (0-indexed)
+            page_to: Ending page (0-indexed, exclusive). None means to end of document.
+            callback: Progress callback function
+
+        Yields:
+            tuple: (page_index, parsed_text, tables, page_image) for each processed page
+        """
+        if page_to is None:
+            page_to = 10**9
+
+        page_size = PDF_BATCH_SIZE
+        total_pages = RAGFlowPdfParser.total_page_number(fnm)
+        if total_pages is None:
+            total_pages = page_to - page_from
+        page_to = min(page_to, total_pages)
+
+        for batch_start in range(page_from, page_to, page_size):
+            batch_end = min(batch_start + page_size, page_to)
+
+            self.lefted_chars = []
+            self.mean_height = []
+            self.mean_width = []
+            self.boxes = []
+            self.garbages = {}
+            self.page_cum_height = [0]
+            self.page_layout = []
+            self.page_from = batch_start
+
+            try:
+                with sys.modules[LOCK_KEY_pdfplumber]:
+                    with pdfplumber.open(fnm) if isinstance(fnm, str) else pdfplumber.open(BytesIO(fnm)) as pdf:
+                        self.pdf = pdf
+                        pages = list(self.pdf.pages[batch_start:batch_end])
+                        self.page_images = []
+                        for page in pages:
+                            img = page.to_image(resolution=72 * zoomin, antialias=True).annotated
+                            self.page_images.append(img)
+
+                        self.page_chars = []
+                        for page in pages:
+                            try:
+                                chars = page.dedupe_chars().chars
+                                self.page_chars.append([c for c in chars if self._has_color(c)])
+                            except Exception as e:
+                                logging.warning(f"Failed to extract chars for page: {e}")
+                                self.page_chars.append([])
+
+                        self.total_page = len(self.pdf.pages)
+
+            except Exception as e:
+                logging.error(f"Error in stream_parse batch {batch_start}-{batch_end}: {e}")
+                continue
+
+            try:
+                self._layouts_rec(zoomin)
+            except Exception as e:
+                logging.error(f"Layout recognition failed: {e}")
+                self.boxes = [[] for _ in self.page_images]
+                self.page_layout = [[] for _ in self.page_images]
+
+            try:
+                self._table_transformer_job(zoomin, auto_rotate=True)
+            except Exception as e:
+                logging.error(f"Table transformer job failed: {e}")
+
+            self._text_merge()
+            self._concat_downward()
+
+            self.page_cum_height = np.cumsum(self.page_cum_height)
+
+            for page_idx in range(len(self.page_images)):
+                page_num = batch_start + page_idx + 1
+                page_boxes = [b for b in self.boxes if b.get("page_number") == page_num]
+
+                for box in page_boxes:
+                    box["top"] += self.page_cum_height[page_idx]
+                    box["bottom"] += self.page_cum_height[page_idx]
+
+                text = self.__filterout_scraps(deepcopy(page_boxes), zoomin)
+
+                tables = []
+                try:
+                    tbls = self._extract_table_figure(True, zoomin, True, False)
+                    for (img, rows), poss in tbls:
+                        if poss and poss[0][0] == page_idx + batch_start:
+                            tables.append((img, rows, poss))
+                except Exception as e:
+                    logging.warning(f"Table extraction failed for page {page_num}: {e}")
+
+                yield batch_start + page_idx, text, tables, self.page_images[page_idx]
+
+                if psutil:
+                    mem_percent = psutil.virtual_memory().percent
+                    if mem_percent > MEMORY_THRESHOLD_PERCENT:
+                        logging.warning(f"Memory high ({mem_percent:.1f}%), forcing GC")
+                        gc.collect()
+
+            self._release_page_images()
+            gc.collect()
+
+            if callback:
+                progress = (batch_end - page_from) / max(1, page_to - page_from)
+                callback(progress, f"Processed pages {batch_start}-{batch_end}")
+
 
 class PlainParser:
     def __call__(self, filename, from_page=0, to_page=100000, **kwargs):
@@ -2084,14 +2414,23 @@ class VisionParser(RAGFlowPdfParser):
             if pdf_page_num < start_page or pdf_page_num >= end_page:
                 continue
 
+            from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
             from rag.app.picture import vision_llm_chunk as picture_vision_llm_chunk
 
-            text = picture_vision_llm_chunk(
-                binary=img_binary,
-                vision_model=self.vision_model,
-                prompt=vision_llm_describe_prompt(page=pdf_page_num + 1),
-                callback=callback,
-            )
+            vision_timeout = 120
+            try:
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(
+                        picture_vision_llm_chunk,
+                        binary=img_binary,
+                        vision_model=self.vision_model,
+                        prompt=vision_llm_describe_prompt(page=pdf_page_num + 1),
+                        callback=callback,
+                    )
+                    text = future.result(timeout=vision_timeout)
+            except FuturesTimeoutError:
+                logging.warning(f"VisionParser: timeout ({vision_timeout}s) processing page {pdf_page_num + 1}")
+                text = ""
 
             if kwargs.get("callback"):
                 kwargs["callback"](idx * 1.0 / len(self.page_images), f"Processed: {idx + 1}/{len(self.page_images)}")

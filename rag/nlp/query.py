@@ -22,6 +22,8 @@ from collections import defaultdict
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
+from common import settings
+
 from common.query_base import QueryBase
 from common.doc_store.doc_store_base import MatchTextExpr
 from rag.nlp import rag_tokenizer, term_weight, synonym
@@ -41,7 +43,12 @@ class FulltextQueryer(QueryBase):
             "content_sm_ltks",
         ]
 
-    def question(self, txt, tbl="qa", min_match: float = 0.6):
+    def question(self, txt, tbl="qa", min_match: float = None):
+        if min_match is None:
+            try:
+                min_match = float(settings.DEFAULT_HYBRID_WEIGHT.split(",")[0])
+            except (ValueError, IndexError):
+                min_match = 0.3
         original_query = txt
         txt = self.add_space_between_eng_zh(txt)
         txt = re.sub(

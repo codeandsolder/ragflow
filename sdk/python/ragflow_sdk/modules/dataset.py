@@ -13,18 +13,61 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ragflow_sdk.ragflow import RAGFlow
 from .base import Base
 from .document import Document
 from .exceptions import APIError
 
 
 class DataSet(Base):
+    """Represents a dataset in RAGFlow.
+
+    A dataset contains documents and their chunks, along with configuration
+    for parsing, embedding, and metadata extraction.
+
+    Attributes:
+        id: Unique identifier of the dataset.
+        name: Name of the dataset.
+        avatar: Avatar URL or base64 string.
+        tenant_id: ID of the tenant who owns this dataset.
+        description: Description of the dataset.
+        embedding_model: Embedding model used for this dataset.
+        permission: Access permission setting.
+        document_count: Number of documents in the dataset.
+        chunk_count: Number of chunks in the dataset.
+        chunk_method: Method used for chunking documents.
+        parser_config: Parser configuration for document processing.
+        pagerank: PageRank score for document ranking.
+
+    Example:
+        >>> datasets = ragflow.list_datasets()
+        >>> dataset = datasets[0]
+        >>> dataset.update({"name": "New Name"})
+    """
+
     class ParserConfig(Base):
-        def __init__(self, rag, res_dict):
+        """Configuration for document parsing.
+
+        Attributes:
+            rag: Reference to the RAGFlow client.
+            res_dict: Dictionary containing parser configuration.
+        """
+
+        def __init__(self, rag: RAGFlow, res_dict: dict) -> None:
             super().__init__(rag, res_dict)
 
-    def __init__(self, rag, res_dict):
+    def __init__(self, rag: RAGFlow, res_dict: dict) -> None:
+        """Initialize a DataSet object.
+
+        Args:
+            rag: Reference to the RAGFlow client.
+            res_dict: Dictionary containing dataset data from API response.
+        """
         self.id = ""
         self.name = ""
         self.avatar = ""
@@ -43,6 +86,17 @@ class DataSet(Base):
         super().__init__(rag, res_dict)
 
     def update(self, update_message: dict):
+        """Update the dataset with new information.
+
+        Args:
+            update_message: Dictionary containing fields to update.
+
+        Returns:
+            DataSet: The updated DataSet object.
+
+        Raises:
+            APIError: If the update fails.
+        """
         res = self.put(f"/datasets/{self.id}", update_message)
         res = res.json()
         if res.get("code") != 0:
@@ -52,6 +106,17 @@ class DataSet(Base):
         return self
 
     def upload_documents(self, document_list: list[dict]):
+        """Upload documents to the dataset.
+
+        Args:
+            document_list: List of dictionaries, each containing 'display_name' and 'blob' keys.
+
+        Returns:
+            list[Document]: List of created Document objects.
+
+        Raises:
+            APIError: If upload fails.
+        """
         url = f"/datasets/{self.id}/documents"
         files = [("file", (ele["display_name"], ele["blob"])) for ele in document_list]
         res = self.post(path=url, json=None, files=files)
@@ -76,6 +141,25 @@ class DataSet(Base):
         create_time_from: int = 0,
         create_time_to: int = 0,
     ):
+        """List documents in the dataset with filtering and pagination.
+
+        Args:
+            id: Filter by document ID.
+            name: Filter by document name (partial match).
+            keywords: Filter by keywords in document.
+            page: Page number (default: 1).
+            page_size: Number of items per page (default: 30).
+            orderby: Field to order by (default: 'create_time').
+            desc: Sort in descending order (default: True).
+            create_time_from: Filter documents created after this timestamp.
+            create_time_to: Filter documents created before this timestamp.
+
+        Returns:
+            list[Document]: List of Document objects.
+
+        Raises:
+            APIError: If listing fails.
+        """
         params = {
             "id": id,
             "name": name,
@@ -97,6 +181,15 @@ class DataSet(Base):
         raise APIError(res["message"])
 
     def delete_documents(self, ids: list[str] | None = None, delete_all: bool = False):
+        """Delete documents from the dataset.
+
+        Args:
+            ids: List of document IDs to delete.
+            delete_all: If True, delete all documents (ignores ids).
+
+        Raises:
+            APIError: If deletion fails.
+        """
         res = self.rm(f"/datasets/{self.id}/documents", {"ids": ids, "delete_all": delete_all})
         res = res.json()
         if res.get("code") != 0:
@@ -133,12 +226,37 @@ class DataSet(Base):
         return finished
 
     def async_parse_documents(self, document_ids):
+        """Start asynchronous document parsing.
+
+        Initiates parsing of documents to extract chunks. This method returns immediately
+        while parsing continues in the background.
+
+        Args:
+            document_ids: List of document IDs to parse.
+
+        Raises:
+            APIError: If parsing initiation fails.
+        """
         res = self.post(f"/datasets/{self.id}/chunks", {"document_ids": document_ids})
         res = res.json()
         if res.get("code") != 0:
             raise APIError(res.get("message"))
 
     def parse_documents(self, document_ids):
+        """Parse documents and wait for completion.
+
+        Parses documents to extract chunks and waits for the parsing to complete.
+        This is a blocking operation that polls for document status.
+
+        Args:
+            document_ids: List of document IDs to parse.
+
+        Returns:
+            list: List of tuples containing (document_id, status, chunk_count, token_count).
+
+        Raises:
+            APIError: If parsing fails.
+        """
         try:
             self.async_parse_documents(document_ids)
             self._get_documents_status(document_ids)
@@ -148,20 +266,18 @@ class DataSet(Base):
         return self._get_documents_status(document_ids)
 
     def async_cancel_parse_documents(self, document_ids):
+        """Cancel ongoing document parsing.
+
+        Args:
+            document_ids: List of document IDs for which to cancel parsing.
+
+        Raises:
+            APIError: If cancellation fails.
+        """
         res = self.rm(f"/datasets/{self.id}/chunks", {"document_ids": document_ids})
         res = res.json()
         if res.get("code") != 0:
-            raise APIError(res.get("message"))
-
-    def get_auto_metadata(self) -> dict[str, Any]:
-        """
-        Retrieve auto-metadata configuration for a dataset via SDK.
-        """
-        res = self.get(f"/datasets/{self.id}/auto_metadata")
-        res = res.json()
-        if res.get("code") == 0:
-            return res["data"]
-        raise APIError(res["message"])
+            raise APIError(res["message"])
 
     def update_auto_metadata(self, **config: Any) -> dict[str, Any]:
         """

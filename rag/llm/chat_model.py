@@ -1329,27 +1329,6 @@ class LiteLLMBase(ABC):
     def _get_delay(self):
         return self.base_delay * random.uniform(10, 150)
 
-    def _classify_error(self, error):
-        error_str = str(error).lower()
-
-        keywords_mapping = [
-            (["quota", "capacity", "credit", "billing", "balance", "欠费"], LLMErrorCode.ERROR_QUOTA),
-            (["rate limit", "429", "tpm limit", "too many requests", "requests per minute"], LLMErrorCode.ERROR_RATE_LIMIT),
-            (["auth", "key", "apikey", "401", "forbidden", "permission"], LLMErrorCode.ERROR_AUTHENTICATION),
-            (["invalid", "bad request", "400", "format", "malformed", "parameter"], LLMErrorCode.ERROR_INVALID_REQUEST),
-            (["server", "503", "502", "504", "500", "unavailable"], LLMErrorCode.ERROR_SERVER),
-            (["timeout", "timed out"], LLMErrorCode.ERROR_TIMEOUT),
-            (["connect", "network", "unreachable", "dns"], LLMErrorCode.ERROR_CONNECTION),
-            (["filter", "content", "policy", "blocked", "safety", "inappropriate"], LLMErrorCode.ERROR_CONTENT_FILTER),
-            (["model", "not found", "does not exist", "not available"], LLMErrorCode.ERROR_MODEL),
-            (["max rounds"], LLMErrorCode.ERROR_MODEL),
-        ]
-        for words, code in keywords_mapping:
-            if re.search("({})".format("|".join(words)), error_str):
-                return code
-
-        return LLMErrorCode.ERROR_GENERIC
-
     def _clean_conf(self, gen_conf):
         gen_conf, _ = _apply_model_family_policies(
             self.model_name,

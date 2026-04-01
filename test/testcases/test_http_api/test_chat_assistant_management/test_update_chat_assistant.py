@@ -19,6 +19,7 @@ from configs import CHAT_ASSISTANT_NAME_LIMIT, INVALID_API_TOKEN
 from libs.auth import RAGFlowHttpApiAuth
 from utils import encode_avatar
 from utils.file_utils import create_image_file
+from test.testcases.conftest import DEFAULT_LLM_ID
 
 UNCHANGED_FIELDS = ("name", "datasets", "llm", "prompt", "avatar")
 
@@ -175,7 +176,7 @@ class TestChatAssistantUpdate:
                 for k, v in llm.items():
                     assert after["llm"][k] == v
             else:
-                assert after["llm"]["model_name"] == "glm-4-flash@ZHIPU-AI"
+                assert after["llm"]["model_name"] == DEFAULT_LLM_ID
                 assert after["llm"]["temperature"] == 0.1
                 assert after["llm"]["top_p"] == 0.3
                 assert after["llm"]["presence_penalty"] == 0.4

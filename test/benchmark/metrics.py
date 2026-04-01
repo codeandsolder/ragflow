@@ -1,5 +1,6 @@
 import math
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
 
@@ -38,6 +39,35 @@ class RetrievalSample:
         return self.t1 - self.t0
 
 
+@dataclass
+class ThroughputTracker:
+    start_time: float = field(default_factory=time.perf_counter)
+    completions: int = 0
+    total_tokens: int = 0
+
+    def record_completion(self, tokens: int = 0) -> None:
+        self.completions += 1
+        self.total_tokens += tokens
+
+    @property
+    def elapsed_seconds(self) -> float:
+        return time.perf_counter() - self.start_time
+
+    @property
+    def requests_per_second(self) -> float:
+        elapsed = self.elapsed_seconds
+        if elapsed <= 0:
+            return 0.0
+        return self.completions / elapsed
+
+    @property
+    def tokens_per_second(self) -> float:
+        elapsed = self.elapsed_seconds
+        if elapsed <= 0:
+            return 0.0
+        return self.total_tokens / elapsed
+
+
 def _percentile(sorted_values: List[float], p: float) -> Optional[float]:
     if not sorted_values:
         return None
@@ -64,4 +94,22 @@ def summarize(values: List[float]) -> dict:
         "p50": _percentile(sorted_vals, 50),
         "p90": _percentile(sorted_vals, 90),
         "p95": _percentile(sorted_vals, 95),
+    }
+
+
+def summarize_throughput(tracker: ThroughputTracker, elapsed: float) -> dict:
+    if elapsed <= 0:
+        return {
+            "total_duration_s": 0,
+            "requests_per_second": 0.0,
+            "tokens_per_second": 0.0,
+            "total_completions": 0,
+            "total_tokens": 0,
+        }
+    return {
+        "total_duration_s": elapsed,
+        "requests_per_second": tracker.completions / elapsed,
+        "tokens_per_second": tracker.total_tokens / elapsed if tracker.total_tokens else 0.0,
+        "total_completions": tracker.completions,
+        "total_tokens": tracker.total_tokens,
     }

@@ -22,6 +22,7 @@ from common import (
     batch_create_datasets,
     bulk_upload_documents,
     delete_all_chat_assistants,
+    delete_all_documents,
     delete_all_datasets,
     delete_all_sessions_with_chat_assistant,
     list_documents,
@@ -135,14 +136,24 @@ def add_dataset_func(request, HttpApiAuth):
 
 
 @pytest.fixture(scope="class")
-def add_document(HttpApiAuth, add_dataset, ragflow_tmp_dir):
+def add_document(request, HttpApiAuth, add_dataset, ragflow_tmp_dir):
+    def cleanup():
+        delete_all_documents(HttpApiAuth, add_dataset)
+
+    request.addfinalizer(cleanup)
+
     dataset_id = add_dataset
     document_ids = bulk_upload_documents(HttpApiAuth, dataset_id, 1, ragflow_tmp_dir)
     return dataset_id, document_ids[0]
 
 
 @pytest.fixture(scope="class")
-def add_chunks(HttpApiAuth, add_document):
+def add_chunks(request, HttpApiAuth, add_document):
+    def cleanup():
+        pass
+
+    request.addfinalizer(cleanup)
+
     dataset_id, document_id = add_document
     parse_documents(HttpApiAuth, dataset_id, {"document_ids": [document_id]})
     condition(HttpApiAuth, dataset_id)

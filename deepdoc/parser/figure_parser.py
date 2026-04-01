@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+import atexit
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 
@@ -196,6 +197,13 @@ def vision_figure_parser_docx_wrapper_naive(chunks, idx_lst, callback=None, **kw
 
 
 shared_executor = ThreadPoolExecutor(max_workers=10)
+
+
+def _shutdown_executor():
+    shared_executor.shutdown(wait=False)
+
+
+atexit.register(_shutdown_executor)
 
 
 class VisionFigureParser:

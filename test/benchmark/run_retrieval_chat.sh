@@ -5,10 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 : "${ZHIPU_AI_API_KEY:?ZHIPU_AI_API_KEY is required}"
+: "${LOGIN_EMAIL:?LOGIN_EMAIL is required}"
+: "${LOGIN_PASSWORD:?LOGIN_PASSWORD is required}"
 
 BASE_URL="http://127.0.0.1:9380"
-LOGIN_EMAIL="qa@infiniflow.org"
-LOGIN_PASSWORD="123"
 DATASET_PAYLOAD='{"name":"bench_dataset","embedding_model":"BAAI/bge-small-en-v1.5@Builtin"}'
 CHAT_PAYLOAD='{"name":"bench_chat","llm":{"model_name":"glm-4-flash@ZHIPU-AI"}}'
 DATASET_ID=""

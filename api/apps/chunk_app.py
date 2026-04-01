@@ -45,20 +45,21 @@ from rag.prompts.generator import cross_languages, keyword_extraction
 from common.string_utils import remove_redundant_spaces
 from common.constants import RetCode, LLMType, ParserType, PAGERANK_FLD
 from common import settings
-from api.apps import login_required, current_user
+from api.apps import login_required, current_user, resource_owner_required
 
 
-@manager.route("/list", methods=["POST"])  # noqa: F821
+@manager.route("/list", methods=["GET"])  # noqa: F821
 @login_required
-@validate_request("doc_id")
+@resource_owner_required
 async def list_chunk():
-    req = await get_request_json()
-    doc_id = req["doc_id"]
-    page = int(req.get("page", 1))
-    size = int(req.get("size", 30))
-    question = req.get("keywords", "")
+    doc_id = request.args.get("doc_id", "")
+    if not doc_id:
+        return get_data_error_result(message='Lack of "doc_id"')
+    page = int(request.args.get("page", 1))
+    size = int(request.args.get("size", 30))
+    question = request.args.get("keywords", "")
     try:
-        tenant_id = DocumentService.get_tenant_id(req["doc_id"])
+        tenant_id = DocumentService.get_tenant_id(doc_id)
         if not tenant_id:
             return get_data_error_result(message="Tenant not found!")
         e, doc = DocumentService.get_by_id(doc_id)
@@ -66,8 +67,9 @@ async def list_chunk():
             return get_data_error_result(message="Document not found!")
         kb_ids = KnowledgebaseService.get_kb_ids(tenant_id)
         query = {"doc_ids": [doc_id], "page": page, "size": size, "question": question, "sort": True}
-        if "available_int" in req:
-            query["available_int"] = int(req["available_int"])
+        available_int = request.args.get("available_int", "")
+        if available_int:
+            query["available_int"] = int(available_int)
         sres = await settings.retriever.search(query, search.index_name(tenant_id), kb_ids, highlight=["content_ltks"])
         res = {"total": sres.total, "chunks": [], "doc": doc.to_dict()}
         for id in sres.ids:
@@ -98,7 +100,9 @@ async def list_chunk():
 @manager.route("/get", methods=["GET"])  # noqa: F821
 @login_required
 def get():
-    chunk_id = request.args["chunk_id"]
+    chunk_id = request.args.get("chunk_id")
+    if not chunk_id:
+        return get_data_error_result(message="chunk_id is required!")
     try:
         chunk = None
         tenants = UserTenantService.query(user_id=current_user.id)
@@ -499,8 +503,11 @@ async def retrieval_test():
 
 @manager.route("/knowledge_graph", methods=["GET"])  # noqa: F821
 @login_required
+@resource_owner_required
 async def knowledge_graph():
-    doc_id = request.args["doc_id"]
+    doc_id = request.args.get("doc_id")
+    if not doc_id:
+        return get_data_error_result(message="doc_id is required!")
     tenant_id = DocumentService.get_tenant_id(doc_id)
     kb_ids = KnowledgebaseService.get_kb_ids(tenant_id)
     req = {"doc_ids": [doc_id], "knowledge_graph_kwd": ["graph", "mind_map"]}

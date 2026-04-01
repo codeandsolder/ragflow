@@ -130,6 +130,9 @@ def html2pdf(
     install_driver: bool = True,
     print_options: dict = {},
 ):
+    # Validate URL before making network request
+    if not is_valid_url(source):
+        raise ValueError("Invalid or blocked URL")
     return __get_pdf_from_html(source, timeout, install_driver, print_options)
 
 
@@ -216,12 +219,59 @@ def is_valid_url(url: str) -> bool:
 
     hostname_lower = hostname.lower()
 
+    # Block known private/reserved hostnames
     if hostname_lower in ("localhost", "0.0.0.0", "::1", "::", "[::1]", "[::]"):
         return False
 
     if hostname_lower.endswith(".local") or hostname_lower.endswith(".localhost") or hostname_lower.endswith(".internal"):
         return False
 
+    # Block private IP ranges in hostname
+    # Check for private IP ranges using regex patterns
+    private_ip_patterns = [
+        r"^10\.",  # 10.0.0.0/8
+        r"^172\.(1[6-9]|2[0-9]|3[01])\.",  # 172.16.0.0/12
+        r"^192\.168\.",  # 192.168.0.0/16
+        r"^127\.",  # 127.0.0.0/8 (loopback)
+        r"^0\.",  # 0.0.0.0/8
+        r"^169\.254\.",  # 169.254.0.0/16 (link-local)
+        r"^224\.",  # 224.0.0.0/4 (multicast)
+        r"^240\.",  # 240.0.0.0/4 (reserved)
+        r"^255\.",  # 255.255.255.255/32 (broadcast)
+    ]
+    
+    for pattern in private_ip_patterns:
+        if re.match(pattern, hostname_lower):
+            return False
+    
+    # Block private IPv6 ranges
+    ipv6_private_patterns = [
+        r"^fc00:",  # Unique local addresses (ULA)
+        r"^fe80:",  # Link-local addresses
+        r"^ff00:",  # Multicast addresses
+    ]
+    
+    for pattern in ipv6_private_patterns:
+        if re.match(pattern, hostname_lower):
+            return False
+    
+    # Block private TLDs and special domains
+    private_tlds = [
+        "localdomain", "localdomain6", "internal", "corp", "home", "lan", "site", "test"
+    ]
+    
+    if any(hostname_lower.endswith(f".{tld}") for tld in private_tlds):
+        return False
+    
+    # Block common internal domains
+    internal_domains = [
+        "example.com", "example.org", "example.net", "invalid", "localhost.localdomain"
+    ]
+    
+    if hostname_lower in internal_domains:
+        return False
+    
+    return True
     if hostname_lower.startswith(
         (
             "192.168.",
@@ -244,25 +294,31 @@ def is_valid_url(url: str) -> bool:
             "172.31.",
             "127.",
             "169.254.",
+            "0.",
+            "255.",
         )
     ):
         return False
 
     try:
+        # Check if hostname is an IP address
         ip_obj = ipaddress.ip_address(hostname_lower.strip("[]"))
         if is_reserved_ip(str(ip_obj)):
             return False
     except ValueError:
-        pass
-
-    try:
-        for _, _, _, _, addrinfo in socket.getaddrinfo(hostname, None):
-            ip = addrinfo[0]
-            if is_reserved_ip(ip):
+        # Hostname is not an IP, resolve it
+        try:
+            # Get all resolved IP addresses
+            addresses = socket.getaddrinfo(hostname, None, proto=socket.IPPROTO_TCP)
+            for addr in addresses:
+                ip = addr[4][0]
+                if is_reserved_ip(ip):
+                    return False
+            # If no IPs resolved, fail
+            if not addresses:
                 return False
-            break
-    except socket.gaierror:
-        return False
+        except (socket.gaierror, socket.herror):
+            return False
 
     return True
 

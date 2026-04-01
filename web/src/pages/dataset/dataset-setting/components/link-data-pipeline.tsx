@@ -121,7 +121,6 @@ const LinkDataPipeline = (props: ILinkDataPipelineProps) => {
     [data],
   );
   const openLinkModalFunc = (open: boolean, data?: IDataPipelineNodeProps) => {
-    console.log('open', open, data);
     setOpenLinkModal(open);
     if (data) {
       setCurrentDataPipeline(data);
@@ -132,7 +131,6 @@ const LinkDataPipeline = (props: ILinkDataPipelineProps) => {
   const handleLinkOrEditSubmit = (
     data: IDataPipelineSelectNode | undefined,
   ) => {
-    console.log('handleLinkOrEditSubmit', data);
     submit?.(data);
     setOpenLinkModal(false);
   };

@@ -41,7 +41,7 @@ export function SwitchFormField({
             <Switch
               checked={field.value}
               onCheckedChange={field.onChange}
-              aria-readonly
+              disabled
               className="!m-0"
             />
           </FormControl>

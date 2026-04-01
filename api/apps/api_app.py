@@ -76,6 +76,9 @@ def token_list():
 async def rm():
     req = await get_request_json()
     try:
+        tenants = UserTenantService.query(user_id=current_user.id, tenant_id=req["tenant_id"])
+        if not tenants:
+            return get_data_error_result(message="You do not have permission to delete tokens for this tenant!")
         for token in req["tokens"]:
             APITokenService.filter_delete([APIToken.tenant_id == req["tenant_id"], APIToken.token == token])
         return get_json_result(data=True)

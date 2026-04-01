@@ -43,6 +43,7 @@ def _env_int(name: str, default: int) -> int:
 
 
 AUTH_READY_TIMEOUT_MS_DEFAULT = _env_int("AUTH_READY_TIMEOUT_MS", 15000)
+RESULT_TIMEOUT_MS_DEFAULT = _env_int("PLAYWRIGHT_RESULT_TIMEOUT_MS", 15000)
 REG_EMAIL_BASE_DEFAULT = os.getenv("REG_EMAIL_BASE", "qa@infiniflow.org")
 REG_NICKNAME_DEFAULT = os.getenv("REG_NICKNAME", "qa")
 REG_PASSWORD_DEFAULT = os.getenv("REG_PASSWORD", "123")
@@ -116,6 +117,10 @@ def _playwright_auth_ready_timeout_ms() -> int | None:
 def _playwright_hang_timeout_s() -> int:
     raw = _env_int_with_fallback("PLAYWRIGHT_HANG_TIMEOUT_S", "HANG_TIMEOUT_S", DEFAULT_HANG_TIMEOUT_S)
     return raw if raw > 0 else 0
+
+
+def _playwright_result_timeout_ms() -> int:
+    return _env_int_with_fallback("PLAYWRIGHT_RESULT_TIMEOUT_MS", None, RESULT_TIMEOUT_MS_DEFAULT)
 
 
 def _failure_text(req) -> str:
@@ -660,6 +665,14 @@ def pytest_collection_modifyitems(session, config, items):
     items[:] = [item for _, item in sorted(indexed, key=_sort_key)]
 
 
+def pytest_configure(config):
+    rerun_count = _env_int("PW_RERUN_COUNT", 2)
+    if rerun_count > 0:
+        config.option.reruns = rerun_count
+        config.option.rerun_except = "not playwright"
+        print(f"Playwright retry mechanism enabled: rerun failed tests up to {rerun_count} times", flush=True)
+
+
 @pytest.fixture(scope="session")
 def base_url() -> str:
     value = os.getenv("RAGFLOW_BASE_URL") or os.getenv("BASE_URL")
@@ -1041,9 +1054,9 @@ def _ensure_model_provider_ready_via_api(base_url: str, auth_header: str) -> dic
 
     target_llm = current_llm
     if not target_llm or _is_malformed_tenant_model_value(target_llm):
-        target_llm = _normalize_tenant_model_value(current_llm)
+            target_llm = _normalize_tenant_model_value(current_llm)
         if not target_llm and _provider_has_model(my_llms_data, "ZHIPU-AI", "glm-4-flash"):
-            target_llm = "glm-4-flash@ZHIPU-AI"
+            target_llm = DEFAULT_LLM_ID
     if not target_llm:
         pytest.skip("Provider exists but no canonical default llm_id could be inferred for tenant setup.")
 

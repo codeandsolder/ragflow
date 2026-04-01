@@ -3,6 +3,7 @@ import os
 import pytest
 from playwright.sync_api import expect
 
+from test.playwright.helpers._constants import RESULT_TIMEOUT_MS
 from test.playwright.helpers.flow_steps import flow_params, require
 from test.playwright.helpers.auth_selectors import EMAIL_INPUT, PASSWORD_INPUT, SUBMIT_BUTTON
 from test.playwright.helpers.auth_waits import wait_for_login_complete
@@ -12,8 +13,6 @@ from test.playwright.helpers.model_providers import (
     safe_close_modal,
     select_default_model,
 )
-
-RESULT_TIMEOUT_MS = 15000
 
 
 def step_01_open_login(

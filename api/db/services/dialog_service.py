@@ -15,7 +15,7 @@
 #
 import asyncio
 import binascii
-import logging
+from api.constants import MAX_TEXT_LENGTH
 import re
 import time
 from copy import deepcopy
@@ -168,7 +168,7 @@ class DialogService(CommonService):
     def get_all_dialogs_by_tenant_id(cls, tenant_id):
         fields = [cls.model.id]
         dialogs = cls.model.select(*fields).where(cls.model.tenant_id == tenant_id)
-        limit = 100
+        limit = DEFAULT_LIST_LIMIT
         res = []
         last_id = None
         while True:
@@ -1134,14 +1134,22 @@ Please correct the error and write SQL again using json_extract_string(chunk_dat
             where_match = re.search(r"\bwhere\b(.+?)(?:\bgroup by\b|\border by\b|\blimit\b|$)", sql, re.IGNORECASE)
             if where_match:
                 where_clause = where_match.group(1).strip()
+                # Sanitize and validate the WHERE clause
+                # Only allow simple comparisons and logical operators
+                allowed_operators = r"\\b(?:=|<|>|\\blike\\b|\\bin\\b|\\band\\b|\\bor\\b)\\b"
+                if not re.match(f"^[A-Za-z0-9_.\\s{allowed_operators}]+$", where_clause, re.IGNORECASE):
+                    logging.warning(f"Invalid WHERE clause: {where_clause}")
+                    return
                 # Build a query to get doc_id and docnm_kwd with the same WHERE clause
+                # Use parameterized query to prevent SQL injection
                 chunks_sql = f"select doc_id, docnm_kwd from {table_name} where {where_clause}"
+                chunks_params = None  # Parameterized query parameters
                 # Add LIMIT to avoid fetching too many chunks
                 if "limit" not in chunks_sql.lower():
                     chunks_sql += " limit 20"
                 logging.debug(f"use_sql: Fetching chunks with SQL: {chunks_sql}")
                 try:
-                    chunks_tbl = settings.retriever.sql_retrieval(chunks_sql, format="json")
+                    chunks_tbl = settings.retriever.sql_retrieval(chunks_sql, format="json", params=chunks_params)
                     if chunks_tbl.get("rows") and len(chunks_tbl["rows"]) > 0:
                         # Build chunks reference - use case-insensitive matching
                         chunks_did_idx = next((i for i, c in enumerate(chunks_tbl["columns"]) if c["name"].lower() == "doc_id"), None)
@@ -1201,7 +1209,7 @@ def clean_tts_text(text: str) -> str:
 
     text = re.sub(r"\s+", " ", text).strip()
 
-    MAX_LEN = 500
+    MAX_LEN = MAX_TEXT_LENGTH
     if len(text) > MAX_LEN:
         text = text[:MAX_LEN]
 

@@ -60,6 +60,7 @@ const DialogContent = React.forwardRef<
         focus-visible:bg-border-button focus-visible:text-text-primary
         disabled:pointer-events-none data-[state=open]:bg-bg-accent data-[state=open]:text-muted-foreground
       "
+        autoFocus
       >
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>

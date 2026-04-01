@@ -13,6 +13,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ragflow_sdk.ragflow import RAGFlow
 
 
 from .base import Base
@@ -21,7 +27,25 @@ from .exceptions import RAGFlowError, APIError
 
 
 class Chat(Base):
-    def __init__(self, rag, res_dict):
+    """Represents a chat assistant in RAGFlow.
+
+    A chat provides conversational interface to query the knowledge base
+    using RAG (Retrieval-Augmented Generation).
+
+    Attributes:
+        id: Unique identifier of the chat.
+        name: Name of the chat assistant.
+        avatar: Avatar URL or base64 string.
+        llm: LLM configuration for this chat.
+        prompt: Prompt configuration for generating responses.
+
+    Example:
+        >>> chats = ragflow.list_chats()
+        >>> chat = chats[0]
+        >>> session = chat.create_session("New Session")
+    """
+
+    def __init__(self, rag: RAGFlow, res_dict: dict) -> None:
         self.id = ""
         self.name = "assistant"
         self.avatar = "path/to/avatar"
@@ -30,7 +54,18 @@ class Chat(Base):
         super().__init__(rag, res_dict)
 
     class LLM(Base):
-        def __init__(self, rag, res_dict):
+        """LLM (Large Language Model) configuration for a chat.
+
+        Attributes:
+            model_name: Name of the LLM model to use.
+            temperature: Sampling temperature for response generation (default: 0.1).
+            top_p: Nucleus sampling parameter (default: 0.3).
+            presence_penalty: Penalty for token presence (default: 0.4).
+            frequency_penalty: Penalty for token frequency (default: 0.7).
+            max_tokens: Maximum number of tokens in response (default: 512).
+        """
+
+        def __init__(self, rag: RAGFlow, res_dict: dict) -> None:
             self.model_name = None
             self.temperature = 0.1
             self.top_p = 0.3
@@ -40,7 +75,22 @@ class Chat(Base):
             super().__init__(rag, res_dict)
 
     class Prompt(Base):
-        def __init__(self, rag, res_dict):
+        """Prompt configuration for generating responses.
+
+        Attributes:
+            similarity_threshold: Minimum similarity for retrieved chunks (default: 0.2).
+            keywords_similarity_weight: Weight of keyword vs vector similarity (default: 0.7).
+            top_n: Number of top chunks to consider (default: 8).
+            top_k: Maximum tokens to retrieve (default: 1024).
+            variables: List of prompt variables with their optional status.
+            rerank_model: Rerank model ID for result reranking.
+            empty_response: Response template for empty results.
+            opener: Opening message for the chat.
+            show_quote: Whether to show citations/quotes in responses (default: True).
+            prompt: The actual prompt template string.
+        """
+
+        def __init__(self, rag: RAGFlow, res_dict: dict) -> None:
             self.similarity_threshold = 0.2
             self.keywords_similarity_weight = 0.7
             self.top_n = 8
@@ -61,6 +111,18 @@ class Chat(Base):
             super().__init__(rag, res_dict)
 
     def update(self, update_message: dict) -> "Chat":
+        """Update the chat configuration.
+
+        Args:
+            update_message: Dictionary containing fields to update (must include 'llm' and/or 'prompt').
+
+        Returns:
+            Chat: The updated Chat object.
+
+        Raises:
+            RAGFlowError: If update_message is not a dict or has empty llm/prompt.
+            APIError: If the update fails.
+        """
         if not isinstance(update_message, dict):
             raise RAGFlowError("`update_message` must be a dict")
         if update_message.get("llm") == {}:
@@ -75,6 +137,17 @@ class Chat(Base):
         return self
 
     def create_session(self, name: str = "New session") -> Session:
+        """Create a new chat session.
+
+        Args:
+            name: Name for the new session (default: "New session").
+
+        Returns:
+            Session: The created Session object.
+
+        Raises:
+            APIError: If session creation fails.
+        """
         res = self.post(f"/chats/{self.id}/sessions", {"name": name})
         res = res.json()
         if res.get("code") == 0:
@@ -82,6 +155,22 @@ class Chat(Base):
         raise APIError(res["message"])
 
     def list_sessions(self, page: int = 1, page_size: int = 30, orderby: str = "create_time", desc: bool = True, id: str = None, name: str = None) -> list[Session]:
+        """List chat sessions with pagination and filtering.
+
+        Args:
+            page: Page number (default: 1).
+            page_size: Number of items per page (default: 30).
+            orderby: Field to order by (default: 'create_time').
+            desc: Sort in descending order (default: True).
+            id: Filter by session ID.
+            name: Filter by session name.
+
+        Returns:
+            list[Session]: List of Session objects.
+
+        Raises:
+            APIError: If listing fails.
+        """
         res = self.get(f"/chats/{self.id}/sessions", {"page": page, "page_size": page_size, "orderby": orderby, "desc": desc, "id": id, "name": name})
         res = res.json()
         if res.get("code") == 0:
@@ -92,6 +181,15 @@ class Chat(Base):
         raise APIError(res["message"])
 
     def delete_sessions(self, ids: list[str] | None = None, delete_all: bool = False):
+        """Delete chat sessions.
+
+        Args:
+            ids: List of session IDs to delete.
+            delete_all: If True, delete all sessions (ignores ids).
+
+        Raises:
+            APIError: If deletion fails.
+        """
         res = self.rm(f"/chats/{self.id}/sessions", {"ids": ids, "delete_all": delete_all})
         res = res.json()
         if res.get("code") != 0:

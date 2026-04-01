@@ -17,6 +17,11 @@ limitations under the License.
 """
 
 import asyncio
+import sys
+from unittest.mock import MagicMock, patch
+
+# Mock scholarly to prevent import error
+sys.modules["scholarly"] = MagicMock()
 
 import pytest
 from rag.flow.file import File, FileParam
@@ -33,6 +38,13 @@ class MockCanvas:
 
 class TestEdgeCaseDocuments:
     """Test class for edge case document processing."""
+
+    @pytest.fixture(autouse=True)
+    def setup_settings_mock(self):
+        """Setup mock for settings.DATABASE_TYPE.upper()."""
+        with patch("api.db.db_models.settings") as mock_settings:
+            mock_settings.DATABASE_TYPE.upper.return_value = "SQLITE"
+            yield mock_settings
 
     def test_empty_document(self):
         """Test processing of empty document."""

@@ -258,7 +258,16 @@ const SearchSetting: React.FC<SearchSettingProps> = ({
     >
       <div className="flex justify-between items-center text-base mb-8">
         <div className="text-text-primary">{t('search.searchSettings')}</div>
-        <div onClick={() => setOpen(false)}>
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              setOpen(false);
+            }
+          }}
+        >
           <X size={16} className="text-text-primary cursor-pointer" />
         </div>
       </div>
@@ -270,11 +279,7 @@ const SearchSetting: React.FC<SearchSettingProps> = ({
           <form
             onSubmit={formMethods.handleSubmit(
               (data) => {
-                console.log('Form submitted with data:', data);
                 onSubmit(data as unknown as IUpdateSearchProps);
-              },
-              (errors) => {
-                console.log('Validation errors:', errors);
               },
             )}
             className="space-y-6"

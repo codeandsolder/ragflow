@@ -112,9 +112,7 @@ const PdfPreview = ({
                 screenshot,
                 isScrolledTo,
               ) => {
-                const isTextHighlight = !Boolean(
-                  highlight.content && highlight.content.image,
-                );
+                const isTextHighlight = !(highlight.content && highlight.content.image);
 
                 const component = isTextHighlight ? (
                   <Highlight

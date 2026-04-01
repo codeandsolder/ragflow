@@ -45,11 +45,12 @@ class LayoutRecognizer(Recognizer):
         "Equation",
     ]
 
-    def __init__(self, domain):
+    def __init__(self, domain) -> None:
         try:
             model_dir = os.path.join(get_project_base_directory(), "rag/res/deepdoc")
             super().__init__(self.labels, domain, model_dir)
-        except Exception:
+        except (OSError, IOError) as e:
+            logging.warning(f"Failed to load model from local directory: {e}. Trying HuggingFace.")
             model_dir = snapshot_download(repo_id="InfiniFlow/deepdoc", local_dir=os.path.join(get_project_base_directory(), "rag/res/deepdoc"), local_dir_use_symlinks=False)
             super().__init__(self.labels, domain, model_dir)
 
@@ -172,7 +173,7 @@ class LayoutRecognizer4YOLOv10(LayoutRecognizer):
         "equation",
     ]
 
-    def __init__(self, domain):
+    def __init__(self, domain) -> None:
         domain = "layout"
         super().__init__(domain)
         self.auto = False
@@ -288,7 +289,7 @@ class AscendLayoutRecognizer(Recognizer):
         "Equation",
     ]
 
-    def __init__(self, domain):
+    def __init__(self, domain) -> None:
         from ais_bench.infer.interface import InferSession
 
         model_dir = os.path.join(get_project_base_directory(), "rag/res/deepdoc")

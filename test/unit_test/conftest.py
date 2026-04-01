@@ -15,6 +15,7 @@
 #
 
 import sys
+import importlib
 from pathlib import Path
 
 import pytest
@@ -22,6 +23,26 @@ import pytest
 project_root = Path(__file__).parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
+
+
+def _patch_sqlglot_compatibility():
+    """Patch sqlglot to support older code importing Expression from it."""
+    # Must patch before importing any modules that depend on pyobvector
+    # which then imports sqlglot with the broken import
+    try:
+        import sqlglot
+
+        if not hasattr(sqlglot, "Expression"):
+            # Need to import from sqlglot.exp to get Expression class
+            from sqlglot import exp as sqlglot_exp
+
+            sqlglot.Expression = sqlglot_exp.Expression
+    except Exception:
+        pass
+
+
+# Apply the patch immediately at module load time, before any other imports
+_patch_sqlglot_compatibility()
 
 
 def _check_import(module_name: str) -> bool:
@@ -39,17 +60,27 @@ skipif_no_tiktoken = pytest.mark.skipif(not _check_import("tiktoken"), reason="t
 
 skipif_no_elasticsearch = pytest.mark.skipif(not _check_import("elasticsearch_dsl"), reason="elasticsearch-dsl not installed")
 
+unit = pytest.mark.unit
+integration = pytest.mark.integration
+
 
 def _patch_sqlglot_compatibility():
     """Patch sqlglot to support older code importing Expression from it."""
     try:
-        import sqlglot
-        from sqlglot import exp
+        import sqlglotc
+        from sqlglotc import exp
 
-        if not hasattr(sqlglot, "Expression"):
-            sqlglot.Expression = exp.Expression
+        if not hasattr(sqlglotc, "Expression"):
+            sqlglotc.Expression = exp.Expression
     except Exception:
-        pass
+        try:
+            import sqlglot
+            from sqlglot import exp
+
+            if not hasattr(sqlglot, "Expression"):
+                sqlglot.Expression = exp.Expression
+        except Exception:
+            pass
 
 
 @pytest.fixture

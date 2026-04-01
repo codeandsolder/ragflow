@@ -340,6 +340,11 @@ class CodeExec(ToolBase, ABC):
         return "Running a short script to process data."
 
     def _deserialize_stdout(self, stdout: str):
+        # Cache for deserialized results
+        if not hasattr(self, "_stdout_cache"):
+            self._stdout_cache = {}
+        if stdout in self._stdout_cache:
+            return self._stdout_cache[stdout]
         text = str(stdout).strip()
         if not text:
             return ""
@@ -348,6 +353,7 @@ class CodeExec(ToolBase, ABC):
                 return loader(text)
             except Exception:
                 continue
+        self._stdout_cache[stdout] = text
         return text
 
     def _coerce_output_value(self, value, expected_type: Optional[str]):

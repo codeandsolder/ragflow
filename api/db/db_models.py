@@ -62,6 +62,9 @@ from common import settings
 CONTINUOUS_FIELD_TYPE = {IntegerField, FloatField, DateTimeField}
 AUTO_DATE_TIMESTAMP_FIELD_PREFIX = {"create", "start", "end", "update", "read_access", "write_access"}
 
+DEFAULT_MAX_RETRIES = 5
+DEFAULT_RETRY_DELAY = 1.0
+
 
 class TextFieldType(Enum):
     MYSQL = "LONGTEXT"
@@ -291,7 +294,7 @@ class RetryingPooledMySQLDatabase(PooledMySQLDatabase):
             self.connect()
         except Exception as e:
             logging.error(f"Failed to reconnect: {e}")
-            time.sleep(0.1)
+            time.sleep(DEFAULT_RETRY_DELAY)
             try:
                 self.connect()
             except Exception as e2:
@@ -357,7 +360,7 @@ class RetryingPooledPostgresqlDatabase(PooledPostgresqlDatabase):
             self.connect()
         except Exception as e:
             logging.error(f"Failed to reconnect to PostgreSQL: {e}")
-            time.sleep(0.1)
+            time.sleep(DEFAULT_RETRY_DELAY)
             try:
                 self.connect()
             except Exception as e2:
@@ -429,7 +432,7 @@ class RetryingPooledOceanBaseDatabase(PooledMySQLDatabase):
             self.connect()
         except Exception as e:
             logging.error(f"Failed to reconnect to OceanBase: {e}")
-            time.sleep(0.1)
+            time.sleep(DEFAULT_RETRY_DELAY)
             try:
                 self.connect()
             except Exception as e2:
@@ -483,7 +486,7 @@ class BaseDataBase:
         logging.info("init database on cluster mode successfully")
 
 
-def with_retry(max_retries=3, retry_delay=1.0):
+def with_retry(DEFAULT_MAX_RETRIES, retry_delay=DEFAULT_RETRY_DELAY):
     """Decorator: Add retry mechanism to database operations
 
     Args:
@@ -531,7 +534,7 @@ class PostgresDatabaseLock:
         self.timeout = int(timeout)
         self.db = db if db else DB
 
-    @with_retry(max_retries=3, retry_delay=1.0)
+    @with_retry(DEFAULT_MAX_RETRIES, retry_delay=DEFAULT_RETRY_DELAY)
     def lock(self):
         cursor = self.db.execute_sql("SELECT pg_try_advisory_lock(%s)", (self.lock_id,))
         ret = cursor.fetchone()
@@ -542,7 +545,7 @@ class PostgresDatabaseLock:
         else:
             raise Exception(f"failed to acquire lock {self.lock_name}")
 
-    @with_retry(max_retries=3, retry_delay=1.0)
+    @with_retry(DEFAULT_MAX_RETRIES, retry_delay=DEFAULT_RETRY_DELAY)
     def unlock(self):
         cursor = self.db.execute_sql("SELECT pg_advisory_unlock(%s)", (self.lock_id,))
         ret = cursor.fetchone()
@@ -577,7 +580,7 @@ class MysqlDatabaseLock:
         self.timeout = int(timeout)
         self.db = db if db else DB
 
-    @with_retry(max_retries=3, retry_delay=1.0)
+    @with_retry(DEFAULT_MAX_RETRIES, retry_delay=DEFAULT_RETRY_DELAY)
     def lock(self):
         # SQL parameters only support %s format placeholders
         cursor = self.db.execute_sql("SELECT GET_LOCK(%s, %s)", (self.lock_name, self.timeout))
@@ -589,7 +592,7 @@ class MysqlDatabaseLock:
         else:
             raise Exception(f"failed to acquire lock {self.lock_name}")
 
-    @with_retry(max_retries=3, retry_delay=1.0)
+    @with_retry(DEFAULT_MAX_RETRIES, retry_delay=DEFAULT_RETRY_DELAY)
     def unlock(self):
         cursor = self.db.execute_sql("SELECT RELEASE_LOCK(%s)", (self.lock_name,))
         ret = cursor.fetchone()

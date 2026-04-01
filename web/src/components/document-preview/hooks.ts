@@ -1,3 +1,5 @@
+import DOMPurify from 'dompurify';
+
 import { Authorization } from '@/constants/authorization';
 import { useGetKnowledgeSearchParams } from '@/hooks/route-hook';
 import { useGetPipelineResultSearchParams } from '@/pages/dataflow-result/hooks';
@@ -145,7 +147,16 @@ export const useFetchDocx = (filePath: string) => {
           setSucceed(true);
           const docEl = document.createElement('div');
           docEl.className = 'document-container';
-          docEl.innerHTML = result.value;
+          docEl.innerHTML = DOMPurify.sanitize(result.value, {
+            ALLOWED_TAGS: ['p', 'br', 'b', 'i', 'em', 'strong', 'a', 'img', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'div', 'span'],
+            ALLOWED_ATTR: {
+              '*': ['class', 'dir'],
+              a: ['href', 'title'],
+              img: ['src', 'alt', 'title'],
+              code: ['class'],
+            },
+            ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|data):|[^a-z]|[a-z+.][^:]*)$/i,
+          });
           const container = containerRef.current;
           if (container) {
             container.innerHTML = docEl.outerHTML;

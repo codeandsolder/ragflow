@@ -31,6 +31,11 @@ from markdown import markdown
 
 from common.float_utils import get_float
 
+DEFAULT_TO_PAGE = 100000
+DOCX_TO_PAGE = 10000
+BATCH_CALLBACK_SIZE = 999
+PROGRESS_EXTRACT_COMPLETE = 0.6
+
 
 class Excel(ExcelParser):
     def __call__(self, fnm, binary=None, callback=None):
@@ -61,16 +66,16 @@ class Excel(ExcelParser):
                     res.append((q, a))
                 else:
                     fails.append(str(i + 1))
-                if len(res) % 999 == 0:
-                    callback(len(res) * 0.6 / total, ("Extract pairs: {}".format(len(res)) + (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
+                if len(res) % BATCH_CALLBACK_SIZE == 0:
+                    callback(len(res) * PROGRESS_EXTRACT_COMPLETE / total, ("Extract pairs: {}".format(len(res)) + (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
 
-        callback(0.6, ("Extract pairs: {}. ".format(len(res)) + (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
+        callback(PROGRESS_EXTRACT_COMPLETE, ("Extract pairs: {}. ".format(len(res)) + (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
         self.is_english = is_english([rmPrefix(q) for q, _ in random_choices(res, k=30) if len(q) > 1])
         return res
 
 
 class Pdf(PdfParser):
-    def __call__(self, filename, binary=None, from_page=0, to_page=100000, zoomin=3, callback=None):
+    def __call__(self, filename, binary=None, from_page=0, to_page=DEFAULT_TO_PAGE, zoomin=3, callback=None):
         start = timer()
         callback(msg="OCR started")
         self.__images__(filename if not binary else binary, zoomin, from_page, to_page, callback)
@@ -175,7 +180,7 @@ class Docx(DocxParser):
     def __init__(self):
         pass
 
-    def __call__(self, filename, binary=None, from_page=0, to_page=100000, callback=None):
+    def __call__(self, filename, binary=None, from_page=0, to_page=DEFAULT_TO_PAGE, callback=None):
         self.doc = Document(filename) if not binary else Document(BytesIO(binary))
         pn = 0
         last_answer, last_image = "", None
@@ -283,7 +288,7 @@ def mdQuestionLevel(s):
     return (len(match.group(0)), s.lstrip("#").lstrip()) if match else (0, s)
 
 
-def chunk(filename, binary=None, from_page=0, to_page=100000, lang="Chinese", callback=None, **kwargs):
+def chunk(filename, binary=None, from_page=0, to_page=DEFAULT_TO_PAGE, lang="Chinese", callback=None, **kwargs):
     """
     Excel and csv(txt) format files are supported.
     If the file is in Excel format, there should be 2 column question and answer without header.
@@ -332,13 +337,13 @@ def chunk(filename, binary=None, from_page=0, to_page=100000, lang="Chinese", ca
                     res.append(beAdoc(deepcopy(doc), question, answer, eng, i))
                 question, answer = arr
             i += 1
-            if len(res) % 999 == 0:
-                callback(len(res) * 0.6 / len(lines), ("Extract Q&A: {}".format(len(res)) + (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
+            if len(res) % BATCH_CALLBACK_SIZE == 0:
+                callback(len(res) * PROGRESS_EXTRACT_COMPLETE / len(lines), ("Extract Q&A: {}".format(len(res)) + (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
 
         if question:
             res.append(beAdoc(deepcopy(doc), question, answer, eng, len(lines)))
 
-        callback(0.6, ("Extract Q&A: {}".format(len(res)) + (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
+        callback(PROGRESS_EXTRACT_COMPLETE, ("Extract Q&A: {}".format(len(res)) + (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
 
         return res
 
@@ -363,13 +368,13 @@ def chunk(filename, binary=None, from_page=0, to_page=100000, lang="Chinese", ca
                 if question and answer:
                     res.append(beAdoc(deepcopy(doc), question, answer, eng, i))
                 question, answer = row
-            if len(res) % 999 == 0:
-                callback(len(res) * 0.6 / len(lines), ("Extract Q&A: {}".format(len(res)) + (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
+            if len(res) % BATCH_CALLBACK_SIZE == 0:
+                callback(len(res) * PROGRESS_EXTRACT_COMPLETE / len(lines), ("Extract Q&A: {}".format(len(res)) + (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
 
         if question:
             res.append(beAdoc(deepcopy(doc), question, answer, eng, len(list(reader))))
 
-        callback(0.6, ("Extract Q&A: {}".format(len(res)) + (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
+        callback(PROGRESS_EXTRACT_COMPLETE, ("Extract Q&A: {}".format(len(res)) + (f"{len(fails)} failure, line: %s..." % (",".join(fails[:3])) if fails else "")))
         return res
 
     elif re.search(r"\.pdf$", filename, re.IGNORECASE):
@@ -417,7 +422,7 @@ def chunk(filename, binary=None, from_page=0, to_page=100000, lang="Chinese", ca
 
     elif re.search(r"\.docx$", filename, re.IGNORECASE):
         docx_parser = Docx()
-        qai_list, tbls = docx_parser(filename, binary, from_page=0, to_page=10000, callback=callback)
+        qai_list, tbls = docx_parser(filename, binary, from_page=0, to_page=DOCX_TO_PAGE, callback=callback)
         res = tokenize_table(tbls, doc, eng)
         for i, (q, a, image) in enumerate(qai_list):
             res.append(beAdocDocx(deepcopy(doc), q, a, eng, image, i))

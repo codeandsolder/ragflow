@@ -194,7 +194,17 @@ const ChunkCreatingModal: React.FC<IModalProps<any> & kFProps> = ({
               {t('chunk.enabled')}
               <Switch checked={checked} onCheckedChange={handleCheck} />
             </div>
-            <div className="flex items-center gap-1" onClick={handleRemove}>
+            <div
+              role="button"
+              tabIndex={0}
+              className="flex items-center gap-1"
+              onClick={handleRemove}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handleRemove();
+                }
+              }}
+            >
               <Trash2 size={16} /> {t('common.delete')}
             </div>
           </Space>

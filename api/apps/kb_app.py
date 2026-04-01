@@ -47,7 +47,7 @@ from common.doc_store.doc_store_base import OrderByExpr
 from api.apps import login_required, current_user, resource_owner_required
 
 
-@manager.route("/update_metadata_setting", methods=["post"])  # noqa: F821
+@manager.route("/update_metadata_setting", methods=["POST"])  # noqa: F821
 @login_required
 @resource_owner_required
 @validate_request("kb_id", "metadata")
@@ -67,7 +67,9 @@ async def update_metadata_setting():
 @login_required
 @resource_owner_required
 def detail():
-    kb_id = request.args["kb_id"]
+    kb_id = request.args.get("kb_id")
+    if not kb_id:
+        return get_data_error_result(message="kb_id is required!")
     try:
         kb = KnowledgebaseService.get_detail(kb_id)
         if not kb:
@@ -75,7 +77,12 @@ def detail():
         kb["size"] = DocumentService.get_total_size_by_kb_id(kb_id=kb["id"], keywords="", run_status=[], types=[])
         kb["connectors"] = Connector2KbService.list_connectors(kb_id)
         if kb["parser_config"].get("metadata"):
-            kb["parser_config"]["metadata"] = turn2jsonschema(kb["parser_config"]["metadata"])
+            metadata = kb["parser_config"]["metadata"]
+            # Batch process metadata items
+            if isinstance(metadata, list):
+                kb["parser_config"]["metadata"] = [turn2jsonschema(item) for item in metadata]
+            else:
+                kb["parser_config"]["metadata"] = turn2jsonschema(metadata)
 
         for key in ["graphrag_task_finish_at", "raptor_task_finish_at", "mindmap_task_finish_at"]:
             if finish_at := kb.get(key):
@@ -90,9 +97,9 @@ def detail():
 @resource_owner_required
 def list_tags(kb_id):
     tenants = UserTenantService.get_tenants_by_user_id(current_user.id)
-    tags = []
-    for tenant in tenants:
-        tags += settings.retriever.all_tags(tenant["tenant_id"], [kb_id])
+    tenant_ids = [tenant["tenant_id"] for tenant in tenants]
+    tenant_to_tags = {tid: settings.retriever.all_tags(tid, [kb_id]) for tid in tenant_ids}
+    tags = [tag for tags in tenant_to_tags.values() for tag in tags]
     return get_json_result(data=tags)
 
 
@@ -262,123 +269,6 @@ def pipeline_log_detail():
     return get_json_result(data=log.to_dict())
 
 
-"""
-@manager.route("/run_graphrag", methods=["POST"])  # noqa: F821
-@login_required
-async def run_graphrag():
-    req = await get_request_json()
-
-    kb_id = req.get("kb_id", "")
-    if not kb_id:
-        return get_error_data_result(message='Lack of "KB ID"')
-
-    ok, kb = KnowledgebaseService.get_by_id(kb_id)
-    if not ok:
-        return get_error_data_result(message="Invalid Knowledgebase ID")
-
-    task_id = kb.graphrag_task_id
-    if task_id:
-        ok, task = TaskService.get_by_id(task_id)
-        if not ok:
-            logging.warning(f"A valid GraphRAG task id is expected for kb {kb_id}")
-
-        if task and task.progress not in [-1, 1]:
-            return get_error_data_result(message=f"Task {task_id} in progress with status {task.progress}. A Graph Task is already running.")
-
-    documents, _ = DocumentService.get_by_kb_id(
-        kb_id=kb_id,
-        page_number=0,
-        items_per_page=0,
-        orderby="create_time",
-        desc=False,
-        keywords="",
-        run_status=[],
-        types=[],
-        suffix=[],
-    )
-    if not documents:
-        return get_error_data_result(message=f"No documents in Knowledgebase {kb_id}")
-
-    sample_document = documents[0]
-    document_ids = [document["id"] for document in documents]
-
-    task_id = queue_raptor_o_graphrag_tasks(sample_doc_id=sample_document, ty="graphrag", priority=0, fake_doc_id=GRAPH_RAPTOR_FAKE_DOC_ID, doc_ids=list(document_ids))
-
-    if not KnowledgebaseService.update_by_id(kb.id, {"graphrag_task_id": task_id}):
-        logging.warning(f"Cannot save graphrag_task_id for kb {kb_id}")
-
-    return get_json_result(data={"graphrag_task_id": task_id})
-
-
-@manager.route("/trace_graphrag", methods=["GET"])  # noqa: F821
-@login_required
-def trace_graphrag():
-    kb_id = request.args.get("kb_id", "")
-    if not kb_id:
-        return get_error_data_result(message='Lack of "KB ID"')
-
-    ok, kb = KnowledgebaseService.get_by_id(kb_id)
-    if not ok:
-        return get_error_data_result(message="Invalid Knowledgebase ID")
-
-    task_id = kb.graphrag_task_id
-    if not task_id:
-        return get_json_result(data={})
-
-    ok, task = TaskService.get_by_id(task_id)
-    if not ok:
-        return get_json_result(data={})
-
-    return get_json_result(data=task.to_dict())
-
-
-@manager.route("/run_raptor", methods=["POST"])  # noqa: F821
-@login_required
-async def run_raptor():
-    req = await get_request_json()
-
-    kb_id = req.get("kb_id", "")
-    if not kb_id:
-        return get_error_data_result(message='Lack of "KB ID"')
-
-    ok, kb = KnowledgebaseService.get_by_id(kb_id)
-    if not ok:
-        return get_error_data_result(message="Invalid Knowledgebase ID")
-
-    task_id = kb.raptor_task_id
-    if task_id:
-        ok, task = TaskService.get_by_id(task_id)
-        if not ok:
-            logging.warning(f"A valid RAPTOR task id is expected for kb {kb_id}")
-
-        if task and task.progress not in [-1, 1]:
-            return get_error_data_result(message=f"Task {task_id} in progress with status {task.progress}. A RAPTOR Task is already running.")
-
-    documents, _ = DocumentService.get_by_kb_id(
-        kb_id=kb_id,
-        page_number=0,
-        items_per_page=0,
-        orderby="create_time",
-        desc=False,
-        keywords="",
-        run_status=[],
-        types=[],
-        suffix=[],
-    )
-    if not documents:
-        return get_error_data_result(message=f"No documents in Knowledgebase {kb_id}")
-
-    sample_document = documents[0]
-    document_ids = [document["id"] for document in documents]
-
-    task_id = queue_raptor_o_graphrag_tasks(sample_doc_id=sample_document, ty="raptor", priority=0, fake_doc_id=GRAPH_RAPTOR_FAKE_DOC_ID, doc_ids=list(document_ids))
-
-    if not KnowledgebaseService.update_by_id(kb.id, {"raptor_task_id": task_id}):
-        logging.warning(f"Cannot save raptor_task_id for kb {kb_id}")
-
-    return get_json_result(data={"raptor_task_id": task_id})
-
-
 @manager.route("/trace_raptor", methods=["GET"])  # noqa: F821
 @login_required
 def trace_raptor():
@@ -521,7 +411,7 @@ def delete_kb_task():
     return get_json_result(data=True)
 
 
-@manager.route("/check_embedding", methods=["post"])  # noqa: F821
+@manager.route("/check_embedding", methods=["POST"])  # noqa: F821
 @login_required
 @resource_owner_required
 async def check_embedding():
@@ -579,7 +469,7 @@ async def check_embedding():
             return []
 
         n = min(n, total)
-        offsets = sorted(random.sample(range(min(total, 1000)), n))
+        offsets = sorted(random.sample(range(min(total, 1000)), EMBEDDING_CHECK_SAMPLE_SIZE))
         out = []
 
         for off in offsets:
@@ -629,7 +519,7 @@ async def check_embedding():
     kb_id = req.get("kb_id", "")
     tenant_embd_id = req.get("tenant_embd_id")
     embd_id = req.get("embd_id", "")
-    n = int(req.get("check_num", 5))
+    n = int(req.get("check_num", EMBEDDING_CHECK_SAMPLE_SIZE))
     _, kb = KnowledgebaseService.get_by_id(kb_id)
     tenant_id = kb.tenant_id
     if tenant_embd_id:

@@ -24,5 +24,12 @@ REQUEST_MAX_WAIT_SEC = 300
 
 DATASET_NAME_LIMIT = 128
 FILE_NAME_LEN_LIMIT = 255
+
+EMBEDDING_CHECK_SAMPLE_SIZE = 5  # Default number of chunks to sample for embedding check
 MEMORY_NAME_LIMIT = 128
 MEMORY_SIZE_LIMIT = 10 * 1024 * 1024  # Byte
+
+DEFAULT_LIST_LIMIT = 100  # Default limit for list queries
+DEFAULT_MAX_RETRIES = 3  # Default maximum retries for retry operations
+DEFAULT_RETRY_DELAY = 0.1  # Default retry delay in seconds
+OAUTH_HTTP_REQUEST_TIMEOUT = 7  # Timeout for OAuth HTTP requests in seconds

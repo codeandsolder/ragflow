@@ -43,6 +43,9 @@ class RAGFlowDocxParser:
             image_blob = None
             try:
                 related_part = document.part.related_parts[embed]
+            except KeyError as e:
+                logging.warning(f"Skipping image due to missing related_part key: {e}")
+                continue
             except Exception as e:
                 logging.warning(f"Skipping image due to unexpected error getting related_part: {e}")
                 continue
@@ -58,7 +61,7 @@ class RAGFlowDocxParser:
                 UnicodeDecodeError,
             ) as e:
                 logging.info(f"Damaged image encountered, attempting blob fallback: {e}")
-            except Exception as e:
+            except (KeyError, AttributeError, IOError) as e:
                 logging.warning(f"Unexpected error getting image, attempting blob fallback: {e}")
 
             if image_blob is None:

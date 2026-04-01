@@ -22,8 +22,19 @@ from common.token_utils import num_tokens_from_string
 _BACKTICK_PAT = re.compile(r"`([^`]+)`", re.I)
 
 
+MAX_TXT_SIZE = 64 * 1024 * 1024
+
+
 class RAGFlowTxtParser:
     def __call__(self, fnm: str, binary: bytes | None = None, chunk_token_num: int = 128, delimiter: str = "\n!?;。；！？"):
+        if binary is not None:
+            if len(binary) > MAX_TXT_SIZE:
+                raise ValueError(f"File size {len(binary)} exceeds limit {MAX_TXT_SIZE}")
+        else:
+            import os
+            size = os.path.getsize(fnm)
+            if size > MAX_TXT_SIZE:
+                raise ValueError(f"File size {size} exceeds limit {MAX_TXT_SIZE}")
         txt = get_text(fnm, binary)
         return self.parser_txt(txt, chunk_token_num, delimiter)
 

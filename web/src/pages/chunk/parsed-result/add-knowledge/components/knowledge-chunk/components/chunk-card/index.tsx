@@ -144,7 +144,7 @@ const ChunkCard = ({
           <Switch
             checked={enabled}
             onCheckedChange={onChange}
-            aria-readonly
+            disabled
             className="!m-0"
           />
         </div>

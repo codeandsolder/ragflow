@@ -39,7 +39,7 @@ class TestChunkingComprehensive:
         """Test that chunks are correctly bounded by token size and delimiters."""
         text = "这是第一段文本。" * 30 + "\n" + "这是第二段文本。" * 30 + "\n" + "这是第三段文本。" * 30
         chunks = naive_merge(text, chunk_size, delimiter, 0)
-        assert len(chunks) <= expected_count + 1
+        assert len(chunks) == expected_count, f"Expected {expected_count} chunks but got {len(chunks)}"
 
     @pytest.mark.parametrize(
         "overlap_percent",

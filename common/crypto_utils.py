@@ -272,12 +272,7 @@ class CryptoUtil:
         Returns:
             Encrypted data (bytes)
         """
-        # import time
-        # start_time = time.time()
-        encrypted = self.crypto.encrypt(data)
-        # end_time = time.time()
-        # logging.info(f"Encryption completed, data length: {len(data)} bytes, time: {(end_time - start_time)*1000:.2f} ms")
-        return encrypted
+        return self.crypto.encrypt(data)
 
     def decrypt(self, encrypted_data):
         """
@@ -289,12 +284,7 @@ class CryptoUtil:
         Returns:
             Decrypted data (bytes)
         """
-        # import time
-        # start_time = time.time()
-        decrypted = self.crypto.decrypt(encrypted_data)
-        # end_time = time.time()
-        # logging.info(f"Decryption completed, data length: {len(encrypted_data)} bytes, time: {(end_time - start_time)*1000:.2f} ms")
-        return decrypted
+        return self.crypto.decrypt(encrypted_data)
 
 
 # Test code

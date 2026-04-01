@@ -55,7 +55,7 @@ export function useWatchFormChange(
     // Manually triggered form updates are synchronized to the canvas
     if (id) {
       values = form?.getValues() || {};
-      let nextValues: any = {
+      const nextValues: any = {
         ...values,
         arguments: convertToObject(
           values?.arguments as FormSchemaType['arguments'],

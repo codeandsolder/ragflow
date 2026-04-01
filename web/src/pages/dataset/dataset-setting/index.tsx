@@ -127,7 +127,6 @@ export default function DatasetSettings() {
     useState<IGenerateLogButtonProps>();
 
   useEffect(() => {
-    console.log('🚀 ~ DatasetSettings ~ knowledgeDetails:', knowledgeDetails);
     if (knowledgeDetails) {
       // const data: IDataPipelineNodeProps = {
       //   id: knowledgeDetails.pipeline_id,
@@ -164,7 +163,7 @@ export default function DatasetSettings() {
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
     try {
-      console.log('Form validation passed, submit data', data);
+      // Form validated, submission handled by SavingButton
     } catch (error) {
       console.error('An error occurred during submission:', error);
     }
@@ -232,17 +231,14 @@ export default function DatasetSettings() {
   }, [parseType, form]);
 
   const unbindFunc = (data: IDataSourceBase) => {
-    if (data) {
-      const connectors = sourceData?.filter((connector) => {
-        return connector.id !== data.id;
-      });
-      console.log('🚀 ~ DatasetSettings ~ connectors:', connectors);
-      setSourceData(connectors as IDataSourceNodeProps[]);
-      form.setValue('connectors', connectors || []);
-      // form.setValue('pipeline_name', data.name || '');
-      // form.setValue('pipeline_avatar', data.avatar || '');
-    }
-  };
+      if (data) {
+        const connectors = sourceData?.filter((connector) => {
+          return connector.id !== data.id;
+        });
+        setSourceData(connectors as IDataSourceNodeProps[]);
+        form.setValue('connectors', connectors || []);
+      }
+    };
   const handleAutoParse = ({
     source_id,
     isAutoParse,

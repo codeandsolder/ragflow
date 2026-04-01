@@ -42,6 +42,20 @@ CITATION_MIN_SCORE = 0.99
 MAX_CITATIONS_PER_SENTENCE = 4
 
 
+def _get_configurable_threshold(name: str, default: float) -> float:
+    """Get configurable threshold from settings. Falls back to default if not set."""
+    try:
+        key = f"CITATION_{name}"
+        return getattr(settings, key, default)
+    except Exception:
+        return default
+
+
+CITATION_SIMILARITY_THRESHOLD = _get_configurable_threshold("SIMILARITY_THRESHOLD", 0.63)
+CITATION_SIMILARITY_MIN_THRESHOLD = _get_configurable_threshold("MIN_THRESHOLD", 0.3)
+CITATION_THRESHOLD_DECAY = _get_configurable_threshold("DECAY", 0.8)
+
+
 def index_name(uid):
     return f"ragflow_{uid}"
 
@@ -56,6 +70,8 @@ class Searcher:
         self.dataStore = dataStore
 
     async def get_vector(self, txt, emb_mdl, topk=10, similarity=0.1):
+        if emb_mdl is None:
+            raise ValueError("emb_mdl cannot be None")
         qv, _ = await thread_pool_exec(emb_mdl.encode_queries, txt)
         shape = np.array(qv).shape
         if len(shape) > 1:
@@ -129,7 +145,7 @@ class Searcher:
                 highlightFields = []
             elif isinstance(highlight, list):
                 highlightFields = highlight
-            matchText, keywords = self.qryr.question(qst, min_match=0.3)
+            matchText, keywords = self.qryr.question(qst, min_match=settings.DEFAULT_HYBRID_WEIGHT.split(",")[0])
             if emb_mdl is None:
                 matchExprs = [matchText]
                 res = await thread_pool_exec(self.dataStore.search, src, highlightFields, filters, matchExprs, orderBy, offset, limit, idx_names, kb_ids, rank_feature=rank_feature)
@@ -141,7 +157,7 @@ class Searcher:
                 if not settings.DOC_ENGINE_INFINITY:
                     src.append(f"q_{len(q_vec)}_vec")
 
-                fusionExpr = FusionExpr("weighted_sum", topk, {"weights": req.get("hybrid_weight", settings.DEFAULT_HYBRID_WEIGHT or "0.05,0.95")})
+                fusionExpr = FusionExpr("weighted_sum", topk, {"weights": req.get("hybrid_weight", settings.DEFAULT_HYBRID_WEIGHT)})
                 matchExprs = [matchText, matchDense, fusionExpr]
 
                 res = await thread_pool_exec(self.dataStore.search, src, highlightFields, filters, matchExprs, orderBy, offset, limit, idx_names, kb_ids, rank_feature=rank_feature)
@@ -153,7 +169,7 @@ class Searcher:
                         res = await thread_pool_exec(self.dataStore.search, src, [], filters, [], orderBy, offset, limit, idx_names, kb_ids)
                         total = self.dataStore.get_total(res)
                     else:
-                        matchText, _ = self.qryr.question(qst, min_match=0.1)
+                        matchText, _ = self.qryr.question(qst, min_match=settings.DEFAULT_HYBRID_WEIGHT.split(",")[0])
                         matchDense.extra_options["similarity"] = 0.17
                         res = await thread_pool_exec(
                             self.dataStore.search, src, highlightFields, filters, [matchText, matchDense, fusionExpr], orderBy, offset, limit, idx_names, kb_ids, rank_feature=rank_feature
@@ -568,7 +584,7 @@ class Dealer:
             orderBy.asc("top_int")
 
         res = []
-        bs = 128
+        bs = settings.EMBEDDING_BATCH_SIZE
         for p in range(offset, max_count, bs):
             limit = min(bs, max_count - p)
             if limit <= 0:
@@ -584,7 +600,7 @@ class Dealer:
                 break
         return res
 
-    def all_tags(self, tenant_id: str, kb_ids: list[str], S=1000):
+    def all_tags(self, tenant_id: str, kb_ids: list[str]):
         if not self.dataStore.index_exist(index_name(tenant_id), kb_ids[0]):
             return []
         res = self.dataStore.search([], [], {}, [], OrderByExpr(), 0, 0, index_name(tenant_id), kb_ids, ["tag_kwd"])
@@ -604,23 +620,26 @@ class Dealer:
         if not aggs:
             return False
         cnt = np.sum([c for _, c in aggs])
-        tag_fea = sorted([(a, round(0.1 * (c + 1) / (cnt + S) / max(1e-6, all_tags.get(a, 0.0001)))) for a, c in aggs], key=lambda x: x[1] * -1)[:topn_tags]
+        tag_fea = self._calc_tag_fea(aggs, cnt, all_tags, topn_tags, S)
         doc[TAG_FLD] = {a.replace(".", "_"): c for a, c in tag_fea if c > 0}
         return True
 
     def tag_query(self, question: str, tenant_ids: str | list[str], kb_ids: list[str], all_tags, topn_tags=3, S=1000):
         if isinstance(tenant_ids, str):
-            idx_nms = index_name(tenant_ids)
+            idx_nm = index_name(tenant_ids)
         else:
-            idx_nms = [index_name(tid) for tid in tenant_ids]
-        match_txt, _ = self.qryr.question(question, min_match=0.0)
-        res = self.dataStore.search([], [], {}, [match_txt], OrderByExpr(), 0, 0, idx_nms, kb_ids, ["tag_kwd"])
+            idx_nm = [index_name(tid) for tid in tenant_ids]
+        match_txt, _ = self.qryr.question(question, min_match=settings.DEFAULT_HYBRID_WEIGHT.split(",")[0])
+        res = self.dataStore.search([], [], {}, [match_txt], OrderByExpr(), 0, 0, idx_nm, kb_ids, ["tag_kwd"])
         aggs = self.dataStore.get_aggregation(res, "tag_kwd")
         if not aggs:
             return {}
         cnt = np.sum([c for _, c in aggs])
-        tag_fea = sorted([(a, round(0.1 * (c + 1) / (cnt + S) / max(1e-6, all_tags.get(a, 0.0001)))) for a, c in aggs], key=lambda x: x[1] * -1)[:topn_tags]
+        tag_fea = self._calc_tag_fea(aggs, cnt, all_tags, topn_tags, S)
         return {a.replace(".", "_"): max(1, c) for a, c in tag_fea}
+
+    def _calc_tag_fea(self, aggs, cnt, all_tags, topn_tags, S):
+        return sorted([(a, round(0.1 * (c + 1) / (cnt + S) / max(1e-6, all_tags.get(a, 0.0001)))) for a, c in aggs], key=lambda x: x[1] * -1)[:topn_tags]
 
     async def retrieval_by_toc(self, query: str, chunks: list[dict], tenant_ids: list[str], chat_mdl, topn: int = 6):
         from rag.prompts.generator import relevant_chunks_with_toc
@@ -636,7 +655,7 @@ class Dealer:
             doc_id2kb_id[ck["doc_id"]] = ck["kb_id"]
         doc_id = sorted(ranks.items(), key=lambda x: x[1] * -1.0)[0][0]
         kb_ids = [doc_id2kb_id[doc_id]]
-        es_res = self.dataStore.search(["content_with_weight"], [], {"doc_id": doc_id, "toc_kwd": "toc"}, [], OrderByExpr(), 0, 128, idx_nms, kb_ids)
+        es_res = self.dataStore.search(["content_with_weight"], [], {"doc_id": doc_id, "toc_kwd": "toc"}, [], OrderByExpr(), 0, settings.EMBEDDING_BATCH_SIZE, idx_nms, kb_ids)
         toc = []
         dict_chunks = self.dataStore.get_fields(es_res, ["content_with_weight"])
         for _, doc in dict_chunks.items():
@@ -644,14 +663,14 @@ class Dealer:
                 toc.extend(json.loads(doc["content_with_weight"]))
             except Exception as e:
                 logging.exception(e)
-        if not toc:
-            return chunks
+            if not toc:
+                return chunks
 
         ids = await relevant_chunks_with_toc(query, toc, chat_mdl, topn * 2)
         if not ids:
             return chunks
 
-        vector_size = 1024
+        vector_size = len(chunks[0]["vector"])
         id2idx = {ck["chunk_id"]: i for i, ck in enumerate(chunks)}
         for cid, sim in ids:
             if cid in id2idx:
@@ -702,10 +721,11 @@ class Dealer:
         if not mom_chunks:
             return chunks
 
-        if not chunks:
-            chunks = []
+        first_cks = list(mom_chunks.values())
+        if not first_cks or not first_cks[0]:
+            return chunks
 
-        vector_size = 1024
+        vector_size = len(first_cks[0][0]["vector"])
         for id, cks in mom_chunks.items():
             chunk = self.dataStore.get(id, idx_nms[0], [ck["kb_id"] for ck in cks])
             d = {

@@ -8,7 +8,6 @@ or processes. This ensures proper tenant isolation in multi-tenant deployments.
 import os
 import pytest
 import asyncio
-import tempfile
 import json
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
 from agent.sandbox.executor_manager.core.container import _CONTAINER_QUEUES

@@ -60,7 +60,7 @@ export const AssistantGroupButton = ({
         className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
         role="toolbar"
       >
-        <CopyToClipboard text={content} className="border-0" size="icon-xs" />
+        <CopyToClipboard text={content} className="border-0" size="icon-xs" aria-label={t('chat.copy')} />
 
         {showLoudspeaker && (
           <>
@@ -71,6 +71,7 @@ export const AssistantGroupButton = ({
                   size="icon-xs"
                   className="border-0"
                   onClick={handleRead}
+                  aria-label={isPlaying ? t('chat.stopReading') : t('chat.read')}
                 >
                   <span>
                     {isPlaying ? <LucidePauseCircle /> : <LucideVolume2 />}
@@ -90,6 +91,7 @@ export const AssistantGroupButton = ({
               size="icon-xs"
               className="border-0"
               onClick={handleLike}
+              aria-label={t('chat.like')}
             >
               <LucideThumbsUp />
             </Button>
@@ -99,6 +101,7 @@ export const AssistantGroupButton = ({
               size="icon-xs"
               className="border-0"
               onClick={showModal}
+              aria-label={t('chat.dislike')}
             >
               <LucideThumbsDown />
             </Button>
@@ -110,6 +113,7 @@ export const AssistantGroupButton = ({
             variant="transparent"
             size="icon-xs"
             className="border-0"
+            aria-label={t('chat.prompt')}
           >
             <PromptIcon style={{ fontSize: '16px' }} />
           </Button>
@@ -167,6 +171,7 @@ export const UserGroupButton = ({
               className="border-0"
               onClick={regenerateMessage}
               disabled={sendLoading}
+              aria-label={t('chat.regenerate')}
             >
               <LucideRefreshCw className={cn(sendLoading && 'animate-spin')} />
             </Button>
@@ -183,6 +188,7 @@ export const UserGroupButton = ({
               className="border-0"
               onClick={onRemoveMessage}
               disabled={loading}
+              aria-label={t('common.delete')}
             >
               <LucideTrash2 />
             </Button>

@@ -9,7 +9,7 @@ RUN npm config set registry https://registry.npmmirror.com
 
 WORKDIR /app
 
-COPY package.json package-lock.json .
+COPY package.json package-lock.json ./
 
 RUN npm install
 

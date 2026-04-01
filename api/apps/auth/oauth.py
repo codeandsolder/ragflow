@@ -42,7 +42,7 @@ class OAuthClient:
         self.redirect_uri = config["redirect_uri"]
         self.scope = config.get("scope", None)
 
-        self.http_request_timeout = 7
+        self.http_request_timeout = OAUTH_HTTP_REQUEST_TIMEOUT
 
     def get_authorization_url(self, state=None):
         """
@@ -111,7 +111,22 @@ class OAuthClient:
             response = sync_request("GET", self.userinfo_url, headers=headers, timeout=self.http_request_timeout)
             response.raise_for_status()
             user_info = response.json()
-            return self.normalize_user_info(user_info)
+
+            # Security: Validate user info structure before processing
+            if not isinstance(user_info, dict):
+                raise ValueError("Invalid user info format: expected dictionary")
+
+            # Security: Sanitize user info fields
+            sanitized_info = {}
+            for key, value in user_info.items():
+                if isinstance(value, (str, int, float, bool, type(None))):
+                    sanitized_info[key] = value
+                elif isinstance(value, list):
+                    sanitized_info[key] = [str(item) if isinstance(item, (str, int, float, bool)) else str(type(item)) for item in value]
+                else:
+                    sanitized_info[key] = str(type(value))
+
+            return self.normalize_user_info(sanitized_info)
         except Exception as e:
             raise ValueError(f"Failed to fetch user info: {e}")
 
@@ -127,7 +142,22 @@ class OAuthClient:
             )
             response.raise_for_status()
             user_info = response.json()
-            return self.normalize_user_info(user_info)
+
+            # Security: Validate user info structure before processing
+            if not isinstance(user_info, dict):
+                raise ValueError("Invalid user info format: expected dictionary")
+
+            # Security: Sanitize user info fields (async version)
+            sanitized_info = {}
+            for key, value in user_info.items():
+                if isinstance(value, (str, int, float, bool, type(None))):
+                    sanitized_info[key] = value
+                elif isinstance(value, list):
+                    sanitized_info[key] = [str(item) if isinstance(item, (str, int, float, bool)) else str(type(item)) for item in value]
+                else:
+                    sanitized_info[key] = str(type(value))
+
+            return self.normalize_user_info(sanitized_info)
         except Exception as e:
             raise ValueError(f"Failed to fetch user info: {e}")
 

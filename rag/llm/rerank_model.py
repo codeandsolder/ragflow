@@ -420,7 +420,7 @@ class HuggingfaceRerank(Base):
     def post(query: str, texts: list, url="127.0.0.1"):
         exc = None
         scores = [0 for _ in range(len(texts))]
-        batch_size = 8
+        batch_size = 8  # Default batch size for reranking
         for i in range(0, len(texts), batch_size):
             try:
                 res = httpx.post(f"http://{url}/rerank", headers={"Content-Type": "application/json"}, json={"query": query, "texts": texts[i : i + batch_size], "raw_scores": False, "truncate": True})

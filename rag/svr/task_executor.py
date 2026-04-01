@@ -78,6 +78,7 @@ from common.signal_utils import start_tracemalloc_and_snapshot, stop_tracemalloc
 from common.exceptions import TaskCanceledException
 from common import settings
 from common.constants import PAGERANK_FLD, TAG_FLD, SVR_CONSUMER_GROUP_NAME
+from rag.config import validate_parser_config, validate_kb_parser_config
 
 BATCH_SIZE = 64
 
@@ -1205,6 +1206,9 @@ async def do_handle_task(task):
     task["llm_id"] = task["kb_parser_config"].get("llm_id") or task["llm_id"]
     task_document_name = task["name"]
     task_start_ts = timer()
+
+    task["parser_config"] = validate_parser_config(task.get("parser_config"))
+    task["kb_parser_config"] = validate_kb_parser_config(task.get("kb_parser_config"))
 
     # prepare the progress callback function
     progress_callback = partial(set_progress, task_id, task_from_page, task_to_page)

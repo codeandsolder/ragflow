@@ -2,7 +2,7 @@
 import { cn } from '@/lib/utils';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { AlertCircle, CheckCircle, Info, Loader, X } from 'lucide-react';
-import { FC, ReactNode, useCallback, useEffect, useMemo } from 'react';
+import { FC, ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useTranslation } from 'react-i18next';
 import { DialogDescription } from '../dialog';
@@ -97,6 +97,8 @@ const Modal: ModalType = ({
     default: 'max-w-2xl',
     large: 'max-w-4xl',
   };
+  const contentRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
 
   const { t } = useTranslation();
   useEffect(() => {
@@ -108,6 +110,17 @@ const Modal: ModalType = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [maskClosable, onOpenChange]);
+
+  useEffect(() => {
+    if (open) {
+      previousActiveElement.current = document.activeElement as HTMLElement;
+      contentRef.current?.focus();
+    } else {
+      if (previousActiveElement.current && typeof previousActiveElement.current.focus === 'function') {
+        previousActiveElement.current.focus();
+      }
+    }
+  }, [open]);
 
   const handleCancel = useCallback(() => {
     onOpenChange?.(false);
@@ -226,6 +239,7 @@ const Modal: ModalType = ({
           style={{ zIndex: zIndex }}
         >
           <DialogPrimitive.Content
+            ref={contentRef}
             className={cn(
               `relative w-[700px] ${full ? 'max-w-full' : sizeClasses[size]} ${className} bg-bg-base rounded-lg shadow-lg border border-border-default transition-all focus-visible:!outline-none`,
               { 'pt-10': closable && !title && !type },

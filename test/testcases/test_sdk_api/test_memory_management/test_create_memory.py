@@ -21,6 +21,7 @@ from configs import INVALID_API_TOKEN, HOST_ADDRESS
 from ragflow_sdk import RAGFlow
 from hypothesis import example, given, settings
 from utils.hypothesis_utils import valid_names
+from test.testcases.conftest import DEFAULT_LLM_ID
 
 
 class TestAuthorization:
@@ -36,7 +37,7 @@ class TestAuthorization:
     def test_auth_invalid(self, invalid_auth, expected_message):
         client = RAGFlow(invalid_auth, HOST_ADDRESS)
         with pytest.raises(Exception) as exception_info:
-            client.create_memory(**{"name": "test_memory", "memory_type": ["raw"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": "glm-4-flash@ZHIPU-AI"})
+            client.create_memory(**{"name": "test_memory", "memory_type": ["raw"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": "DEFAULT_LLM_ID"})
         assert str(exception_info.value) == expected_message, str(exception_info.value)
 
 
@@ -51,7 +52,7 @@ class TestMemoryCreate:
             "name": name,
             "memory_type": ["raw"] + random.choices(["semantic", "episodic", "procedural"], k=random.randint(0, 3)),
             "embd_id": "BAAI/bge-small-en-v1.5@Builtin",
-            "llm_id": "glm-4-flash@ZHIPU-AI",
+            "llm_id": "DEFAULT_LLM_ID",
         }
         memory = client.create_memory(**payload)
         pattern = rf"^{name}|{name}(?:\((\d+)\))?$"
@@ -73,7 +74,7 @@ class TestMemoryCreate:
             "name": name,
             "memory_type": ["raw"] + random.choices(["semantic", "episodic", "procedural"], k=random.randint(0, 3)),
             "embd_id": "BAAI/bge-small-en-v1.5@Builtin",
-            "llm_id": "glm-4-flash@ZHIPU-AI",
+            "llm_id": "DEFAULT_LLM_ID",
         }
         with pytest.raises(Exception) as exception_info:
             client.create_memory(**payload)
@@ -83,7 +84,7 @@ class TestMemoryCreate:
     @given(name=valid_names())
     @settings(deadline=None)
     def test_type_invalid(self, client, name):
-        payload = {"name": name, "memory_type": ["something"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": "glm-4-flash@ZHIPU-AI"}
+        payload = {"name": name, "memory_type": ["something"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": "DEFAULT_LLM_ID"}
         with pytest.raises(Exception) as exception_info:
             client.create_memory(**payload)
         assert str(exception_info.value) == f"Memory type '{ {'something'} }' is not supported.", str(exception_info.value)
@@ -95,7 +96,7 @@ class TestMemoryCreate:
             "name": name,
             "memory_type": ["raw"] + random.choices(["semantic", "episodic", "procedural"], k=random.randint(0, 3)),
             "embd_id": "BAAI/bge-small-en-v1.5@Builtin",
-            "llm_id": "glm-4-flash@ZHIPU-AI",
+            "llm_id": "DEFAULT_LLM_ID",
         }
         res1 = client.create_memory(**payload)
         assert res1.name == name, str(res1)

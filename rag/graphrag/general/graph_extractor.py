@@ -79,11 +79,11 @@ class GraphExtractor(Extractor):
         self._on_error = on_error or (lambda _e, _s, _d: None)
         self.prompt_token_count = num_tokens_from_string(self._extraction_prompt)
 
-        # Construct the looping arguments
         encoding = tiktoken.get_encoding("cl100k_base")
         yes = encoding.encode("YES")
         no = encoding.encode("NO")
         self._loop_args = {"logit_bias": {yes[0]: 100, no[0]: 100}, "max_tokens": 1}
+        encoding.close()
 
         # Wire defaults into the prompt variables
         self._prompt_variables = {

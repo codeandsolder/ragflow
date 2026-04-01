@@ -217,25 +217,17 @@ class TestDocxParserBasic:
         assert "Special chars" in secs[0][0]
         assert "Quotes" in secs[1][0]
 
-    def test_parse_from_file_path(self):
+    def test_parse_from_file_path(self, temp_docx):
         """Test parsing from a file path (string) instead of bytes."""
-        import tempfile
-
         paragraphs = ["File path test"]
         docx_bytes = _create_docx_with_paragraphs(paragraphs)
+        temp_path = temp_docx(suffix=".docx", content=docx_bytes)
 
-        with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as f:
-            f.write(docx_bytes)
-            temp_path = f.name
+        parser = RAGFlowDocxParser()
+        secs, tbls = parser(temp_path)
 
-        try:
-            parser = RAGFlowDocxParser()
-            secs, tbls = parser(temp_path)
-
-            assert len(secs) == 1
-            assert secs[0][0] == "File path test"
-        finally:
-            os.unlink(temp_path)
+        assert len(secs) == 1
+        assert secs[0][0] == "File path test"
 
 
 class TestDocxParserTables:

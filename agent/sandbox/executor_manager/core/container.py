@@ -199,7 +199,11 @@ async def allocate_container_blocking(language: SupportLanguage, timeout=10) -> 
 
                 return name
         except Empty:
-            await asyncio.sleep(sleep_time)
+            # Use more efficient waiting with timeout
+            if sleep_time < max_sleep:
+                sleep_time = min(sleep_time * 2, max_sleep)
+            else:
+                await asyncio.sleep(0.1)
             sleep_time = min(sleep_time * 2, max_sleep)
 
     return ""

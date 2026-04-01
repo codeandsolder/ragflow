@@ -18,6 +18,7 @@ import uuid
 
 import pytest
 import random
+from test.testcases.conftest import DEFAULT_LLM_ID
 
 
 @pytest.fixture(scope="class")
@@ -29,7 +30,7 @@ def add_empty_raw_type_memory(client, request):
             client.delete_memory(_memory_id)
 
     request.addfinalizer(cleanup)
-    payload = {"name": "test_memory_0", "memory_type": ["raw"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": "glm-4-flash@ZHIPU-AI"}
+    payload = {"name": "test_memory_0", "memory_type": ["raw"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": "DEFAULT_LLM_ID"}
     res = client.create_memory(**payload)
     memory_id = res.id
     request.cls.memory_id = memory_id
@@ -50,7 +51,7 @@ def add_empty_multiple_type_memory(client, request):
         "name": "test_memory_0",
         "memory_type": ["raw"] + random.choices(["semantic", "episodic", "procedural"], k=random.randint(1, 3)),
         "embd_id": "BAAI/bge-small-en-v1.5@Builtin",
-        "llm_id": "glm-4-flash@ZHIPU-AI",
+        "llm_id": "DEFAULT_LLM_ID",
     }
     res = client.create_memory(**payload)
     memory_id = res.id
@@ -74,7 +75,7 @@ def add_2_multiple_type_memory(client, request):
             "name": f"test_memory_{i}",
             "memory_type": ["raw"] + random.choices(["semantic", "episodic", "procedural"], k=random.randint(1, 3)),
             "embd_id": "BAAI/bge-small-en-v1.5@Builtin",
-            "llm_id": "glm-4-flash@ZHIPU-AI",
+            "llm_id": "DEFAULT_LLM_ID",
         }
         res = client.create_memory(**payload)
         memory_ids.append(res.id)
@@ -96,7 +97,7 @@ def add_memory_with_multiple_type_message_func(client, request):
         "name": "test_memory_0",
         "memory_type": ["raw"] + random.choices(["semantic", "episodic", "procedural"], k=random.randint(1, 3)),
         "embd_id": "BAAI/bge-small-en-v1.5@Builtin",
-        "llm_id": "glm-4-flash@ZHIPU-AI",
+        "llm_id": "DEFAULT_LLM_ID",
     }
     memory = client.create_memory(**payload)
     memory_id = memory.id
@@ -131,7 +132,7 @@ def add_memory_with_5_raw_message_func(client, request):
 
     request.addfinalizer(cleanup)
 
-    payload = {"name": "test_memory_1", "memory_type": ["raw"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": "glm-4-flash@ZHIPU-AI"}
+    payload = {"name": "test_memory_1", "memory_type": ["raw"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": "DEFAULT_LLM_ID"}
     memory = client.create_memory(**payload)
     memory_id = memory.id
     agent_ids = [uuid.uuid4().hex for _ in range(2)]

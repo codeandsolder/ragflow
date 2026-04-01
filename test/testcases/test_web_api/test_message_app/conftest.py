@@ -19,6 +19,7 @@ import uuid
 import pytest
 import random
 from test_web_api.common import create_memory, list_memory, add_message, delete_memory
+from test.testcases.conftest import DEFAULT_LLM_ID
 
 
 @pytest.fixture(scope="class")
@@ -30,7 +31,7 @@ def add_empty_raw_type_memory(request, WebApiAuth):
             delete_memory(WebApiAuth, _memory_id)
 
     request.addfinalizer(cleanup)
-    payload = {"name": "test_memory_0", "memory_type": ["raw"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": "glm-4-flash@ZHIPU-AI"}
+    payload = {"name": "test_memory_0", "memory_type": ["raw"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": DEFAULT_LLM_ID}
     res = create_memory(WebApiAuth, payload)
     memory_id = res["data"]["id"]
     request.cls.memory_id = memory_id
@@ -51,7 +52,7 @@ def add_empty_multiple_type_memory(request, WebApiAuth):
         "name": "test_memory_0",
         "memory_type": ["raw"] + random.choices(["semantic", "episodic", "procedural"], k=random.randint(1, 3)),
         "embd_id": "BAAI/bge-small-en-v1.5@Builtin",
-        "llm_id": "glm-4-flash@ZHIPU-AI",
+        "llm_id": "DEFAULT_LLM_ID",
     }
     res = create_memory(WebApiAuth, payload)
     memory_id = res["data"]["id"]
@@ -75,7 +76,7 @@ def add_2_multiple_type_memory(request, WebApiAuth):
             "name": f"test_memory_{i}",
             "memory_type": ["raw"] + random.choices(["semantic", "episodic", "procedural"], k=random.randint(1, 3)),
             "embd_id": "BAAI/bge-small-en-v1.5@Builtin",
-            "llm_id": "glm-4-flash@ZHIPU-AI",
+            "llm_id": "DEFAULT_LLM_ID",
         }
         res = create_memory(WebApiAuth, payload)
         memory_ids.append(res["data"]["id"])
@@ -97,7 +98,7 @@ def add_memory_with_multiple_type_message_func(request, WebApiAuth):
         "name": "test_memory_0",
         "memory_type": ["raw"] + random.choices(["semantic", "episodic", "procedural"], k=random.randint(1, 3)),
         "embd_id": "BAAI/bge-small-en-v1.5@Builtin",
-        "llm_id": "glm-4-flash@ZHIPU-AI",
+        "llm_id": "DEFAULT_LLM_ID",
     }
     res = create_memory(WebApiAuth, payload)
     memory_id = res["data"]["id"]
@@ -132,7 +133,7 @@ def add_memory_with_5_raw_message_func(request, WebApiAuth):
 
     request.addfinalizer(cleanup)
 
-    payload = {"name": "test_memory_1", "memory_type": ["raw"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": "glm-4-flash@ZHIPU-AI"}
+    payload = {"name": "test_memory_1", "memory_type": ["raw"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": "DEFAULT_LLM_ID"}
     res = create_memory(WebApiAuth, payload)
     memory_id = res["data"]["id"]
     agent_ids = [uuid.uuid4().hex for _ in range(2)]

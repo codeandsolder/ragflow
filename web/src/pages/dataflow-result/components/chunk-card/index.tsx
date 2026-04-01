@@ -12,7 +12,7 @@ import { IChunk } from '@/interfaces/database/knowledge';
 import { CheckedState } from '@radix-ui/react-checkbox';
 import classNames from 'classnames';
 import DOMPurify from 'dompurify';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 import { ChunkTextMode } from '../../constant';
 import styles from './index.module.less';
 
@@ -27,7 +27,7 @@ interface IProps {
   textMode: ChunkTextMode;
 }
 
-const ChunkCard = ({
+const ChunkCard = memo(function ChunkCard({
   item,
   checked,
   handleCheckboxClick,
@@ -115,13 +115,13 @@ const ChunkCard = ({
           <Switch
             checked={enabled}
             onCheckedChange={onChange}
-            aria-readonly
+            disabled
             className="!m-0"
           />
         </div>
       </div>
     </Card>
   );
-};
+});
 
 export default ChunkCard;

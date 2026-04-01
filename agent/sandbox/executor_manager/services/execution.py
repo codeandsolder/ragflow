@@ -178,7 +178,6 @@ if (fs.existsSync(mainPath)) {
             time_used_ms = (time.time() - start_time) * 1000
 
             logger.info("----------------------------------------------")
-            logger.info(f"Code: {str(base64.b64decode(req.code_b64))}")
             logger.info(f"{returncode=}")
             logger.info(f"{stdout=}")
             logger.info(f"{stderr=}")

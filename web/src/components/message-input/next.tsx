@@ -121,7 +121,7 @@ export function NextMessageInput({
 
   const onFileReject = React.useCallback((file: File, message: string) => {
     toast(message, {
-      description: `"${file.name.length > 20 ? `${file.name.slice(0, 20)}...` : file.name}" has been rejected`,
+      description: `"${file.name.length > 20 ? `${file.name.slice(0, 20)}...` : file.name}" has been rejected`.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
     });
   }, []);
 

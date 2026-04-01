@@ -259,6 +259,9 @@ class Extractor:
 
         if not entities:
             return
+        if not all(dp.get("entity_type") for dp in entities):
+            logging.warning(f"Entity {entity_name} has no type, skipping")
+            return
         entity_type = sorted(
             Counter([dp["entity_type"] for dp in entities]).items(),
             key=lambda x: x[1],

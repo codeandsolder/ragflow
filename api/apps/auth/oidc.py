@@ -51,7 +51,7 @@ class OIDCClient(OAuthClient):
         """
         try:
             metadata_url = f"{issuer}/.well-known/openid-configuration"
-            response = sync_request("GET", metadata_url, timeout=7)
+            response = sync_request("GET", metadata_url, timeout=OAUTH_HTTP_REQUEST_TIMEOUT)
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -80,7 +80,22 @@ class OIDCClient(OAuthClient):
                 audience=str(self.client_id),
                 issuer=self.issuer,
             )
-            return decoded_token
+            
+            # Security: Validate decoded token structure
+            if not isinstance(decoded_token, dict):
+                raise ValueError("Invalid ID token format: expected dictionary")
+            
+            # Security: Sanitize token claims
+            sanitized_token = {}
+            for key, value in decoded_token.items():
+                if isinstance(value, (str, int, float, bool, type(None))):
+                    sanitized_token[key] = value
+                elif isinstance(value, list):
+                    sanitized_token[key] = [str(item) if isinstance(item, (str, int, float, bool)) else str(type(item)) for item in value]
+                else:
+                    sanitized_token[key] = str(type(value))
+            
+            return sanitized_token
         except Exception as e:
             raise ValueError(f"Error parsing ID Token: {e}")
 

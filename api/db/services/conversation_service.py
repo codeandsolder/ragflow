@@ -52,7 +52,7 @@ class ConversationService(CommonService):
     @DB.connection_context()
     def get_all_conversation_by_dialog_ids(cls, dialog_ids):
         sessions = cls.model.select().where(cls.model.dialog_id.in_(dialog_ids))
-        limit = 100
+        limit = DEFAULT_LIST_LIMIT
         res = []
         last_id = None
         while True:

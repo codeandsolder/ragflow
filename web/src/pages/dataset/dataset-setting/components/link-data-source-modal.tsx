@@ -27,8 +27,7 @@ const LinkDataSourceModal = ({
   }, [selectedList]);
 
   const { categorizedList } = useListDataSource();
-  const handleFormSubmit = (values: any) => {
-    console.log(values, selectedList);
+  const handleFormSubmit = (values: Record<string, unknown>) => {
     onSubmit?.(list);
   };
   return (

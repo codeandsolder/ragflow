@@ -8,9 +8,9 @@ from playwright.sync_api import expect
 
 from test.playwright.helpers.flow_context import FlowContext
 from test.playwright.helpers._auth_helpers import ensure_authed
+from test.playwright.helpers._constants import RESULT_TIMEOUT_MS, CHAT_TIMEOUT_MS
 from test.playwright.helpers.flow_steps import flow_params, require
 from test.playwright.helpers._next_apps_helpers import (
-    RESULT_TIMEOUT_MS,
     _fill_and_save_create_modal,
     _goto_home,
     _nav_click,
@@ -88,7 +88,7 @@ def step_06_ask_question(ctx: FlowContext, step, snap):
     require(ctx.state, "chat_dataset_selected")
     page = ctx.page
     with step("ask question"):
-        _send_chat_and_wait_done(page, "what is ragflow", timeout_ms=60000)
+        _send_chat_and_wait_done(page, "what is ragflow", timeout_ms=CHAT_TIMEOUT_MS)
     snap("chat_stream_done")
 
 

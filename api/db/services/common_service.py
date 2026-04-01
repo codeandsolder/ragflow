@@ -23,6 +23,7 @@ import peewee
 from peewee import InterfaceError, OperationalError
 
 from api.db.db_models import DB
+from api.constants import DEFAULT_MAX_RETRIES, DEFAULT_RETRY_DELAY
 from common.misc_utils import get_uuid
 from common.time_utils import current_timestamp, datetime_format
 
@@ -31,7 +32,7 @@ def _is_deadlock_error(exc: OperationalError) -> bool:
     return isinstance(exc, OperationalError) and bool(getattr(exc, "args", ())) and exc.args[0] == 1213
 
 
-def retry_deadlock_operation(max_retries=3, retry_delay=0.1):
+def retry_deadlock_operation(max_retries=DEFAULT_MAX_RETRIES, retry_delay=DEFAULT_RETRY_DELAY):
     """Retry a full DB operation when MySQL/OceanBase aborts it due to deadlock."""
 
     def decorator(func):

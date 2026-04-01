@@ -215,7 +215,7 @@ class ComponentParamBase(ABC):
             with open(param_validation_path, "r") as fin:
                 validation_json = json.loads(fin.read())
         except (FileNotFoundError, PermissionError) as e:
-            logging.debug(f"Validation file not accessible: {e}")
+            logging.warning(f"Validation file not accessible: {param_validation_path}: {e}. Parameter validation skipped.")
             return
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON in validation file {param_validation_path}: {e}")

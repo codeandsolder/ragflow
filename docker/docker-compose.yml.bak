@@ -1,0 +1,209 @@
+include:
+  - path: ./docker-compose-base.yml
+
+services:
+  # LiteLLM Proxy Service
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: litellm-proxy
+    ports:
+      - "4000:4000"
+    volumes:
+      - ../litellm_config.yaml:/app/config.yaml:ro
+    environment:
+      - LITELLM_MODE=PRODUCTION
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - DATABASE_URL=postgresql://litellm_user:${LITELLM_DB_PASSWORD}@litellm-db:5432/litellm
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      # Infisical Secrets Management (optional, falls back to .env)
+      - INFISICAL_TOKEN=${INFISICAL_TOKEN:-}
+      - INFISICAL_API_URL=${INFISICAL_API_URL:-https://app.infisical.com}
+      # Provider API Keys (fallback from .env)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - AZURE_API_KEY=${AZURE_API_KEY:-}
+      - AZURE_API_BASE=${AZURE_API_BASE:-}
+      - AZURE_API_VERSION=${AZURE_API_VERSION:-2024-02-15-preview}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - TOGETHERAI_API_KEY=${TOGETHERAI_API_KEY:-}
+      - DEEPINFRA_API_KEY=${DEEPINFRA_API_KEY:-}
+      - FIREWORKS_API_KEY=${FIREWORKS_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY:-}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION_NAME=${AWS_REGION_NAME:-us-east-1}
+      - VERTEXAI_PROJECT=${VERTEXAI_PROJECT:-}
+      - VERTEXAI_LOCATION=${VERTEXAI_LOCATION:-us-central1}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - XAI_API_KEY=${XAI_API_KEY:-}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY:-}
+      - MODELRELAY_API_KEY=${MODELRELAY_API_KEY:-}
+      - MODELRELAY_BASE_URL=${MODELRELAY_BASE_URL:-https://app.modelrelay.com/api}
+      - REPLICATE_API_KEY=${REPLICATE_API_KEY:-}
+      - NOVITA_API_KEY=${NOVITA_API_KEY:-}
+      - VOYAGE_API_KEY=${VOYAGE_API_KEY:-}
+      - CEREBRAS_API_KEY=${CEREBRAS_API_KEY:-}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}
+      - CUSTOM_API_BASE=${CUSTOM_API_BASE:-}
+      - CUSTOM_API_KEY=${CUSTOM_API_KEY:-}
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    depends_on:
+      litellm-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health/liveliness"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - ragflow
+
+  # PostgreSQL for LiteLLM key management
+  litellm-db:
+    image: postgres:16
+    container_name: litellm-db
+    environment:
+      POSTGRES_DB: litellm
+      POSTGRES_USER: litellm_user
+      POSTGRES_PASSWORD: ${LITELLM_DB_PASSWORD}
+    volumes:
+      - litellm-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm_user -d litellm"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ragflow
+
+  # RAGFlow CPU service (modified to use LiteLLM proxy)
+  ragflow-cpu:
+    depends_on:
+      mysql:
+        condition: service_healthy
+      litellm:
+        condition: service_started
+    profiles:
+      - cpu
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command:
+      - --enable-adminserver
+    ports:
+      - ${SVR_WEB_HTTP_PORT}:80
+      - ${SVR_WEB_HTTPS_PORT}:443
+      - ${SVR_HTTP_PORT}:9380
+      - ${ADMIN_SVR_HTTP_PORT}:9381
+      - ${SVR_MCP_PORT}:9382
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '0.5'
+        reservations:
+          memory: 1G
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9380/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - ./service_conf.yaml.template:/ragflow/conf/service_conf.yaml.template
+      - ./entrypoint.sh:/ragflow/entrypoint.sh
+    env_file: .env
+    networks:
+      - ragflow
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/log/nginx
+      - /var/run
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
+      nproc: 4096
+      core: 0
+
+  # RAGFlow GPU service (modified to use LiteLLM proxy)
+  ragflow-gpu:
+    depends_on:
+      mysql:
+        condition: service_healthy
+      litellm:
+        condition: service_started
+    profiles:
+      - gpu
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    command:
+      - --enable-adminserver
+    ports:
+      - ${SVR_WEB_HTTP_PORT}:80
+      - ${SVR_WEB_HTTPS_PORT}:443
+      - ${SVR_HTTP_PORT}:9380
+      - ${ADMIN_SVR_HTTP_PORT}:9381
+      - ${SVR_MCP_PORT}:9382
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '0.5'
+        reservations:
+          memory: 1G
+          cpus: '0.25'
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9380/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - ./service_conf.yaml.template:/ragflow/conf/service_conf.yaml.template
+      - ./entrypoint.sh:/ragflow/entrypoint.sh
+    env_file: .env
+    networks:
+      - ragflow
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/log/nginx
+      - /var/run
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
+      nproc: 4096
+      core: 0
+
+networks:
+  ragflow:
+    driver: bridge
+
+volumes:
+  litellm-db-data:
+    driver: local

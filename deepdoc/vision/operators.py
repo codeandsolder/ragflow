@@ -132,7 +132,7 @@ class NormalizeImage:
 class ToCHWImage:
     """convert hwc image to chw image"""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         pass
 
     def __call__(self, data):
@@ -272,7 +272,7 @@ class Resize:
 
 
 class DetResizeForTest:
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super(DetResizeForTest, self).__init__()
         self.resize_type = 0
         self.keep_ratio = False
@@ -402,7 +402,7 @@ class DetResizeForTest:
 
 
 class E2EResizeForTest:
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super(E2EResizeForTest, self).__init__()
         self.max_side_len = kwargs["max_side_len"]
         self.valid_set = kwargs["valid_set"]
@@ -468,7 +468,7 @@ class E2EResizeForTest:
 
 
 class KieResize:
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super(KieResize, self).__init__()
         self.max_side, self.min_side = kwargs["img_scale"][0], kwargs["img_scale"][1]
 

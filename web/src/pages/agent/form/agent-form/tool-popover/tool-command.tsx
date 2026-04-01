@@ -106,7 +106,7 @@ function useHandleSelectChange({ onChange, value }: ToolCommandProps) {
   };
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
+ 
 export function ToolCommand({ value, onChange }: ToolCommandProps) {
   const { t } = useTranslation();
 

@@ -14,14 +14,18 @@
 #  limitations under the License.
 #
 
-
+import logging
 import os
 from functools import lru_cache
+from typing import Any
 
 import tiktoken
 
 from common.file_utils import get_project_base_directory
 
+logger = logging.getLogger(__name__)
+
+# Initialize tiktoken encoder with caching
 tiktoken_cache_dir = get_project_base_directory()
 os.environ["TIKTOKEN_CACHE_DIR"] = tiktoken_cache_dir
 encoder = tiktoken.get_encoding("cl100k_base")
@@ -29,62 +33,99 @@ encoder = tiktoken.get_encoding("cl100k_base")
 
 @lru_cache(maxsize=4096)
 def num_tokens_from_string(string: str) -> int:
-    """Returns the number of tokens in a text string."""
+    """Returns the number of tokens in a text string using tiktoken.
+
+    Args:
+        string: The text string to encode.
+
+    Returns:
+        Number of tokens in the string, or 0 if encoding fails.
+    """
+    if not string:
+        return 0
     try:
         code_list = encoder.encode(string)
         return len(code_list)
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Token encoding error for string (first 50 chars): '{string[:50]}': {e}")
         return 0
 
 
-def total_token_count_from_response(resp):
-    """
-    Extract token count from LLM response in various formats.
+def _get_attribute_value(obj: Any, *attrs: str) -> Any:
+    """Safely get a nested attribute from an object.
 
-    Handles None responses and different response structures from various LLM providers.
+    Args:
+        obj: The object to get attributes from.
+        *attrs: Sequence of attribute names to traverse.
+
+    Returns:
+        The attribute value if found, otherwise None.
+    """
+    current = obj
+    for attr in attrs:
+        try:
+            current = getattr(current, attr)
+        except Exception:
+            return None
+    return current
+
+
+def total_token_count_from_response(resp: Any) -> int:
+    """Extract token count from LLM response in various formats.
+
+    Handles different response structures from various LLM providers.
     Returns 0 if token count cannot be determined.
+
+    Args:
+        resp: The LLM response object (can be None, dict, or object with attributes).
+
+    Returns:
+        Total token count from the response, or 0 if not available.
     """
     if resp is None:
         return 0
 
-    try:
-        if hasattr(resp, "usage") and hasattr(resp.usage, "total_tokens"):
-            return resp.usage.total_tokens
-    except Exception:
-        pass
+    # Try various attribute-based response formats
+    token_count = _get_attribute_value(resp, "usage", "total_tokens")
+    if token_count is not None:
+        return token_count
 
-    try:
-        if hasattr(resp, "usage_metadata") and hasattr(resp.usage_metadata, "total_tokens"):
-            return resp.usage_metadata.total_tokens
-    except Exception:
-        pass
+    token_count = _get_attribute_value(resp, "usage_metadata", "total_tokens")
+    if token_count is not None:
+        return token_count
 
-    try:
-        if hasattr(resp, "meta") and hasattr(resp.meta, "billed_units") and hasattr(resp.meta.billed_units, "input_tokens"):
-            return resp.meta.billed_units.input_tokens
-    except Exception:
-        pass
+    token_count = _get_attribute_value(resp, "meta", "billed_units", "input_tokens")
+    if token_count is not None:
+        return token_count
 
-    if isinstance(resp, dict) and "usage" in resp and "total_tokens" in resp["usage"]:
-        try:
-            return resp["usage"]["total_tokens"]
-        except Exception:
-            pass
+    # Try dictionary-based response formats
+    if isinstance(resp, dict):
+        if "usage" in resp:
+            usage = resp["usage"]
+            if isinstance(usage, dict):
+                if "total_tokens" in usage:
+                    return usage["total_tokens"]
+                if "input_tokens" in usage and "output_tokens" in usage:
+                    return usage["input_tokens"] + usage["output_tokens"]
 
-    if isinstance(resp, dict) and "usage" in resp and "input_tokens" in resp["usage"] and "output_tokens" in resp["usage"]:
-        try:
-            return resp["usage"]["input_tokens"] + resp["usage"]["output_tokens"]
-        except Exception:
-            pass
+        if "meta" in resp:
+            meta = resp["meta"]
+            if isinstance(meta, dict) and "tokens" in meta:
+                tokens = meta["tokens"]
+                if isinstance(tokens, dict) and "input_tokens" in tokens and "output_tokens" in tokens:
+                    return tokens["input_tokens"] + tokens["output_tokens"]
 
-    if isinstance(resp, dict) and "meta" in resp and "tokens" in resp["meta"] and "input_tokens" in resp["meta"]["tokens"] and "output_tokens" in resp["meta"]["tokens"]:
-        try:
-            return resp["meta"]["tokens"]["input_tokens"] + resp["meta"]["tokens"]["output_tokens"]
-        except Exception:
-            pass
     return 0
 
 
 def truncate(string: str, max_len: int) -> str:
-    """Returns truncated text if the length of text exceed max_len."""
+    """Truncate text to a maximum number of tokens.
+
+    Args:
+        string: The text to truncate.
+        max_len: Maximum number of tokens.
+
+    Returns:
+        Truncated text that does not exceed max_len tokens.
+    """
     return encoder.decode(encoder.encode(string)[:max_len])

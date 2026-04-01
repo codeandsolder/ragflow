@@ -214,25 +214,17 @@ class TestPptParserBasic:
         assert len(result) == 1
         assert "中文内容测试" in result[0]
 
-    def test_parse_from_file_path(self):
+    def test_parse_from_file_path(self, temp_pptx):
         """Test parsing from a file path."""
-        import tempfile
-
         slides_content = [{"texts": ["File path test"]}]
         pptx_bytes = _create_pptx_with_slides(slides_content)
+        temp_path = temp_pptx(suffix=".pptx", content=pptx_bytes)
 
-        with tempfile.NamedTemporaryFile(suffix=".pptx", delete=False) as f:
-            f.write(pptx_bytes)
-            temp_path = f.name
+        parser = RAGFlowPptParser()
+        result = parser(temp_path, from_page=0, to_page=100)
 
-        try:
-            parser = RAGFlowPptParser()
-            result = parser(temp_path, from_page=0, to_page=100)
-
-            assert len(result) == 1
-            assert "File path test" in result[0]
-        finally:
-            os.unlink(temp_path)
+        assert len(result) == 1
+        assert "File path test" in result[0]
 
 
 class TestPptParserPageRange:

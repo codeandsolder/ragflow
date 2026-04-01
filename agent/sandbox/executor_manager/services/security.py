@@ -14,10 +14,99 @@
 #  limitations under the License.
 #
 import ast
+import re
 from typing import List, Tuple
 
 from core.logger import logger
 from models.enums import SupportLanguage
+
+
+class SecureJavaScriptAnalyzer:
+    """
+    A regex-based analyzer for detecting unsafe JavaScript/Node.js code patterns.
+    """
+
+    DANGEROUS_PATTERNS = [
+        (r'\brequire\s*\(\s*[\'"]child_process[\'"]\s*\)', "Dangerous require: child_process module", 1),
+        (r'\brequire\s*\(\s*[\'"]fs[\'"]\s*\)', "Dangerous require: fs module", 1),
+        (r'\brequire\s*\(\s*[\'"]net[\'"]\s*\)', "Dangerous require: net module", 1),
+        (r'\brequire\s*\(\s*[\'"]http[\'"]\s*\)', "Dangerous require: http module", 1),
+        (r'\brequire\s*\(\s*[\'"]https[\'"]\s*\)', "Dangerous require: https module", 1),
+        (r'\brequire\s*\(\s*[\'"]dns[\'"]\s*\)', "Dangerous require: dns module", 1),
+        (r'\brequire\s*\(\s*[\'"]tls[\'"]\s*\)', "Dangerous require: tls module", 1),
+        (r'\brequire\s*\(\s*[\'"]dgram[\'"]\s*\)', "Dangerous require: dgram module", 1),
+        (r'\brequire\s*\(\s*[\'"]cluster[\'"]\s*\)', "Dangerous require: cluster module", 1),
+        (r'\brequire\s*\(\s*[\'"]worker_threads[\'"]\s*\)', "Dangerous require: worker_threads module", 1),
+        (r'\brequire\s*\(\s*[\'"]crypto[\'"]\s*\)', "Dangerous require: crypto module", 1),
+        (r'\brequire\s*\(\s*[\'"]zlib[\'"]\s*\)', "Dangerous require: zlib module", 1),
+        (r'\brequire\s*\(\s*[\'"]readline[\'"]\s*\)', "Dangerous require: readline module", 1),
+        (r'\brequire\s*\(\s*[\'"]repl[\'"]\s*\)', "Dangerous require: repl module", 1),
+        (r'\brequire\s*\(\s*[\'"]vm[\'"]\s*\)', "Dangerous require: vm module (can bypass sandbox)", 1),
+        (r'\beval\s*\(', "Dangerous: eval() allows arbitrary code execution", 1),
+        (r'\bFunction\s*\(', "Dangerous: Function constructor allows arbitrary code execution", 1),
+        (r'`[^`]*?\$\{', "Potential injection via template literal", 1),
+        (r'\bprocess\.', "Dangerous: process access allows system interaction", 1),
+        (r'\bexec\s*\(', "Dangerous: child_process.exec allows shell command execution", 1),
+        (r'\bexecSync\s*\(', "Dangerous: child_process.execSync allows shell command execution", 1),
+        (r'\bexecFile\s*\(', "Dangerous: child_process.execFile allows shell command execution", 1),
+        (r'\bexecFileSync\s*\(', "Dangerous: child_process.execFileSync allows shell command execution", 1),
+        (r'\bspawn\s*\(', "Dangerous: child_process.spawn allows process execution", 1),
+        (r'\bspawnSync\s*\(', "Dangerous: child_process.spawnSync allows process execution", 1),
+        (r'\bfork\s*\(', "Dangerous: child_process.fork allows module execution", 1),
+        (r'\.(readFile|writeFile|readFileSync|writeFileSync|readdir|readdirSync|mkdir|rmdir|unlink|stat|lstat|access|existsSync)\s*\(', "Dangerous: File system operation", 1),
+        (r'\.(connect|createConnection|listen|gethostbyname|resolve)\s*\(', "Dangerous: Network operation", 1),
+        (r'\bsetTimeout\s*\(\s*(?:function|\([^)]*\)\s*=>|async\s*\([^)]*\)\s*=>)', "setTimeout with function is allowed", 1),
+        (r'\bsetInterval\s*\(\s*(?:function|\([^)]*\)\s*=>|async\s*\([^)]*\)\s*=>)', "setInterval with function is allowed", 1),
+        (r'__dirname\b', "Dangerous: __dirname reveals file system path", 1),
+        (r'__filename\b', "Dangerous: __filename reveals file system path", 1),
+        (r'\.mainModule\b', "Dangerous: mainModule access allows module manipulation", 1),
+        (r'\bmodule\.exports\b', "Allowed: module.exports is standard export", 1),
+        (r'\bexports\.\w+\s*=', "Allowed: exports is standard export", 1),
+    ]
+
+    ALLOWED_PATTERNS = [
+        r'console\.log',
+        r'console\.error',
+        r'console\.warn',
+        r'console\.info',
+        r'console\.debug',
+        r'\.toString\(',
+        r'Array\.isArray',
+        r'Object\.keys',
+        r'Object\.values',
+        r'Object\.entries',
+        r'JSON\.parse',
+        r'JSON\.stringify',
+        r'Math\.',
+        r'Date\.',
+        r'String\(',
+        r'Number\(',
+        r'Boolean\(',
+        r'parseInt\(',
+        r'parseFloat\(',
+        r'isNaN\(',
+        r'isFinite\(',
+    ]
+
+    def __init__(self):
+        self.unsafe_items: List[Tuple[str, int]] = []
+        self._dangerous_patterns_compiled = [(re.compile(p[0], re.IGNORECASE), p[1], p[2]) for p in self.DANGEROUS_PATTERNS]
+        self._allowed_patterns_compiled = [re.compile(p, re.IGNORECASE) for p in self.ALLOWED_PATTERNS]
+
+    def _is_allowed(self, line: str) -> bool:
+        for pattern in self._allowed_patterns_compiled:
+            if pattern.search(line):
+                return True
+        return False
+
+    def analyze(self, code: str) -> None:
+        lines = code.split('\n')
+        for line_num, line in enumerate(lines, start=1):
+            if self._is_allowed(line):
+                continue
+            for pattern, description, severity in self._dangerous_patterns_compiled:
+                if pattern.search(line):
+                    self.unsafe_items.append((f"{description}", line_num))
 
 
 class SecurePythonAnalyzer(ast.NodeVisitor):
@@ -168,6 +257,13 @@ def analyze_code_security(code: str, language: SupportLanguage) -> Tuple[bool, L
         except Exception as e:
             logger.error(f"[SafeCheck] Python parsing failed: {str(e)}")
             return False, [(f"Parsing Error: {str(e)}", -1)]
+    elif language == SupportLanguage.NODEJS:
+        analyzer = SecureJavaScriptAnalyzer()
+        analyzer.analyze(code)
+        if analyzer.unsafe_items:
+            logger.warning(f"[SafeCheck] Node.js code flagged {len(analyzer.unsafe_items)} potential security issue(s)")
+            return False, analyzer.unsafe_items
+        return True, []
     else:
         logger.warning(f"[SafeCheck] Unsupported language for security analysis: {language} — defaulting to SAFE (manual review recommended)")
         return True, [(f"Unsupported language for security analysis: {language} — defaulted to SAFE, manual review recommended", -1)]

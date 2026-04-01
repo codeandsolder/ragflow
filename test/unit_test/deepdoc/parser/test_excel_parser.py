@@ -190,24 +190,16 @@ class TestExcelParserBasic:
 
         assert len(result) == 2
 
-    def test_parse_from_file_path(self):
+    def test_parse_from_file_path(self, temp_xlsx):
         """Test parsing from a file path."""
-        import tempfile
-
         data = [["A", "B"], ["1", "2"]]
         xlsx_bytes = _create_xlsx_with_data(data)
+        temp_path = temp_xlsx(suffix=".xlsx", content=xlsx_bytes)
 
-        with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f:
-            f.write(xlsx_bytes)
-            temp_path = f.name
+        parser = RAGFlowExcelParser()
+        result = parser(BytesIO(xlsx_bytes))
 
-        try:
-            parser = RAGFlowExcelParser()
-            result = parser(BytesIO(xlsx_bytes))
-
-            assert len(result) >= 1
-        finally:
-            os.unlink(temp_path)
+        assert len(result) >= 1
 
 
 class TestExcelParserMultipleSheets:

@@ -6,11 +6,14 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 : "${ZHIPU_AI_API_KEY:?ZHIPU_AI_API_KEY is required}"
 
+: "${LOGIN_EMAIL:?LOGIN_EMAIL is required}"
+: "${LOGIN_PASSWORD:?LOGIN_PASSWORD is required}"
+
 PYTHONPATH="${REPO_ROOT}/test" uv run -m benchmark retrieval \
   --base-url http://127.0.0.1:9380 \
   --allow-register \
-  --login-email "qa@infiniflow.org" \
-  --login-password "123" \
+  --login-email "${LOGIN_EMAIL}" \
+  --login-password "${LOGIN_PASSWORD}" \
   --bootstrap-llm \
   --llm-factory ZHIPU-AI \
   --llm-api-key "$ZHIPU_AI_API_KEY" \

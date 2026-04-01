@@ -255,7 +255,8 @@ class BaseRecLabelDecode:
             if use_space_char:
                 self.character_str.append(" ")
             dict_character = list(self.character_str)
-            if "arabic" in character_dict_path:
+            dict_path_lower = character_dict_path.lower()
+            if any(rtll in dict_path_lower for rtll in ["arabic", "hebrew", "persian", "urdu", "syriac", "thaana"]):
                 self.reverse = True
 
         dict_character = self.add_special_char(dict_character)
@@ -305,7 +306,7 @@ class BaseRecLabelDecode:
 
             text = "".join(char_list)
 
-            if self.reverse:  # for arabic rec
+            if self.reverse:  # for RTL languages (arabic, hebrew, persian, etc.)
                 text = self.pred_reverse(text)
 
             result_list.append((text, np.mean(conf_list).tolist()))

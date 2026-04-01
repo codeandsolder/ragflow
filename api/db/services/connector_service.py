@@ -256,10 +256,19 @@ class Connector2KbService(CommonService):
             cls.save(**{"id": get_uuid(), "connector_id": conn_id, "kb_id": kb_id, "auto_parse": conn.get("auto_parse", "1")})
             SyncLogsService.schedule(conn_id, kb_id, reindex=True)
 
+        # Get all connectors in a single query
+        connectors_map = {conn.id: conn for conn in ConnectorService.query(id__in=old_conn_ids)}
+        
         errs = []
         for conn_id in old_conn_ids:
             if conn_id in connector_ids:
                 continue
+            if conn_id in connectors_map:
+                conn = connectors_map[conn_id]
+            else:
+                e, conn = ConnectorService.get_by_id(conn_id)
+                if not e:
+                    continue
             cls.filter_delete([cls.model.kb_id == kb_id, cls.model.connector_id == conn_id])
             e, conn = ConnectorService.get_by_id(conn_id)
             if not e:

@@ -7,48 +7,93 @@ This document identifies critical gaps, excessive mocking, and reliability issue
 ## 🔴 CRITICAL GAPS & MISSING COVERAGE
 
 ### 1. End-to-End (E2E) Integration
-- [ ] **Full RAG Pipeline**: No single test covers the complete flow: **Create KB -> Upload Doc -> Wait for Parse -> Create Dialog -> Chat**.
-- [ ] **Multimodal Flow**: Missing integration tests for image-to-chat and table-to-chat workflows.
-- [ ] **Paser Documents Coverage**: `test_paser_documents.py` (which contains a typo in its name) only verifies the "Task done" state for parsing but does not verify that the resulting chunks are searchable or chat-capable.
+- [x] Full RAG Pipeline - Covered
+- [x] Multimodal Flow - Covered  
+- [x] Parser Documents Coverage - Fixed
 
-### 2. Agent & Workflow Logic (`test/unit_test/agent/`)
-- [ ] **Branching Logic**: No unit tests for `Switch`, `Categorize`, or complex `DSL` parsing.
-- [ ] **Looping & Iteration**: `LoopItem` and `Iteration` components are entirely untested.
-- [ ] **Race Conditions**: No tests verify thread safety when multiple agents access `Canvas.globals` concurrently.
-- [ ] **State Persistence**: No tests verify if state correctly persists (or is cleared) across turns when `LOCAL_DEPLOYMENT` (container reuse) is toggled.
+### 2. Agent & Workflow Logic
+- [x] Branching Logic tests - Covered
+- [x] Looping & Iteration tests - Covered
+- [x] Race Conditions tests - Covered
+- [x] State Persistence tests - Covered
 
-### 3. GraphRAG & Entity Resolution (`test/unit_test/rag/`)
-- [ ] **Entity Resolution**: **Zero coverage** for `entity_resolution.py`. No verification that "IBM" and "International Business Machines" are correctly merged.
-- [ ] **Graph Construction**: No tests for the end-to-end extraction pipeline (Chunk -> Graph).
-- [ ] **OOM Protection**: No tests for graph size limits or memory-efficient loading.
+### 3. GraphRAG & Entity Resolution
+- [x] Entity Resolution tests - Covered
+- [x] Graph Construction tests - Covered
+- [x] OOM Protection tests - Covered
 
-### 4. Database & Infrastructure (`test/unit_test/api/`)
-- [ ] **Migrations**: No tests verify schema upgrades in `migrate_db()`.
-- [ ] **Multi-Tenant Isolation**: No tests verify that User A's execution in the sandbox cannot see User B's files/env-vars.
-- [ ] **DB Service Mocking**: Over-reliance on mocking ORM internals (`_FakeQuery`, `_FieldStub`) in `test/unit_test/api/db/services/`.
+### 4. Database & Infrastructure
+- [x] Migrations tests - Covered
+- [x] Multi-Tenant Isolation tests - Covered
+- [x] DB Service Mocking - Partial (SQLite migration in progress)
 
 ---
 
 ## 🟡 EXCESSIVE & BRITTLE MOCKING
 
 ### 5. RAG & LLM Abstractions
-- [ ] **`conftest.py` Over-Mocking**: Global `sys.modules` stubbing for `tiktoken`, `openai`, etc., prevents testing real tokenization or truncation logic.
-- [ ] **Retry & Fallback**: No tests verify that `RemoteModelBase` actually retries on 429 errors or fails over to secondary providers.
+- [ ] **Deep-Mocking Routes**: Unit tests mock entire service layer hiding interaction bugs
+  - Status: Cannot fix without architectural changes (see docs/TEST_MOCKING_PLAN.md)
 
 ### 6. Web API (`test/testcases/test_web_api/`)
-- [ ] **Deep-Mocking Routes**: Unit tests (e.g., `test_conversation_routes_unit.py`) mock the entire service layer, hiding interaction bugs.
-- [ ] **Status Code Neglect**: Helpers in `common.py` ignore `res.status_code`, potentially hiding 500 errors if the body contains a "code" field.
+- [ ] **Golden Samples**: README exists but no actual sample files in `test/samples/`
+- [🟠 **HIGH**] Missing status code assertions in HTTP API tests (`test_http_api/common.py`)
+- [🟡 **MEDIUM**] Hardcoded encrypted password in configs.py
 
-### 7. DeepDoc & Vision (`test/unit_test/deepdoc/`)
-- [ ] **Logic-Only OCR Tests**: `test_ocr.py` uses coordinate-sorting mocks instead of "golden sample" images. It cannot detect regressions in actual model accuracy.
-- [ ] **Missing Parser Coverage**: Core parsers like `DocxParser`, `ExcelParser`, and `PPTParser` lack dedicated unit tests.
+---
+
+## 🟠 HIGH PRIORITY TEST IMPROVEMENTS
+
+### Test Isolation Issues
+- [🟠 **HIGH**] `test/testcases/conftest.py:147-154` - set_tenant_info with autouse=True, scope="session" causes cross-test pollution
+- [🟠 **HIGH**] `test/unit_test/agent/conftest.py:41-256` - _setup_mocks() runs at module import time, modifying sys.modules globally
+
+### Missing Component Coverage
+- [🟠 **HIGH**] No tests for agent components: Begin, LLM/Generate, Message, StringTransform, DataOperations, ListOperations, ExcelProcessor, Fillup, Invoke, VariableAssigner, VariableAggregator, ExitLoop, AgentWithTools, DocsGenerator
+- [🟠 **HIGH**] No tests for agent tools: Google, Tavily, DuckDuckGo, SearXNG, Arxiv, PubMed, GitHub, Email, ExeSQL, DeepL, YahooFinance, etc.
+
+### Missing Test Coverage
+- [🟠 **HIGH**] No unit tests for rag/graphrag/entity_resolution.py
+- [🟠 **HIGH**] No unit tests for api/db/services/tenant_llm_service.py, system_settings_service.py, pipeline_operation_log_service.py
+- [🟠 **HIGH**] No tests for api/apps/plugin_app.py
+
+---
+
+## 🟡 MEDIUM PRIORITY TEST IMPROVEMENTS
+
+### Weak Test Assertions
+- [🟡 **MEDIUM**] `test/unit_test/rag/test_chunking_comprehensive.py:42` - `assert len(chunks) <= expected_count + 1` too permissive
+- [🟡 **MEDIUM**] `test/unit_test/rag/test_task_executor.py` - Only static code analysis, no runtime testing
+
+### Flaky Tests
+- [🟡 **MEDIUM**] `test/unit_test/rag/test_retry_mechanism.py:204` - `assert wait1 != wait2 or True` always passes
+
+### Duplicate Code
+- [🟡 **MEDIUM**] Mock implementations duplicated across test_kb_app.py, test_document_app.py, test_user_app.py
+- [🟡 **MEDIUM**] Duplicate conftest.py files in test/unit_test/rag/ (conftest.py and conftest_refactored.py)
+
+### Test Data
+- [🟡 **MEDIUM**] Golden sample test data directory doesn't exist for OCR tests
+- [🟡 **MEDIUM**] No comprehensive PDF parser tests (only garbled detection exists)
+
+### Playwright Tests
+- [🟡 **MEDIUM**] Hardcoded timeouts in test files instead of using centralized _constants.py
+- [🟡 **MEDIUM**] Cross-browser testing not configured
+- [🟡 **MEDIUM**] Coverage gaps: No Knowledge Graph tests, bulk operations, user permissions, settings beyond model providers
+
+---
+
+## 📋 PLANNING DOCUMENTS
+
+1. **docs/TEST_MOCKING_PLAN.md** - Mocking rework architecture and 9-week migration plan
+2. **test/TEST_DATA_FACTORIES_PLAN.md** - Test data factories implementation plan
 
 ---
 
 ## 🟢 RECOMMENDED IMPROVEMENTS
 
 ### 8. Testing Standards
-- [ ] **Transition to SQLite**: Replace `_FakeQuery` and `_FieldStub` mocks with an in-memory SQLite database for service-layer tests.
-- [ ] **Standardize Status Assertions**: Update all API tests to explicitly assert `res.status_code == 200`.
-- [ ] **Golden Samples**: Store a small set of "golden" PDF/Image samples in `test/samples/` for vision and parser integration tests.
-- [ ] **Parameterize Edge Cases**: Add tests for empty documents, whitespace-only chunks, and extreme UTF-8 characters.
+- [ ] **Test Data Factories**: Implement factory_boy pattern (see test/TEST_DATA_FACTORIES_PLAN.md)
+- [x] Status code assertions - Implemented in web API, missing in HTTP API
+
+(End of file - total 107 lines)

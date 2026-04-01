@@ -179,8 +179,8 @@ Example: chat benchmark creating dataset + upload + parse + chat (login + regist
   PYTHONPATH=./test uv run -m benchmark chat \
     --base-url http://127.0.0.1:9380 \
     --allow-register \
-    --login-email "qa@infiniflow.org" \
-    --login-password "123" \
+    --login-email "${LOGIN_EMAIL}" \
+    --login-password "${LOGIN_PASSWORD}" \
     --bootstrap-llm \
     --llm-factory ZHIPU-AI \
     --llm-api-key $ZHIPU_AI_API_KEY \
@@ -200,8 +200,8 @@ Example: chat benchmark with existing dataset + chat id (no creation)
   PYTHONPATH=./test uv run -m benchmark chat \
     --base-url http://127.0.0.1:9380 \
     --chat-id <existing_chat_id> \
-    --login-email "qa@infiniflow.org" \
-    --login-password "123" \
+    --login-email "${LOGIN_EMAIL}" \
+    --login-password "${LOGIN_PASSWORD}" \
     --message "What is the purpose of RAGFlow?" \
     --model "glm-4-flash@ZHIPU-AI"
 ```
@@ -211,8 +211,8 @@ Example: retrieval benchmark creating dataset + upload + parse
   PYTHONPATH=./test uv run -m benchmark retrieval \
     --base-url http://127.0.0.1:9380 \
     --allow-register \
-    --login-email "qa@infiniflow.org" \
-    --login-password "123" \
+    --login-email "${LOGIN_EMAIL}" \
+    --login-password "${LOGIN_PASSWORD}" \
     --bootstrap-llm \
     --llm-factory ZHIPU-AI \
     --llm-api-key $ZHIPU_AI_API_KEY \
@@ -228,8 +228,8 @@ Example: retrieval benchmark with existing dataset IDs
 ```
   PYTHONPATH=./test uv run -m benchmark retrieval \
     --base-url http://127.0.0.1:9380 \
-    --login-email "qa@infiniflow.org" \
-    --login-password "123" \
+    --login-email "${LOGIN_EMAIL}" \
+    --login-password "${LOGIN_PASSWORD}" \
     --dataset-ids "<dataset_id_1>,<dataset_id_2>" \
     --question "What does RAG mean?"
 ```
@@ -238,8 +238,8 @@ Example: retrieval benchmark with existing dataset IDs and document IDs
 ```
   PYTHONPATH=./test uv run -m benchmark retrieval \
     --base-url http://127.0.0.1:9380 \
-    --login-email "qa@infiniflow.org" \
-    --login-password "123" \
+    --login-email "${LOGIN_EMAIL}" \
+    --login-password "${LOGIN_PASSWORD}" \
     --dataset-id "<dataset_id>" \
     --document-ids "<doc_id_1>,<doc_id_2>" \
     --question "What does RAG mean?"
@@ -272,14 +272,19 @@ Both (retrieval then chat on the same dataset):
 
 Requires:
   - ZHIPU_AI_API_KEY exported in your shell.
+  - LOGIN_EMAIL and LOGIN_PASSWORD exported in your shell (with allow-register).
 
 Defaults used:
   - Base URL: http://127.0.0.1:9380
-  - Login: qa@infiniflow.org / 123 (with allow-register)
   - LLM bootstrap: ZHIPU-AI with $ZHIPU_AI_API_KEY
   - Dataset: bench_dataset (BAAI/bge-small-en-v1.5@Builtin)
   - Chat: bench_chat (glm-4-flash@ZHIPU-AI)
   - Chat message: "What is the purpose of RAGFlow?"
   - Retrieval question: "What does RAG mean?"
   - Iterations: 1
-  - concurrency:f 4
+  - concurrency: 4
+
+Baseline comparison:
+  - Set BENCHMARK_BASELINE_FILE to a path to enable baseline comparison.
+  - First run saves baseline; subsequent runs compare against it.
+  - Reports show percentage change and regression markers ([REGRESSION]/[IMPROVED]).

@@ -77,6 +77,8 @@ def get_connector(connector_id):
     e, conn = ConnectorService.get_by_id(connector_id)
     if not e:
         return get_data_error_result(message="Can't find this Connector!")
+    if conn.tenant_id != current_user.id:
+        return get_json_result(data=False, message="No authorization for connector.", code=RetCode.AUTHENTICATION_ERROR)
     return get_json_result(data=conn.to_dict())
 
 
@@ -164,14 +166,14 @@ async def _render_web_oauth_popup(flow_id: str, success: bool, message: str, sou
     #   Drive: ragflow-google-drive-oauth
     #   Gmail: ragflow-gmail-oauth
     payload_type = f"ragflow-{source}-oauth"
-    payload_json = json.dumps(
-        {
-            "type": payload_type,
-            "status": status,
-            "flowId": flow_id or "",
-            "message": message,
-        }
-    )
+        payload_json = json.dumps(
+            {
+                "type": payload_type,
+                "status": status,
+                "flowId": flow_id or "",
+                "message": escaped_message,
+            }
+        )
     # TODO(google-oauth): title/heading/message may need to reflect drive/gmail based on cached type
     html = WEB_OAUTH_POPUP_TEMPLATE.format(
         title=f"Google {source.capitalize()} Authorization",

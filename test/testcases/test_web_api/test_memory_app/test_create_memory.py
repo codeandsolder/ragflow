@@ -20,6 +20,7 @@ import pytest
 from test_web_api.common import create_memory
 from configs import INVALID_API_TOKEN
 from libs.auth import RAGFlowWebApiAuth
+from test.testcases.conftest import DEFAULT_LLM_ID
 
 
 class TestAuthorization:
@@ -46,7 +47,7 @@ class TestMemoryCreate:
             "name": name,
             "memory_type": ["raw"] + random.choices(["semantic", "episodic", "procedural"], k=random.randint(0, 3)),
             "embd_id": "BAAI/bge-small-en-v1.5@Builtin",
-            "llm_id": "glm-4-flash@ZHIPU-AI",
+            "llm_id": DEFAULT_LLM_ID,
         }
         res = create_memory(WebApiAuth, payload)
         assert res["code"] == 0, res
@@ -69,7 +70,7 @@ class TestMemoryCreate:
             "name": name,
             "memory_type": ["raw"] + random.choices(["semantic", "episodic", "procedural"], k=random.randint(0, 3)),
             "embd_id": "BAAI/bge-small-en-v1.5@Builtin",
-            "llm_id": "glm-4-flash@ZHIPU-AI",
+            "llm_id": DEFAULT_LLM_ID,
         }
         res = create_memory(WebApiAuth, payload)
         assert res["message"] == expected_message, res
@@ -77,7 +78,7 @@ class TestMemoryCreate:
     @pytest.mark.p2
     @pytest.mark.parametrize("name", ["invalid_type_name", "memory_alpha"])
     def test_type_invalid(self, WebApiAuth, name):
-        payload = {"name": name, "memory_type": ["something"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": "glm-4-flash@ZHIPU-AI"}
+        payload = {"name": name, "memory_type": ["something"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": DEFAULT_LLM_ID}
         res = create_memory(WebApiAuth, payload)
         assert res["message"] == f"Memory type '{ {'something'} }' is not supported.", res
 
@@ -88,7 +89,26 @@ class TestMemoryCreate:
             "name": name,
             "memory_type": ["raw"] + random.choices(["semantic", "episodic", "procedural"], k=random.randint(0, 3)),
             "embd_id": "BAAI/bge-small-en-v1.5@Builtin",
-            "llm_id": "glm-4-flash@ZHIPU-AI",
+            "llm_id": DEFAULT_LLM_ID,
+        }
+        res = create_memory(WebApiAuth, payload)
+        assert res["message"] == expected_message, res
+
+    @pytest.mark.p2
+    @pytest.mark.parametrize("name", ["invalid_type_name", "memory_alpha"])
+    def test_type_invalid(self, WebApiAuth, name):
+        payload = {"name": name, "memory_type": ["something"], "embd_id": "BAAI/bge-small-en-v1.5@Builtin", "llm_id": DEFAULT_LLM_ID}
+        res = create_memory(WebApiAuth, payload)
+        assert res["message"] == f"Memory type '{ {'something'} }' is not supported.", res
+
+    @pytest.mark.p3
+    def test_name_duplicated(self, WebApiAuth):
+        name = "duplicated_name_test"
+        payload = {
+            "name": name,
+            "memory_type": ["raw"] + random.choices(["semantic", "episodic", "procedural"], k=random.randint(0, 3)),
+            "embd_id": "BAAI/bge-small-en-v1.5@Builtin",
+            "llm_id": DEFAULT_LLM_ID,
         }
         res1 = create_memory(WebApiAuth, payload)
         assert res1["code"] == 0, res1

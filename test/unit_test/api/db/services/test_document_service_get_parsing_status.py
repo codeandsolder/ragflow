@@ -18,9 +18,9 @@ import types
 import warnings
 
 import pytest
+import peewee
+from playhouse.sqlite_ext import SqliteExtDatabase
 
-# xgboost imports pkg_resources and emits a deprecation warning that is promoted
-# to error in our pytest configuration; ignore it for this unit test module.
 warnings.filterwarnings(
     "ignore",
     message="pkg_resources is deprecated as an API.*",
@@ -67,126 +67,90 @@ _install_cv2_stub_if_unavailable()
 from api.db.services.document_service import DocumentService  # noqa: E402
 from common.constants import TaskStatus  # noqa: E402
 
-# ---------------------------------------------------------------------------
-# Helpers to access the original function bypassing @DB.connection_context()
-# ---------------------------------------------------------------------------
+
+class _SqliteDocument(peewee.Model):
+    """SQLite version of Document model for testing parsing status aggregation."""
+
+    id = peewee.CharField(max_length=32, primary_key=True)
+    kb_id = peewee.CharField(max_length=256, null=False, index=True)
+    run = peewee.CharField(max_length=1, null=True, default="0", index=True)
+    create_time = peewee.BigIntegerField(null=True, index=True)
+
+    class Meta:
+        table_name = "document"
+        database = None
 
 
-def _unwrapped_get_parsing_status():
-    """Return the original (un-decorated) get_parsing_status_by_kb_ids function.
-
-    @classmethod + @DB.connection_context() together means:
-      DocumentService.get_parsing_status_by_kb_ids.__func__  -> connection_context wrapper
-      ....__func__.__wrapped__                               -> original function
-    """
-    return DocumentService.get_parsing_status_by_kb_ids.__func__.__wrapped__
-
-
-# ---------------------------------------------------------------------------
-# Fake ORM helpers – mimic the minimal peewee query chain used by the function
-# ---------------------------------------------------------------------------
+@pytest.fixture
+def sqlite_db():
+    """Create in-memory SQLite database with schema."""
+    db = SqliteExtDatabase(":memory:")
+    _SqliteDocument._meta.database = db
+    db.create_tables([_SqliteDocument])
+    yield db
+    db.close()
 
 
-class _FieldStub:
-    """Minimal stand-in for a peewee model field used in select/where/group_by."""
+@pytest.fixture
+def populate_documents(sqlite_db):
+    """Insert sample documents into the test DB."""
 
-    def in_(self, values):
-        """Called by .where(cls.model.kb_id.in_(kb_ids)) – no-op in tests."""
-        return self
+    def _populate(rows):
+        _SqliteDocument.delete().execute()
+        for row in rows:
+            _SqliteDocument.create(**row)
+        return sqlite_db
 
-    def alias(self, name):
-        return self
-
-
-class _FakeQuery:
-    """Chains .where(), .group_by(), .dicts() without touching a real database."""
-
-    def __init__(self, rows):
-        self._rows = rows
-
-    def where(self, *_args, **_kwargs):
-        return self
-
-    def group_by(self, *_args, **_kwargs):
-        return self
-
-    def dicts(self):
-        return list(self._rows)
-
-
-def _make_fake_model(rows):
-    """Create a fake Document model class whose select() returns *rows*."""
-
-    class _FakeModel:
-        id = _FieldStub()
-        kb_id = _FieldStub()
-        run = _FieldStub()
-
-        @classmethod
-        def select(cls, *_args):
-            return _FakeQuery(rows)
-
-    return _FakeModel
-
-
-# ---------------------------------------------------------------------------
-# Pytest fixture – patch DocumentService.model per test
-# ---------------------------------------------------------------------------
+    return _populate
 
 
 @pytest.fixture()
-def call_with_rows(monkeypatch):
-    """Return a helper that runs get_parsing_status_by_kb_ids with fake DB rows."""
+def call_with_sqlite(sqlite_db, populate_documents, monkeypatch):
+    """Return a helper that runs get_parsing_status_by_kb_ids with real SQLite queries."""
 
     def _call(rows, kb_ids):
-        monkeypatch.setattr(DocumentService, "model", _make_fake_model(rows))
-        fn = _unwrapped_get_parsing_status()
+        populate_documents(rows)
+        monkeypatch.setattr(DocumentService, "model", _SqliteDocument)
+        fn = DocumentService.get_parsing_status_by_kb_ids.__func__.__wrapped__
         return fn(DocumentService, kb_ids)
 
     return _call
 
-
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
 
 _ALL_STATUS_FIELDS = frozenset(["unstart_count", "running_count", "cancel_count", "done_count", "fail_count"])
 
 
 @pytest.mark.p2
 class TestGetParsingStatusByKbIds:
-    # ------------------------------------------------------------------
-    # Edge-case: empty input list – must short-circuit before any DB call
-    # ------------------------------------------------------------------
-
-    def test_empty_kb_ids_returns_empty_dict(self, call_with_rows):
-        result = call_with_rows([], [])
+    def test_empty_kb_ids_returns_empty_dict(self, call_with_sqlite):
+        result = call_with_sqlite([], [])
         assert result == {}
 
-    # ------------------------------------------------------------------
-    # A kb_id present in the input but with no matching documents
-    # ------------------------------------------------------------------
-
-    def test_single_kb_id_no_documents(self, call_with_rows):
-        result = call_with_rows(rows=[], kb_ids=["kb-1"])
+    def test_single_kb_id_no_documents(self, call_with_sqlite):
+        result = call_with_sqlite(rows=[], kb_ids=["kb-1"])
 
         assert set(result.keys()) == {"kb-1"}
         assert set(result["kb-1"].keys()) == _ALL_STATUS_FIELDS
         assert all(v == 0 for v in result["kb-1"].values())
 
-    # ------------------------------------------------------------------
-    # A single kb_id with one document in each run-status bucket
-    # ------------------------------------------------------------------
-
-    def test_single_kb_id_all_five_statuses(self, call_with_rows):
+    def test_single_kb_id_all_five_statuses(self, call_with_sqlite):
         rows = [
-            {"kb_id": "kb-1", "run": TaskStatus.UNSTART.value, "cnt": 3},
-            {"kb_id": "kb-1", "run": TaskStatus.RUNNING.value, "cnt": 1},
-            {"kb_id": "kb-1", "run": TaskStatus.CANCEL.value, "cnt": 2},
-            {"kb_id": "kb-1", "run": TaskStatus.DONE.value, "cnt": 10},
-            {"kb_id": "kb-1", "run": TaskStatus.FAIL.value, "cnt": 4},
+            {"id": f"doc-{i}", "kb_id": "kb-1", "run": TaskStatus.UNSTART.value}
+            for i in range(3)
+        ] + [
+            {"id": f"doc-running-{i}", "kb_id": "kb-1", "run": TaskStatus.RUNNING.value}
+            for i in range(1)
+        ] + [
+            {"id": f"doc-cancel-{i}", "kb_id": "kb-1", "run": TaskStatus.CANCEL.value}
+            for i in range(2)
+        ] + [
+            {"id": f"doc-done-{i}", "kb_id": "kb-1", "run": TaskStatus.DONE.value}
+            for i in range(10)
+        ] + [
+            {"id": f"doc-fail-{i}", "kb_id": "kb-1", "run": TaskStatus.FAIL.value}
+            for i in range(4)
         ]
-        result = call_with_rows(rows=rows, kb_ids=["kb-1"])
+        result = call_with_sqlite(rows=rows, kb_ids=["kb-1"])
 
         assert result["kb-1"]["unstart_count"] == 3
         assert result["kb-1"]["running_count"] == 1
@@ -194,18 +158,14 @@ class TestGetParsingStatusByKbIds:
         assert result["kb-1"]["done_count"] == 10
         assert result["kb-1"]["fail_count"] == 4
 
-    # ------------------------------------------------------------------
-    # Two kb_ids – counts must be independent per dataset
-    # ------------------------------------------------------------------
-
-    def test_multiple_kb_ids_aggregated_separately(self, call_with_rows):
-        rows = [
-            {"kb_id": "kb-a", "run": TaskStatus.DONE.value, "cnt": 5},
-            {"kb_id": "kb-a", "run": TaskStatus.FAIL.value, "cnt": 1},
-            {"kb_id": "kb-b", "run": TaskStatus.UNSTART.value, "cnt": 7},
-            {"kb_id": "kb-b", "run": TaskStatus.DONE.value, "cnt": 2},
-        ]
-        result = call_with_rows(rows=rows, kb_ids=["kb-a", "kb-b"])
+    def test_multiple_kb_ids_aggregated_separately(self, call_with_sqlite):
+        rows = (
+            [{"id": f"doc-a-done-{i}", "kb_id": "kb-a", "run": TaskStatus.DONE.value} for i in range(5)]
+            + [{"id": f"doc-a-fail-{i}", "kb_id": "kb-a", "run": TaskStatus.FAIL.value} for i in range(1)]
+            + [{"id": f"doc-b-unstart-{i}", "kb_id": "kb-b", "run": TaskStatus.UNSTART.value} for i in range(7)]
+            + [{"id": f"doc-b-done-{i}", "kb_id": "kb-b", "run": TaskStatus.DONE.value} for i in range(2)]
+        )
+        result = call_with_sqlite(rows=rows, kb_ids=["kb-a", "kb-b"])
 
         assert set(result.keys()) == {"kb-a", "kb-b"}
 
@@ -219,65 +179,45 @@ class TestGetParsingStatusByKbIds:
         assert result["kb-b"]["done_count"] == 2
         assert result["kb-b"]["fail_count"] == 0
 
-    # ------------------------------------------------------------------
-    # An unrecognised run value must be silently ignored
-    # ------------------------------------------------------------------
-
-    def test_unknown_run_value_ignored(self, call_with_rows):
+    def test_unknown_run_value_ignored(self, call_with_sqlite):
         rows = [
-            {"kb_id": "kb-1", "run": "9", "cnt": 99},  # "9" is not a TaskStatus
-            {"kb_id": "kb-1", "run": TaskStatus.DONE.value, "cnt": 4},
+            {"id": "doc-1", "kb_id": "kb-1", "run": "9"},
+            {"id": "doc-2", "kb_id": "kb-1", "run": TaskStatus.DONE.value},
         ]
-        result = call_with_rows(rows=rows, kb_ids=["kb-1"])
+        result = call_with_sqlite(rows=rows, kb_ids=["kb-1"])
 
-        assert result["kb-1"]["done_count"] == 4
+        assert result["kb-1"]["done_count"] == 1
         assert all(result["kb-1"][f] == 0 for f in _ALL_STATUS_FIELDS - {"done_count"})
 
-    # ------------------------------------------------------------------
-    # A row whose kb_id was NOT requested must not appear in the output
-    # ------------------------------------------------------------------
-
-    def test_row_with_unrequested_kb_id_is_filtered_out(self, call_with_rows):
+    def test_row_with_unrequested_kb_id_is_filtered_out(self, call_with_sqlite):
         rows = [
-            {"kb_id": "kb-requested", "run": TaskStatus.DONE.value, "cnt": 3},
-            {"kb_id": "kb-unexpected", "run": TaskStatus.DONE.value, "cnt": 100},
+            {"id": "doc-1", "kb_id": "kb-requested", "run": TaskStatus.DONE.value},
+            {"id": "doc-2", "kb_id": "kb-unexpected", "run": TaskStatus.DONE.value},
         ]
-        result = call_with_rows(rows=rows, kb_ids=["kb-requested"])
+        result = call_with_sqlite(rows=rows, kb_ids=["kb-requested"])
 
         assert "kb-unexpected" not in result
-        assert result["kb-requested"]["done_count"] == 3
+        assert result["kb-requested"]["done_count"] == 1
 
-    # ------------------------------------------------------------------
-    # cnt values must be treated as integers regardless of DB type hints
-    # ------------------------------------------------------------------
-
-    def test_cnt_is_cast_to_int(self, call_with_rows):
+    def test_cnt_is_cast_to_int(self, call_with_sqlite):
         rows = [
-            {"kb_id": "kb-1", "run": TaskStatus.RUNNING.value, "cnt": "7"},
+            {"id": "doc-1", "kb_id": "kb-1", "run": TaskStatus.RUNNING.value},
         ]
-        result = call_with_rows(rows=rows, kb_ids=["kb-1"])
+        result = call_with_sqlite(rows=rows, kb_ids=["kb-1"])
 
-        assert result["kb-1"]["running_count"] == 7
+        assert result["kb-1"]["running_count"] == 1
         assert isinstance(result["kb-1"]["running_count"], int)
 
-    # ------------------------------------------------------------------
-    # run value stored as integer in DB (some adapters may omit str cast)
-    # ------------------------------------------------------------------
-
-    def test_run_value_as_integer_is_handled(self, call_with_rows):
+    def test_run_value_as_integer_is_handled(self, call_with_sqlite):
         rows = [
-            {"kb_id": "kb-1", "run": int(TaskStatus.DONE.value), "cnt": 5},
+            {"id": "doc-1", "kb_id": "kb-1", "run": str(int(TaskStatus.DONE.value))},
         ]
-        result = call_with_rows(rows=rows, kb_ids=["kb-1"])
+        result = call_with_sqlite(rows=rows, kb_ids=["kb-1"])
 
-        assert result["kb-1"]["done_count"] == 5
+        assert result["kb-1"]["done_count"] == 1
 
-    # ------------------------------------------------------------------
-    # All five status fields are initialised to 0 even when no rows exist
-    # ------------------------------------------------------------------
-
-    def test_all_five_fields_initialised_to_zero(self, call_with_rows):
-        result = call_with_rows(rows=[], kb_ids=["kb-empty"])
+    def test_all_five_fields_initialised_to_zero(self, call_with_sqlite):
+        result = call_with_sqlite(rows=[], kb_ids=["kb-empty"])
 
         assert result["kb-empty"] == {
             "unstart_count": 0,
@@ -287,33 +227,23 @@ class TestGetParsingStatusByKbIds:
             "fail_count": 0,
         }
 
-    # ------------------------------------------------------------------
-    # Multiple kb_ids in the input – all should appear in the result
-    # even when no documents exist for some of them
-    # ------------------------------------------------------------------
-
-    def test_requested_kb_ids_all_present_in_result(self, call_with_rows):
+    def test_requested_kb_ids_all_present_in_result(self, call_with_sqlite):
         rows = [
-            {"kb_id": "kb-with-data", "run": TaskStatus.DONE.value, "cnt": 1},
+            {"id": "doc-1", "kb_id": "kb-with-data", "run": TaskStatus.DONE.value},
         ]
-        result = call_with_rows(rows=rows, kb_ids=["kb-with-data", "kb-empty-1", "kb-empty-2"])
+        result = call_with_sqlite(rows=rows, kb_ids=["kb-with-data", "kb-empty-1", "kb-empty-2"])
 
         assert set(result.keys()) == {"kb-with-data", "kb-empty-1", "kb-empty-2"}
         assert result["kb-empty-1"] == {f: 0 for f in _ALL_STATUS_FIELDS}
         assert result["kb-empty-2"] == {f: 0 for f in _ALL_STATUS_FIELDS}
 
-    # ------------------------------------------------------------------
-    # SCHEDULE (run=="5") is not mapped – must be silently ignored
-    # ------------------------------------------------------------------
-
-    def test_schedule_status_is_not_mapped(self, call_with_rows):
+    def test_schedule_status_is_not_mapped(self, call_with_sqlite):
         rows = [
-            {"kb_id": "kb-1", "run": TaskStatus.SCHEDULE.value, "cnt": 3},
-            {"kb_id": "kb-1", "run": TaskStatus.DONE.value, "cnt": 2},
+            {"id": "doc-1", "kb_id": "kb-1", "run": TaskStatus.SCHEDULE.value},
+            {"id": "doc-2", "kb_id": "kb-1", "run": TaskStatus.DONE.value},
         ]
-        result = call_with_rows(rows=rows, kb_ids=["kb-1"])
+        result = call_with_sqlite(rows=rows, kb_ids=["kb-1"])
 
-        assert result["kb-1"]["done_count"] == 2
-        # SCHEDULE is not a tracked bucket
+        assert result["kb-1"]["done_count"] == 1
         assert "schedule_count" not in result["kb-1"]
         assert all(result["kb-1"][f] == 0 for f in _ALL_STATUS_FIELDS - {"done_count"})

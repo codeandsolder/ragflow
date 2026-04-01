@@ -2,6 +2,7 @@ import { MoreButton } from '@/components/more-button';
 import { Card, CardContent } from '@/components/ui/card';
 import { IAgentLogResponse } from '@/interfaces/database/agent';
 import { cn } from '@/lib/utils';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SessionDropdown } from './session-dropdown';
 
@@ -12,7 +13,7 @@ interface SessionCardProps {
   removeTemporarySession?: (sessionId: string) => void;
 }
 
-export function SessionCard({
+export const SessionCard = memo(function SessionCard({
   session,
   selected,
   onClick,
@@ -44,4 +45,4 @@ export function SessionCard({
       </CardContent>
     </Card>
   );
-}
+});

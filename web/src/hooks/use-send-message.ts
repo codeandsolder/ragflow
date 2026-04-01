@@ -89,7 +89,7 @@ export type IEventList = Array<IChatEvent>;
 export const useSendMessageBySSE = (url: string = api.completeConversation) => {
   const [answerList, setAnswerList] = useState<IEventList>([]);
   const [done, setDone] = useState(true);
-  const timer = useRef<any>();
+  const timer = useRef<ReturnType<typeof setTimeout>>();
   const sseRef = useRef<AbortController>();
 
   const initializeSseRef = useCallback(() => {
@@ -166,12 +166,10 @@ export const useSendMessageBySSE = (url: string = api.completeConversation) => {
             }
           } catch (e) {
             if (e instanceof DOMException && e.name === 'AbortError') {
-              console.log('Request was aborted by user or logic.');
               break;
             }
           }
-        }
-        console.info('done?');
+            }
         setDone(true);
         resetAnswerList();
         return { data: await res, response };

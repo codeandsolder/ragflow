@@ -147,6 +147,7 @@ async def set_dialog():
 
 @manager.route("/get", methods=["GET"])  # noqa: F821
 @login_required
+@resource_owner_required
 def get():
     dialog_id = request.args["dialog_id"]
     try:
@@ -161,12 +162,14 @@ def get():
 
 
 def get_kb_names(kb_ids):
+    if not kb_ids:
+        return [], []
+    kbs = KnowledgebaseService.get_by_ids(kb_ids)
     ids, nms = [], []
-    for kid in kb_ids:
-        e, kb = KnowledgebaseService.get_by_id(kid)
-        if not e or kb.status != StatusEnum.VALID.value:
+    for kb in kbs:
+        if kb.status != StatusEnum.VALID.value:
             continue
-        ids.append(kid)
+        ids.append(kb.id)
         nms.append(kb.name)
     return ids, nms
 

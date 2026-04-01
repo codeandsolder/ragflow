@@ -23,7 +23,7 @@ import { ITraceData } from '@/interfaces/database/agent';
 import { cn } from '@/lib/utils';
 import { t } from 'i18next';
 import { get, isEmpty } from 'lodash';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, memo } from 'react';
 import { Operator } from '../constant';
 import { JsonViewer } from '../form/components/json-viewer';
 import { useCacheChatLog } from '../hooks/use-cache-chat-log';
@@ -90,7 +90,7 @@ function getInputsOrOutputs(
 
   return inputsOrOutputs;
 }
-export const WorkFlowTimeline = ({
+const WorkFlowTimelineContent = ({
   currentEventListWithoutMessage,
   currentMessageId,
   canvasId,
@@ -335,3 +335,5 @@ export const WorkFlowTimeline = ({
     </Timeline>
   );
 };
+
+export const WorkFlowTimeline = memo(WorkFlowTimelineContent);

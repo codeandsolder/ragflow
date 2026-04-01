@@ -488,7 +488,7 @@ const FloatingChatWidget = () => {
                       setInputValue(newValue);
                       handleInputChange(e);
                     }}
-                    onKeyPress={handleKeyPress}
+                    onKeyDown={handleKeyPress}
                     placeholder="Type your message..."
                     rows={1}
                     className="w-full resize-none border border-gray-300 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
@@ -665,7 +665,7 @@ const FloatingChatWidget = () => {
                         // Also update the hook's state
                         handleInputChange(e);
                       }}
-                      onKeyPress={handleKeyPress}
+                      onKeyDown={handleKeyPress}
                       placeholder="Type your message..."
                       rows={1}
                       className="w-full resize-none border border-gray-300 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"

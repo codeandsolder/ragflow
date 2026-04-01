@@ -16,4 +16,25 @@
 
 import ragflow_sdk
 
-print(ragflow_sdk.__version__)
+API_KEY = "ragflow-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+BASE_URL = "http://127.0.0.1:9380"
+
+
+def main():
+    ragflow = ragflow_sdk.RAGFlow(api_key=API_KEY, base_url=BASE_URL)
+
+    datasets = ragflow.list_datasets(id="your_dataset_id")
+    for dataset in datasets:
+        print(f"Dataset: {dataset.name} (ID: {dataset.id})")
+        chats = ragflow.list_chats(dataset_id=dataset.id)
+        for chat in chats:
+            print(f"  Chat: {chat.name} (ID: {chat.id})")
+            sessions = chat.list_sessions()
+            for session in sessions:
+                print(f"    Session: {session.id}")
+
+    ragflow.close()
+
+
+if __name__ == "__main__":
+    main()

@@ -235,5 +235,88 @@ class TestMigrations:
                 mock_db.execute_sql.assert_called_once()
 
 
+class TestMigrateDb:
+    """Test cases for the complete migrate_db() function."""
+
+    def test_migrate_db_executes_all_migrations(self):
+        """Test that migrate_db() executes all migration operations."""
+        from unittest.mock import patch, MagicMock, call
+
+        with patch("api.db.db_models.DatabaseMigrator") as mock_migrator_class:
+            mock_migrator = MagicMock()
+            mock_migrator_class.value = MagicMock(return_value=mock_migrator)
+
+            with patch("api.db.db_models.alter_db_add_column") as mock_add_column:
+                with patch("api.db.db_models.alter_db_column_type") as mock_column_type:
+                    with patch("api.db.db_models.alter_db_rename_column") as mock_rename:
+                        with patch("api.db.db_models.update_tenant_llm_to_id_primary_key") as mock_update_tenant:
+                            with patch("api.db.db_models.migrate_add_unique_email") as mock_unique_email:
+                                with patch("api.db.db_models.DB"):
+                                    from api.db.db_models import migrate_db
+
+                                    migrate_db()
+
+                                    assert mock_add_column.call_count >= 30, "Should call alter_db_add_column at least 30 times"
+                                    assert mock_column_type.call_count >= 5, "Should call alter_db_column_type at least 5 times"
+                                    assert mock_rename.call_count >= 2, "Should call alter_db_rename_column at least 2 times"
+                                    assert mock_update_tenant.called, "Should call update_tenant_llm_to_id_primary_key"
+                                    assert mock_unique_email.called, "Should call migrate_add_unique_email"
+
+    def test_migrate_db_adds_required_columns(self):
+        """Test that migrate_db() adds all required columns."""
+        from unittest.mock import patch, MagicMock
+
+        added_columns = []
+
+        def capture_add_column(migrator, table, col_name, *args, **kwargs):
+            added_columns.append((table, col_name))
+
+        with patch("api.db.db_models.DatabaseMigrator") as mock_migrator_class:
+            mock_migrator = MagicMock()
+            mock_migrator_class.value = MagicMock(return_value=mock_migrator)
+
+            with patch("api.db.db_models.alter_db_add_column", side_effect=capture_add_column):
+                with patch("api.db.db_models.alter_db_column_type"):
+                    with patch("api.db.db_models.alter_db_rename_column"):
+                        with patch("api.db.db_models.update_tenant_llm_to_id_primary_key"):
+                            with patch("api.db.db_models.migrate_add_unique_email"):
+                                with patch("api.db.db_models.DB"):
+                                    from api.db.db_models import migrate_db
+
+                                    migrate_db()
+
+                                    tables_with_cols = {t for t, c in added_columns}
+                                    assert "file" in tables_with_cols, "Should add columns to 'file' table"
+                                    assert "tenant" in tables_with_cols, "Should add columns to 'tenant' table"
+                                    assert "dialog" in tables_with_cols, "Should add columns to 'dialog' table"
+
+    def test_migrate_db_handles_rename_migrations(self):
+        """Test that migrate_db() handles column renames correctly."""
+        from unittest.mock import patch, MagicMock
+
+        renames = []
+
+        def capture_rename(migrator, table, old_name, new_name):
+            renames.append((table, old_name, new_name))
+
+        with patch("api.db.db_models.DatabaseMigrator") as mock_migrator_class:
+            mock_migrator = MagicMock()
+            mock_migrator_class.value = MagicMock(return_value=mock_migrator)
+
+            with patch("api.db.db_models.alter_db_add_column"):
+                with patch("api.db.db_models.alter_db_column_type"):
+                    with patch("api.db.db_models.alter_db_rename_column", side_effect=capture_rename):
+                        with patch("api.db.db_models.update_tenant_llm_to_id_primary_key"):
+                            with patch("api.db.db_models.migrate_add_unique_email"):
+                                with patch("api.db.db_models.DB"):
+                                    from api.db.db_models import migrate_db
+
+                                    migrate_db()
+
+                                    rename_pairs = {(t, o, n) for t, o, n in renames}
+                                    assert ("task", "process_duation", "process_duration") in rename_pairs, "Should rename process_duation to process_duration in task table"
+                                    assert ("document", "process_duation", "process_duration") in rename_pairs, "Should rename process_duation to process_duration in document table"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

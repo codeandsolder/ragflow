@@ -1,13 +1,11 @@
-import os
 import re
 import time
 from urllib.parse import urljoin
 
 from playwright.sync_api import expect
 
+from test.playwright.helpers._constants import RESULT_TIMEOUT_MS
 from test.playwright.helpers.response_capture import capture_response
-
-RESULT_TIMEOUT_MS = int(os.getenv("PLAYWRIGHT_RESULT_TIMEOUT_MS", 15000))
 
 
 def _unique_name(prefix: str) -> str:

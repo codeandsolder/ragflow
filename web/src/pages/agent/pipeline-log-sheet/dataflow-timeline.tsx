@@ -12,7 +12,7 @@ import { ITraceData } from '@/interfaces/database/agent';
 import { cn } from '@/lib/utils';
 import { isEmpty } from 'lodash';
 import { File } from 'lucide-react';
-import { useCallback } from 'react';
+import { useCallback, memo } from 'react';
 import { Operator } from '../constant';
 import OperatorIcon from '../operator-icon';
 import useGraphStore from '../store';
@@ -30,7 +30,7 @@ interface DataflowTrace {
   progress: number;
   timestamp: number;
 }
-export function DataflowTimeline({ traceList }: DataflowTimelineProps) {
+function DataflowTimelineContent({ traceList }: DataflowTimelineProps) {
   const getNode = useGraphStore((state) => state.getNode);
 
   const getNodeData = useCallback(
@@ -135,3 +135,5 @@ export function DataflowTimeline({ traceList }: DataflowTimelineProps) {
     </Timeline>
   );
 }
+
+export const DataflowTimeline = memo(DataflowTimelineContent);

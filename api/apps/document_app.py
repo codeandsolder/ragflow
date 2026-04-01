@@ -18,6 +18,7 @@ import os.path
 import pathlib
 import re
 from pathlib import Path, PurePosixPath, PureWindowsPath
+from urllib.parse import urlparse
 
 from quart import make_response, request
 
@@ -98,6 +99,11 @@ async def upload():
             _close_file_objs(file_objs)
             return get_json_result(data=False, message=f"File name must be {FILE_NAME_LEN_LIMIT} bytes or less.", code=RetCode.ARGUMENT_ERROR)
 
+        # Enhanced security validation for filename
+        if not _is_safe_download_filename(file_obj.filename):
+            _close_file_objs(file_objs)
+            return get_json_result(data=False, message="Invalid filename.", code=RetCode.ARGUMENT_ERROR)
+
     e, kb = KnowledgebaseService.get_by_id(kb_id)
     if not e:
         raise LookupError("Can't find this dataset!")
@@ -129,6 +135,17 @@ async def web_crawl():
     url = form.get("url")
     if not is_valid_url(url):
         return get_json_result(data=False, message="The URL format is invalid", code=RetCode.ARGUMENT_ERROR)
+
+    # Enhanced security validation for URL - prevent dangerous URL schemes
+    url_lower = url.lower()
+    if "javascript:" in url_lower or "data:" in url_lower or "vbscript:" in url_lower:
+        return get_json_result(data=False, message="Invalid URL scheme.", code=RetCode.ARGUMENT_ERROR)
+
+    # Additional security checks - block internal hostnames and IPs
+    parsed_url = urlparse(url)
+    if parsed_url.hostname in ("localhost", "127.0.0.1", "0.0.0.0"):
+        return get_json_result(data=False, message="URL not allowed.", code=RetCode.ARGUMENT_ERROR)
+
     e, kb = KnowledgebaseService.get_by_id(kb_id)
     if not e:
         raise LookupError("Can't find this dataset!")
@@ -373,8 +390,7 @@ async def list_docs():
 @manager.route("/filter", methods=["GET"])  # noqa: F821
 @login_required
 async def get_filter():
-    req = await get_request_json()
-    kb_id = req.get("kb_id")
+    kb_id = request.args.get("kb_id", "")
     if not kb_id:
         return get_json_result(data=False, message='Lack of "KB ID"', code=RetCode.ARGUMENT_ERROR)
     tenants = UserTenantService.query(user_id=current_user.id)
@@ -383,18 +399,24 @@ async def get_filter():
             break
     else:
         return get_json_result(data=False, message="Only owner of dataset authorized for this operation.", code=RetCode.OPERATING_ERROR)
-    keywords = req.get("keywords", "")
-    suffix = req.get("suffix", [])
-    run_status = req.get("run_status", [])
+    keywords = request.args.get("keywords", "")
+    suffix = request.args.get("suffix", "")
+    if suffix:
+        suffix = [s.strip() for s in suffix.split(",") if s.strip()]
+    else:
+        suffix = []
+    run_status = request.args.get("run_status", "")
     if run_status:
         invalid_status = {s for s in run_status if s not in VALID_TASK_STATUS}
         if invalid_status:
             return get_data_error_result(message=f"Invalid filter run status conditions: {', '.join(invalid_status)}")
-    types = req.get("types", [])
+    types = request.args.get("types", "")
     if types:
-        invalid_types = {t for t in types if t not in VALID_FILE_TYPES}
+        types_list = [t.strip() for t in types.split(",") if t.strip()]
+        invalid_types = {t for t in types_list if t not in VALID_FILE_TYPES}
         if invalid_types:
             return get_data_error_result(message=f"Invalid filter conditions: {', '.join(invalid_types)} type{'s' if len(invalid_types) > 1 else ''}")
+        types = types_list
     try:
         filter, total = DocumentService.get_filter_by_kb_id(kb_id, keywords, run_status, types, suffix)
         return get_json_result(data={"total": total, "filter": filter})
@@ -402,7 +424,7 @@ async def get_filter():
         return server_error_response(e)
 
 
-@manager.route("/infos", methods=["GET"])  # noqa: F821
+@manager.route("/infos", methods=["POST"])  # noqa: F821
 @login_required
 async def doc_infos():
     req = await get_request_json()
@@ -821,10 +843,43 @@ async def change_parser():
 @login_required
 async def get_image(image_id):
     try:
+        if not image_id or "-" not in image_id:
+            return get_data_error_result(message="Image not found.")
         arr = image_id.split("-")
         if len(arr) != 2:
             return get_data_error_result(message="Image not found.")
-        bkt, nm = image_id.split("-")
+        bkt, nm = arr
+
+        # Enhanced security validation
+        if not bkt or not nm or "/" in nm or ".." in nm or "\\" in nm:
+            return get_data_error_result(message="Image not found.")
+
+        # Validate bucket and filename patterns
+        if not re.match(r"^[a-zA-Z0-9_-]+$", bkt):
+            return get_data_error_result(message="Invalid bucket name.")
+        if not re.match(r"^[a-zA-Z0-9._-]+$", nm):
+            return get_data_error_result(message="Invalid filename.")
+
+        # Enhanced security validation
+        if not bkt or not nm or "/" in nm or ".." in nm or "\\" in nm:
+            return get_data_error_result(message="Invalid filename.")
+
+        # Validate bucket and filename patterns
+        if not re.match(r"^[a-zA-Z0-9_-]+$", bkt):
+            return get_data_error_result(message="Invalid bucket name.")
+        if not re.match(r"^[a-zA-Z0-9._-]+$", nm):
+            return get_data_error_result(message="Invalid filename.")
+
+        # Enhanced security validation
+        if not bkt or not nm or "/" in nm or ".." in nm or "\\" in nm:
+            return get_data_error_result(message="Invalid filename.")
+
+        # Validate bucket and filename patterns
+        if not re.match(r"^[a-zA-Z0-9_-]+$", bkt):
+            return get_data_error_result(message="Invalid bucket name.")
+        if not re.match(r"^[a-zA-Z0-9._-]+$", nm):
+            return get_data_error_result(message="Invalid filename.")
+
         data = await thread_pool_exec(settings.STORAGE_IMPL.get, bkt, nm)
         response = await make_response(data)
         response.headers.set("Content-Type", "image/JPEG")
@@ -857,6 +912,10 @@ async def get_artifact(filename):
         ext = os.path.splitext(basename)[1].lower()
         if ext not in ARTIFACT_CONTENT_TYPES:
             return get_data_error_result(message="Invalid file type.")
+        # Additional validation: UUID format check
+        filename_without_ext = os.path.splitext(basename)[0]
+        if not re.match(r"^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$", filename_without_ext):
+            return get_data_error_result(message="Invalid filename format.")
         data = await thread_pool_exec(settings.STORAGE_IMPL.get, bucket, basename)
         if not data:
             return get_data_error_result(message="Artifact not found.")
@@ -962,7 +1021,8 @@ async def parse():
             if not body:
                 body = page.content().encode("utf-8") if page.content() is not None else b""
 
-            Path(filepath).write_bytes(body)
+            with open(filepath, "wb") as f:
+                f.write(body)
             txt = FileService.parse_docs([File(filename, filepath)], current_user.id)
             browser.close()
             return get_json_result(data=txt)

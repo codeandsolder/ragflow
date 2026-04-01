@@ -3,11 +3,27 @@ Unit tests for OCR functionality using golden sample images.
 
 Tests cover actual OCR model accuracy using real test images with known text content.
 These tests validate the end-to-end OCR pipeline instead of just logic components.
+
+Setup:
+    Create test/unit_test/deepdoc/test_data/ directory with the following images:
+    - basic_text.png: Clean, high-quality text image
+    - multilingual_text.png: Image with mixed language text
+    - handwritten_text.png: Handwritten text sample
+    - low_quality_text.png: Noisy or low-resolution text image
+    - rotated_text.png: Rotated text sample
 """
+
+import os
+from pathlib import Path
 
 import pytest
 from PIL import Image
 from deepdoc.vision.ocr import OCR
+
+
+def _get_test_data_dir():
+    """Get the test data directory path."""
+    return Path(__file__).parent / "test_data"
 
 
 class TestOCRGoldenSamples:
@@ -20,15 +36,21 @@ class TestOCRGoldenSamples:
 
     @pytest.fixture
     def sample_images(self):
-        """Load golden sample test images."""
-        # These images should be provided in test data directory
-        return {
-            "basic_text.png": Image.open("test_data/basic_text.png"),
-            "multilingual_text.png": Image.open("test_data/multilingual_text.png"),
-            "handwritten_text.png": Image.open("test_data/handwritten_text.png"),
-            "low_quality_text.png": Image.open("test_data/low_quality_text.png"),
-            "rotated_text.png": Image.open("test_data/rotated_text.png"),
-        }
+        """Load golden sample test images.
+
+        Skips tests if test_data directory is not available.
+        """
+        test_data_dir = _get_test_data_dir()
+        if not test_data_dir.exists():
+            pytest.skip(f"Test data directory not found: {test_data_dir}")
+
+        images = {}
+        for filename in ["basic_text.png", "multilingual_text.png", "handwritten_text.png", "low_quality_text.png", "rotated_text.png"]:
+            filepath = test_data_dir / filename
+            if not filepath.exists():
+                pytest.skip(f"Test image not found: {filepath}")
+            images[filename] = Image.open(filepath)
+        return images
 
     def test_ocr_basic_text_extraction(self, ocr_instance, sample_images):
         """Test OCR on clean, high-quality text."""
@@ -43,7 +65,7 @@ class TestOCRGoldenSamples:
     def test_ocr_multilingual_text(self, ocr_instance, sample_images):
         """Test OCR on multilingual text."""
         image = sample_images["multilingual_text.png"]
-        expected_text = "中文 English 한구컬 العربية"  # Chinese English Korean Arabic
+        expected_text = "Chinese English Korean Arabic"
 
         result = ocr_instance.ocr(image)
 

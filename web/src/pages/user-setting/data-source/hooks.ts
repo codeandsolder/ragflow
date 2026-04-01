@@ -46,7 +46,7 @@ export const useListDataSource = () => {
 
   const updatedDataSourceTemplates = useMemo(() => {
     const categorizedData = categorizeDataBySource(list || []);
-    let sourceList: Array<IDataSorceInfo & { list: Array<IDataSourceBase> }> =
+    const sourceList: Array<IDataSorceInfo & { list: Array<IDataSourceBase> }> =
       [];
     Object.keys(categorizedData).forEach((key: string) => {
       const k = key as DataSourceKey;
@@ -61,7 +61,6 @@ export const useListDataSource = () => {
       }
     });
 
-    console.log('🚀 ~ useListDataSource ~ sourceList:', sourceList);
     return sourceList;
   }, [list]);
 
@@ -91,7 +90,6 @@ export const useAddDataSource = () => {
     async (data: any) => {
       setAddLoading(true);
       const { data: res } = await dataSourceService.dataSourceSet(data);
-      console.log('🚀 ~ handleAddOk ~ code:', res.code);
       if (res.code === 0) {
         queryClient.invalidateQueries({ queryKey: ['data-source'] });
         message.success(t(`message.operated`));

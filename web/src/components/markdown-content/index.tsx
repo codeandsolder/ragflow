@@ -54,19 +54,27 @@ const MarkdownContent = ({
   const { t } = useTranslation();
   const { setDocumentIds, data: fileThumbnails } =
     useFetchDocumentThumbnailsByIds();
-  const contentWithCursor = useMemo(() => {
-    let text = DOMPurify.sanitize(content, {
-      ADD_TAGS: ['think', 'section'],
-      ADD_ATTR: ['class'],
-    });
+    const contentWithCursor = useMemo(() => {
+      let text = DOMPurify.sanitize(content, {
+        ADD_TAGS: ['think', 'section'],
+        ADD_ATTR: ['class'],
+        ALLOWED_TAGS: ['p', 'br', 'b', 'i', 'em', 'strong', 'a', 'img', 'code', 'pre', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'div', 'span', 'custom-typography', 'think', 'section'],
+        ALLOWED_ATTR: {
+          '*': ['class', 'dir'],
+          a: ['href', 'title'],
+          img: ['src', 'alt', 'title'],
+          code: ['class'],
+        },
+        ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|data):|[^a-z]|[a-z+.][^:]*)$/i,
+      });
 
-    // let text = content;
-    if (text === '') {
-      text = t('chat.searching');
-    }
-    const nextText = replaceTextByOldReg(text);
-    return pipe(replaceThinkToSection, preprocessLaTeX)(nextText);
-  }, [content, t]);
+      // let text = content;
+      if (text === '') {
+        text = t('chat.searching');
+      }
+      const nextText = replaceTextByOldReg(text);
+      return pipe(replaceThinkToSection, preprocessLaTeX)(nextText);
+    }, [content, t]);
 
   useEffect(() => {
     const docAggs = reference?.doc_aggs;

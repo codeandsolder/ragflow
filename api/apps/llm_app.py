@@ -364,6 +364,9 @@ async def add_llm():
 @validate_request("llm_factory", "llm_name")
 async def delete_llm():
     req = await get_request_json()
+    objs = TenantLLMService.query(tenant_id=current_user.id, llm_factory=req["llm_factory"], llm_name=req["llm_name"])
+    if not objs:
+        return get_data_error_result(message="LLM not found for this tenant!")
     TenantLLMService.filter_delete([TenantLLM.tenant_id == current_user.id, TenantLLM.llm_factory == req["llm_factory"], TenantLLM.llm_name == req["llm_name"]])
     return get_json_result(data=True)
 
@@ -373,6 +376,9 @@ async def delete_llm():
 @validate_request("llm_factory", "llm_name")
 async def enable_llm():
     req = await get_request_json()
+    objs = TenantLLMService.query(tenant_id=current_user.id, llm_factory=req["llm_factory"], llm_name=req["llm_name"])
+    if not objs:
+        return get_data_error_result(message="LLM not found for this tenant!")
     TenantLLMService.filter_update(
         [TenantLLM.tenant_id == current_user.id, TenantLLM.llm_factory == req["llm_factory"], TenantLLM.llm_name == req["llm_name"]], {"status": str(req.get("status", "1"))}
     )

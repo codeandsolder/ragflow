@@ -81,8 +81,8 @@ interface IProps {
   header?: string | ReactNode;
   title?: string;
   content?: ReactNode;
-  onOk?: (...args: any[]) => any;
-  onCancel?: (...args: any[]) => any;
+  onOk?: (...args: unknown[]) => unknown;
+  onCancel?: (...args: unknown[]) => unknown;
 }
 
 export const useShowDeleteConfirm = () => {
