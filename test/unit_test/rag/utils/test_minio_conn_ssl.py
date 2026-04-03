@@ -27,11 +27,14 @@ class TestBuildMinioHttpClient:
 
     @patch("rag.utils.minio_conn.settings")
     def test_returns_none_when_verify_true(self, mock_settings):
+        """
+        Test that SSL verification enabled returns None client (use default).
+        """
         mock_settings.MINIO = {"verify": True}
         from rag.utils.minio_conn import _build_minio_http_client
 
         client = _build_minio_http_client()
-        assert client is None
+        assert client is None  # Expected: None when SSL verification is enabled
 
     @patch("rag.utils.minio_conn.settings")
     def test_returns_none_when_verify_missing(self, mock_settings):

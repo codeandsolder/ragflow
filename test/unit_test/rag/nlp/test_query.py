@@ -19,63 +19,59 @@ Unit tests for query module (FulltextQueryer and hybrid_similarity).
 """
 
 import pytest
+from unittest.mock import patch
 
 
-@pytest.mark.filterwarnings("ignore")
-class TestFulltextQueryerInit:
-    """Test FulltextQueryer initialization"""
+class TestFulltextQueryerInitialization:
+    """Test FulltextQueryer initialization with proper assertions"""
 
-    def test_default_init(self):
+    def test_default_initialization(self):
         from rag.nlp.query import FulltextQueryer
 
         qryr = FulltextQueryer()
 
-        assert qryr.tw is not None
-        assert qryr.syn is not None
-        assert len(qryr.query_fields) > 0
+        # Test that essential components are initialized
+        assert qryr.tw is not None, "Text tokenizer should be initialized"
+        assert qryr.syn is not None, "Synonym handler should be initialized"
+        assert isinstance(qryr.query_fields, list), "Query fields should be a list"
+        assert len(qryr.query_fields) > 0, "Query fields should not be empty"
 
-    def test_query_fields_content(self):
+    def test_query_fields_have_expected_weights(self):
         from rag.nlp.query import FulltextQueryer
 
         qryr = FulltextQueryer()
 
-        assert "title_tks^10" in qryr.query_fields
-        assert "content_ltks^2" in qryr.query_fields
-        assert "important_kwd^30" in qryr.query_fields
+        # Test that query fields have proper boosting weights
+        assert "title_tks^10" in qryr.query_fields, "Title field should have weight 10"
+        assert "content_ltks^2" in qryr.query_fields, "Content field should have weight 2"
+        assert "important_kwd^30" in qryr.query_fields, "Important keywords field should have weight 30"
 
 
-@pytest.mark.filterwarnings("ignore")
 class TestFulltextQueryerEdgeCases:
-    """Test edge cases for FulltextQueryer"""
+    """Test edge cases for FulltextQueryer with proper behavior"""
 
-    def test_question_empty_string(self):
+    def test_empty_question_returns_empty_keywords(self):
         from rag.nlp.query import FulltextQueryer
+        from rag.nlp import query as query_module
 
         qryr = FulltextQueryer()
-        result, keywords = qryr.question("")
+        with patch.object(query_module.settings, "DEFAULT_HYBRID_WEIGHT", "0.3,0.7", create=True):
+            result, keywords = qryr.question("")
 
-        assert isinstance(keywords, list)
+        assert isinstance(keywords, list), "Keywords should be a list"
+        assert len(keywords) == 0, "Empty question should return empty keywords"
 
-
-@pytest.mark.filterwarnings("ignore")
-class TestTokenSimilarityEdgeCases:
-    """Test edge cases for token_similarity"""
-
-    def test_token_similarity_empty_lists(self):
+    def test_empty_token_similarity_returns_empty_list(self):
         from rag.nlp.query import FulltextQueryer
 
         qryr = FulltextQueryer()
 
         result = qryr.token_similarity([], [])
 
-        assert result == []
+        assert isinstance(result, list), "Result should be a list"
+        assert len(result) == 0, "Empty input should return empty list"
 
-
-@pytest.mark.filterwarnings("ignore")
-class TestSimilarityEdgeCases:
-    """Test edge cases for similarity"""
-
-    def test_similarity_no_overlap(self):
+    def test_similarity_with_no_overlap_returns_zero(self):
         from rag.nlp.query import FulltextQueryer
 
         qryr = FulltextQueryer()
@@ -85,21 +81,16 @@ class TestSimilarityEdgeCases:
 
         result = qryr.similarity(qtwt, dtwt)
 
-        assert result >= 0
+        assert result == 0, "No overlap should return zero similarity"
 
-
-@pytest.mark.filterwarnings("ignore")
-class TestParagraphEdgeCases:
-    """Test paragraph method edge cases"""
-
-    def test_paragraph_with_keywords(self):
+    def test_paragraph_with_empty_content_returns_empty(self):
         from rag.nlp.query import FulltextQueryer
 
         qryr = FulltextQueryer()
 
-        result = qryr.paragraph("test content", keywords=["keyword"])
+        result = qryr.paragraph("", keywords=["keyword"])
 
-        assert result is not None
+        assert result == "", "Empty content should return empty paragraph"
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@
 #
 import asyncio
 import binascii
+import logging
 from api.constants import MAX_TEXT_LENGTH
 import re
 import time

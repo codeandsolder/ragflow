@@ -18,7 +18,7 @@ def test_oauth_legacy_yaml_compatibility():
     with patch("core.config.app.load_yaml", return_value=legacy_yaml):
         cfg = AppConfig()
 
-    assert "oauth" not in cfg
+    assert not hasattr(cfg, "oauth")
 
     oauth_cfg = cfg.third_party.oauth
     assert oauth_cfg.oauth2.client_id == "old_oauth2_id"

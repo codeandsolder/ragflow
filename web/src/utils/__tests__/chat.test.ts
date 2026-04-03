@@ -32,4 +32,20 @@ describe('preprocessLaTeX', () => {
     const result = preprocessLaTeX(content);
     expect(result).toBe('First $$a$$ then $$ b \\right] c $$');
   });
+
+  it('returns empty string as-is', () => {
+    expect(preprocessLaTeX('')).toBe('');
+  });
+
+  it('returns string without LaTeX as-is', () => {
+    const content = 'This is plain text without any LaTeX.';
+    expect(preprocessLaTeX(content)).toBe(content);
+  });
+
+  it('handles mixed content with text and equations', () => {
+    const content = 'The formula \\[ x^2 \\] is important and inline \\( y \\) too.';
+    const result = preprocessLaTeX(content);
+    expect(result).toContain('$$x^2$$');
+    expect(result).toContain('$y$');
+  });
 });

@@ -96,23 +96,23 @@ class TestReadPotentialBrokenPdf:
 
 
 class TestThumbnailImg:
-    """Edge cases for file_utils.file_utils.thumbnail_img."""
+    """Edge cases for file_utils.thumbnail_img."""
 
     def test_none_blob_returns_none(self):
-        assert file_utils.file_utils.thumbnail_img("x.pdf", None) is None
+        assert file_utils.thumbnail_img("x.pdf", None) is None
 
     def test_none_filename_returns_none(self):
-        assert file_utils.file_utils.thumbnail_img(None, b"fake pdf content") is None
+        assert file_utils.thumbnail_img(None, b"fake pdf content") is None
 
     def test_empty_blob_returns_none(self):
-        assert file_utils.file_utils.thumbnail_img("x.pdf", b"") is None
+        assert file_utils.thumbnail_img("x.pdf", b"") is None
 
     def test_empty_filename_returns_none(self):
-        assert file_utils.file_utils.thumbnail_img("", b"x") is None
+        assert file_utils.thumbnail_img("", b"x") is None
 
     def test_oversized_blob_returns_none(self):
         huge = b"x" * (file_utils.MAX_BLOB_SIZE_THUMBNAIL + 1)
-        assert file_utils.file_utils.thumbnail_img("x.pdf", huge) is None
+        assert file_utils.thumbnail_img("x.pdf", huge) is None
 
 
 class TestThumbnail:

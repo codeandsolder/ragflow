@@ -32,16 +32,15 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-RETCODE_SUCCESS = 0
-RETCODE_ARGUMENT_ERROR = 1
-RETCODE_DATA_ERROR = 2
-RETCODE_FORBIDDEN = 3
-RETCODE_NOT_FOUND = 4
-RETCODE_AUTHENTICATION_ERROR = 2
-RETCODE_OPERATING_ERROR = 6
-RETCODE_NOT_EFFECTIVE = 7
-RETCODE_SERVER_ERROR = 5
-RETCODE_BAD_REQUEST = 8
+from api.utils.api_utils import get_json_result, get_data_error_result
+from common.constants import RetCode
+
+
+def _get_result_json(result):
+    """Helper to get JSON from result, handling both dict and response objects."""
+    if hasattr(result, "get_json"):
+        return result.get_json()
+    return result
 
 
 @pytest.fixture
@@ -84,40 +83,40 @@ class TestDocumentUploadValidation:
 
     def test_upload_missing_kb_id(self):
         """Test upload returns error when KB ID is missing"""
-        result = get_json_result(data=False, message='Lack of "KB ID"', code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message='Lack of "KB ID"', code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
         assert "KB ID" in result_json.get("message", "")
 
     def test_upload_no_file_part(self):
         """Test upload returns error when no file part in request"""
-        result = get_json_result(data=False, message="No file part!", code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="No file part!", code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
         assert "No file part" in result_json.get("message", "")
 
     def test_upload_no_file_selected(self):
         """Test upload returns error when no file is selected"""
-        result = get_json_result(data=False, message="No file selected!", code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="No file selected!", code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_upload_file_name_too_long(self):
         """Test upload returns error when file name exceeds limit"""
-        result = get_json_result(data=False, message="File name must be 255 bytes or less.", code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="File name must be 255 bytes or less.", code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_upload_no_authorization(self):
         """Test upload returns error when user is not authorized"""
-        result = get_json_result(data=False, message="No authorization.", code=RETCODE_AUTHENTICATION_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_AUTHENTICATION_ERROR
+        assert result_json.get("code") == RetCode.AUTHENTICATION_ERROR
 
 
 class TestDocumentCreateValidation:
@@ -125,31 +124,31 @@ class TestDocumentCreateValidation:
 
     def test_create_missing_kb_id(self):
         """Test create returns error when KB ID is missing"""
-        result = get_json_result(data=False, message='Lack of "KB ID"', code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message='Lack of "KB ID"', code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_create_file_name_too_long(self):
         """Test create returns error when file name exceeds limit"""
-        result = get_json_result(data=False, message="File name must be 255 bytes or less.", code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="File name must be 255 bytes or less.", code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_create_empty_name(self):
         """Test create returns error for empty name"""
-        result = get_json_result(data=False, message="File name can't be empty.", code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="File name can't be empty.", code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_create_duplicate_name(self):
         """Test create returns error for duplicate document name"""
         result = get_data_error_result(message="Duplicated document name in the same dataset.")
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_DATA_ERROR
+        assert result_json.get("code") == RetCode.DATA_ERROR
 
 
 class TestDocumentListValidation:
@@ -157,32 +156,32 @@ class TestDocumentListValidation:
 
     def test_list_missing_kb_id(self):
         """Test list returns error when KB ID is missing"""
-        result = get_json_result(data=False, message='Lack of "KB ID"', code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message='Lack of "KB ID"', code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_list_no_authorization(self):
         """Test list returns error when user is not authorized"""
-        result = get_json_result(data=False, message="Only owner of dataset authorized for this operation.", code=RETCODE_OPERATING_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="Only owner of dataset authorized for this operation.", code=RetCode.OPERATING_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_OPERATING_ERROR
+        assert result_json.get("code") == RetCode.OPERATING_ERROR
 
     def test_list_invalid_run_status(self):
         """Test list returns error for invalid run status filter"""
         result = get_data_error_result(message="Invalid filter run status conditions: invalid_status")
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_DATA_ERROR
+        assert result_json.get("code") == RetCode.DATA_ERROR
         assert "Invalid filter" in result_json.get("message", "")
 
     def test_list_invalid_file_type(self):
         """Test list returns error for invalid file type filter"""
         result = get_data_error_result(message="Invalid filter conditions: invalid_type type")
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_DATA_ERROR
+        assert result_json.get("code") == RetCode.DATA_ERROR
 
 
 class TestDocumentDeleteValidation:
@@ -190,10 +189,10 @@ class TestDocumentDeleteValidation:
 
     def test_delete_no_authorization(self):
         """Test delete returns error when user is not authorized"""
-        result = get_json_result(data=False, message="No authorization.", code=RETCODE_AUTHENTICATION_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_AUTHENTICATION_ERROR
+        assert result_json.get("code") == RetCode.AUTHENTICATION_ERROR
 
 
 class TestDocumentRenameValidation:
@@ -201,32 +200,32 @@ class TestDocumentRenameValidation:
 
     def test_rename_extension_change(self):
         """Test rename returns error when extension is changed"""
-        result = get_json_result(data=False, message="The extension of file can't be changed", code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="The extension of file can't be changed", code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
         assert "extension" in result_json.get("message", "").lower()
 
     def test_rename_file_name_too_long(self):
         """Test rename returns error when new name exceeds limit"""
-        result = get_json_result(data=False, message="File name must be 255 bytes or less.", code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="File name must be 255 bytes or less.", code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_rename_duplicate_name(self):
         """Test rename returns error for duplicate name"""
         result = get_data_error_result(message="Duplicated document name in the same dataset.")
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_DATA_ERROR
+        assert result_json.get("code") == RetCode.DATA_ERROR
 
     def test_rename_no_authorization(self):
         """Test rename returns error when user is not authorized"""
-        result = get_json_result(data=False, message="No authorization.", code=RETCODE_AUTHENTICATION_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_AUTHENTICATION_ERROR
+        assert result_json.get("code") == RetCode.AUTHENTICATION_ERROR
 
 
 class TestDocumentChangeStatusValidation:
@@ -234,10 +233,10 @@ class TestDocumentChangeStatusValidation:
 
     def test_change_status_invalid_value(self):
         """Test change_status returns error for invalid status value"""
-        result = get_json_result(data=False, message='"Status" must be either 0 or 1!', code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message='"Status" must be either 0 or 1!', code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
 
 class TestDocumentMetadataValidation:
@@ -245,24 +244,24 @@ class TestDocumentMetadataValidation:
 
     def test_metadata_update_invalid_updates_type(self):
         """Test metadata_update returns error when updates is not a list"""
-        result = get_json_result(data=False, message="updates and deletes must be lists.", code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="updates and deletes must be lists.", code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_metadata_update_invalid_update_item(self):
         """Test metadata_update returns error when update item is invalid"""
-        result = get_json_result(data=False, message="Each update requires key and value.", code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="Each update requires key and value.", code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_metadata_update_invalid_delete_item(self):
         """Test metadata_update returns error when delete item is invalid"""
-        result = get_json_result(data=False, message="Each delete requires key.", code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="Each delete requires key.", code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
 
 class TestDocumentInfosValidation:
@@ -270,10 +269,10 @@ class TestDocumentInfosValidation:
 
     def test_infos_no_authorization(self):
         """Test infos returns error when user is not authorized"""
-        result = get_json_result(data=False, message="No authorization.", code=RETCODE_AUTHENTICATION_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_AUTHENTICATION_ERROR
+        assert result_json.get("code") == RetCode.AUTHENTICATION_ERROR
 
 
 class TestDocumentThumbnailsValidation:
@@ -281,10 +280,10 @@ class TestDocumentThumbnailsValidation:
 
     def test_thumbnails_missing_doc_ids(self):
         """Test thumbnails returns error when doc_ids is missing"""
-        result = get_json_result(data=False, message='Lack of "Document ID"', code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message='Lack of "Document ID"', code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
 
 class TestDocumentRunValidation:
@@ -292,17 +291,17 @@ class TestDocumentRunValidation:
 
     def test_run_no_authorization(self):
         """Test run returns error when user is not authorized"""
-        result = get_json_result(data=False, message="No authorization.", code=RETCODE_AUTHENTICATION_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_AUTHENTICATION_ERROR
+        assert result_json.get("code") == RetCode.AUTHENTICATION_ERROR
 
     def test_run_document_not_found(self):
         """Test run returns error when document is not found"""
         result = get_data_error_result(message="Document not found!")
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_DATA_ERROR
+        assert result_json.get("code") == RetCode.DATA_ERROR
 
 
 class TestDocumentSetMetaValidation:
@@ -310,24 +309,24 @@ class TestDocumentSetMetaValidation:
 
     def test_set_meta_no_authorization(self):
         """Test set_meta returns error when user is not authorized"""
-        result = get_json_result(data=False, message="No authorization.", code=RETCODE_AUTHENTICATION_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_AUTHENTICATION_ERROR
+        assert result_json.get("code") == RetCode.AUTHENTICATION_ERROR
 
     def test_set_meta_invalid_json(self):
         """Test set_meta returns error for invalid JSON"""
-        result = get_json_result(data=False, message="Json syntax error: Expecting value", code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="Json syntax error: Expecting value", code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_set_meta_invalid_type_in_list(self):
         """Test set_meta returns error for invalid type in list"""
-        result = get_json_result(data=False, message="The type is not supported in list: [1, 'string', {'obj': true}]", code=RETCODE_ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="The type is not supported in list: [1, 'string', {'obj': true}]", code=RetCode.ARGUMENT_ERROR)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
 
 class TestDocumentUploadInfoValidation:
@@ -335,17 +334,17 @@ class TestDocumentUploadInfoValidation:
 
     def test_upload_info_both_file_and_url(self):
         """Test upload_info returns error when both file and URL are provided"""
-        result = get_json_result(data=False, message="Provide either multipart file(s) or ?url=..., not both.", code=RETCODE_BAD_REQUEST)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="Provide either multipart file(s) or ?url=..., not both.", code=RetCode.BAD_REQUEST)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_BAD_REQUEST
+        assert result_json.get("code") == RetCode.BAD_REQUEST
 
     def test_upload_info_missing_input(self):
         """Test upload_info returns error when no input is provided"""
-        result = get_json_result(data=False, message="Missing input: provide multipart file(s) or url", code=RETCODE_BAD_REQUEST)
-        result_json = result.get_json()
+        result = get_json_result(data=False, message="Missing input: provide multipart file(s) or url", code=RetCode.BAD_REQUEST)
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == RETCODE_BAD_REQUEST
+        assert result_json.get("code") == RetCode.BAD_REQUEST
 
 
 class TestSafeFilenameValidation:

@@ -84,7 +84,7 @@ class TestDeserializeB64:
         result = configs.deserialize_b64(serialized)
 
         assert result == test_data
-        mock_config.assert_called_once_with("use_deserialize_configs.safe_module", False)
+        mock_config.assert_called_once_with("use_deserialize_safe_module", False)
 
     @patch("api.utils.configs.get_base_config")
     def test_deserialize_with_safe_module_enabled(self, mock_config):

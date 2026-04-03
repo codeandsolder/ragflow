@@ -167,7 +167,6 @@ def test_get_list_fetches_metadata_for_page_document_ids(setup_document_service,
     assert calls == [(["doc-1", "doc-2"], "kb-1")]
 
 
-@pytest.mark.p2
 def test_get_by_kb_id_fetches_metadata_for_page_document_ids(setup_document_service, sample_documents):
     calls = setup_document_service
     docs, count = document_service.DocumentService.get_by_kb_id(

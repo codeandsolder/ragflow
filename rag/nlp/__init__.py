@@ -1181,8 +1181,8 @@ def naive_merge(sections: str | list, chunk_token_num=128, delimiter="\n。；�
         sections = [sections]
     if isinstance(sections[0], str):
         sections = [(s, "") for s in sections]
-    cks = [""]
-    tk_nums = [0]
+    cks = []
+    tk_nums = []
 
     def add_chunk(t, pos):
         nonlocal cks, tk_nums, delimiter
@@ -1192,7 +1192,7 @@ def naive_merge(sections: str | list, chunk_token_num=128, delimiter="\n。；�
         if tnum < 8:
             pos = ""
         # Ensure that the length of the merged chunk does not exceed chunk_token_num
-        if cks[-1] == "" or tk_nums[-1] > chunk_token_num * (100 - overlapped_percent) / 100.0:
+        if not cks or tk_nums[-1] > chunk_token_num * (100 - overlapped_percent) / 100.0:
             if cks:
                 overlapped = RAGFlowPdfParser.remove_tag(cks[-1])
                 codes = encoder.encode(overlapped)

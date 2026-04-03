@@ -190,14 +190,13 @@ class TestExcelParserBasic:
 
         assert len(result) == 2
 
-    def test_parse_from_file_path(self, temp_xlsx):
-        """Test parsing from a file path."""
+    def test_parse_from_bytes(self):
+        """Test parsing from bytes."""
         data = [["A", "B"], ["1", "2"]]
         xlsx_bytes = _create_xlsx_with_data(data)
-        temp_path = temp_xlsx(suffix=".xlsx", content=xlsx_bytes)
 
         parser = RAGFlowExcelParser()
-        result = parser(BytesIO(xlsx_bytes))
+        result = parser(xlsx_bytes)
 
         assert len(result) >= 1
 

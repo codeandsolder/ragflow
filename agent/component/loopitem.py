@@ -65,6 +65,16 @@ class LoopItem(ComponentBase, ABC):
             elif operator == "not empty":
                 return var != ""
 
+        elif isinstance(var, bool):
+            if operator == "is":
+                return var is value
+            elif operator == "is not":
+                return var is not value
+            elif operator == "empty":
+                return var is None
+            elif operator == "not empty":
+                return var is not None
+
         elif isinstance(var, (int, float)):
             if operator == "=":
                 return var == value
@@ -78,16 +88,6 @@ class LoopItem(ComponentBase, ABC):
                 return var >= value
             elif operator == "≤":
                 return var <= value
-            elif operator == "empty":
-                return var is None
-            elif operator == "not empty":
-                return var is not None
-
-        elif isinstance(var, bool):
-            if operator == "is":
-                return var is value
-            elif operator == "is not":
-                return var is not value
             elif operator == "empty":
                 return var is None
             elif operator == "not empty":
@@ -130,12 +130,12 @@ class LoopItem(ComponentBase, ABC):
         for item in parent._param.loop_termination_condition:
             if not item.get("variable") or not item.get("operator"):
                 raise ValueError("Loop condition is incomplete.")
-            var = self._canvas.get_variable_value(item["variable"])
+            var = parent.output(item["variable"])
             operator = item["operator"]
             input_mode = item.get("input_mode", "constant")
 
             if input_mode == "variable":
-                value = self._canvas.get_variable_value(item.get("value", ""))
+                value = parent.output(item.get("value", ""))
             elif input_mode == "constant":
                 value = item.get("value", "")
             else:
@@ -158,7 +158,8 @@ class LoopItem(ComponentBase, ABC):
             self._idx += 1
             if self._idx >= len(self._items):
                 self._idx = -1
-        return False
+                return False
+        return True
 
     def thoughts(self) -> str:
         return "Next turn..."

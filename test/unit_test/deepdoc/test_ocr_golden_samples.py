@@ -13,12 +13,15 @@ Setup:
     - rotated_text.png: Rotated text sample
 """
 
-import os
 from pathlib import Path
 
 import pytest
 from PIL import Image
-from deepdoc.vision.ocr import OCR
+
+try:
+    from deepdoc.vision import OCR
+except ImportError:
+    OCR = None
 
 
 def _get_test_data_dir():
@@ -26,6 +29,8 @@ def _get_test_data_dir():
     return Path(__file__).parent / "test_data"
 
 
+@pytest.mark.filterwarnings("ignore:.*local_dir_use_symlinks.*:UserWarning")
+@pytest.mark.filterwarnings("ignore:.*deprecated.*:DeprecationWarning")
 class TestOCRGoldenSamples:
     """Tests for OCR using golden sample images."""
 

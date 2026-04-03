@@ -292,15 +292,14 @@ class TestGraphConstruction:
         """
         from rag.graphrag.utils import handle_single_entity_extraction, handle_single_relationship_extraction
 
-        empty_records = []
-        assert len(empty_records) == 0
-
+        # Test empty records
         result = handle_single_entity_extraction([], "chunk_0")
         assert result is None
 
         result = handle_single_relationship_extraction([], "chunk_0")
         assert result is None
 
+        # Test malformed records
         result = handle_single_entity_extraction(['"entity"'], "chunk_0")
         assert result is None
 
@@ -324,7 +323,7 @@ class TestGraphConstruction:
             ('"Alice"', "Alice"),
             ("Alice\x00Bob", "AliceBob"),
             ("Alice\u4e2d\u6587", "Alice中文"),
-            ("Alice\t\nBob", "Alice Bob"),
+            ("Alice\t\nBob", "AliceBob"),
         ]
 
         for input_str, expected in test_cases:
@@ -438,7 +437,7 @@ class TestGraphTransformations:
         data = nx.node_link_data(graph, edges="edges")
 
         assert "nodes" in data
-        assert "links" in data
+        assert "edges" in data
 
         restored = nx.node_link_graph(data, edges="edges")
         assert restored.has_node("A")

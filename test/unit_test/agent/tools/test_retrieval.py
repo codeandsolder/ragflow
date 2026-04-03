@@ -14,19 +14,27 @@
 #  limitations under the License.
 #
 
+import json
+
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 
+from agent.canvas import Canvas
 from agent.tools.retrieval import Retrieval, RetrievalParam
 
 
-class MockCanvas:
+class MockCanvas(Canvas):
     def __init__(self):
-        self._components = {}
-        self._variables = {}
-        self._tenant_id = "test_tenant"
+        dsl = json.dumps({"components": {}, "path": [], "history": []})
+        super().__init__(dsl, tenant_id="test_tenant")
         self._references = []
         self._canceled = False
+
+    def load(self):
+        pass
+
+    def is_canceled(self):
+        return self._canceled
 
     def get_component_name(self, component_id):
         return "retrieval"
@@ -35,16 +43,13 @@ class MockCanvas:
         self._references.extend(chunks)
 
     def get_variable_value(self, var_name):
-        return self._variables.get(var_name)
+        return self.variables.get(var_name)
 
     def set_variable_value(self, var_name, value):
-        self._variables[var_name] = value
+        self.variables[var_name] = value
 
     def get_tenant_id(self):
         return self._tenant_id
-
-    def is_canceled(self):
-        return self._canceled
 
 
 class TestRetrievalParam:
@@ -115,7 +120,6 @@ class TestRetrieval:
         assert "test query" in thoughts
         assert "Keywords" in thoughts
 
-    @pytest.mark.asyncio
     async def test_retrieval_invoke_empty_query(self):
         canvas = MockCanvas()
         param = RetrievalParam()

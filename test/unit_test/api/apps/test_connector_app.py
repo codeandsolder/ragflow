@@ -29,6 +29,13 @@ from api.utils.api_utils import get_json_result, get_data_error_result
 from common.constants import RetCode
 
 
+def _get_result_json(result):
+    """Helper to get JSON from result, handling both dict and response objects."""
+    if hasattr(result, "get_json"):
+        return _get_result_json(result)
+    return result
+
+
 class TestConnectorAppSet:
     """Test cases for connector_app.set endpoint logic"""
 
@@ -38,7 +45,7 @@ class TestConnectorAppSet:
         mock_connector.to_dict.return_value = {"id": "connector-123", "name": "Test Connector"}
 
         result = get_json_result(data=mock_connector.to_dict())
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == 0
 
@@ -49,7 +56,7 @@ class TestConnectorAppList:
     def test_list_connectors_success(self):
         """Test successful connector listing"""
         result = get_json_result(data=[])
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == 0
         assert result_json.get("data") == []
@@ -61,7 +68,7 @@ class TestConnectorAppGet:
     def test_get_connector_not_found(self):
         """Test get_connector returns error when connector not found"""
         result = get_data_error_result(message="Can't find this Connector!")
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == RetCode.DATA_ERROR
         assert "Can't find" in result_json.get("message", "")
@@ -73,7 +80,7 @@ class TestConnectorAppResponseHelpers:
     def test_get_json_result_success(self):
         """Test successful JSON result creation"""
         result = get_json_result(data={"connector_id": "test-id"})
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == 0
         assert result_json.get("data") == {"connector_id": "test-id"}

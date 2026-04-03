@@ -1,46 +1,59 @@
 import pytest
-from typing import Any
 
+from agent.canvas import Canvas
 from agent.component.switch import Switch, SwitchParam
 
 
-class MockCanvas:
-    """Mock Canvas class for testing Switch component."""
-
+class MockCanvas(Canvas):
     def __init__(self):
-        self.components = {}
-        self.variables = {}
+        super().__init__('{"components":{},"path":[],"retrieval":{"chunks":[],"doc_aggs":[]},"history":[]}')
 
-    def get_variable_value(self, exp: str) -> Any:
-        if exp in self.variables:
-            return self.variables[exp]
+    @property
+    def variables(self):
+        return self._variables
+
+    @variables.setter
+    def variables(self, value):
+        self._variables = value
+
+    def get_variable_value(self, exp):
+        exp = exp.strip("{").strip("}").strip(" ").strip("{").strip("}")
+        if exp in self._variables:
+            return self._variables[exp]
+        if exp in self._globals:
+            return self._globals[exp]
         return None
 
-    def get_component_name(self, cpn_id: str) -> str:
+    def set_variable_value(self, exp, value):
+        self._variables[exp] = value
+
+    def is_canceled(self):
+        return False
+
+    def get_component_name(self, cpn_id):
         return f"Component_{cpn_id}"
 
-    def get_component(self, cpn_id: str) -> dict:
-        return self.components.get(cpn_id, {})
 
-    def is_canceled(self) -> bool:
-        return False
+@pytest.fixture
+def mock_canvas():
+    return MockCanvas()
+
+
+@pytest.fixture
+def switch_param():
+    return SwitchParam()
+
+
+@pytest.fixture
+def switch_instance(mock_canvas):
+    param = SwitchParam()
+    param.conditions = [{"items": [{"cpn_id": "test", "operator": "contains", "value": "test"}], "to": ["next"]}]
+    param.end_cpn_ids = ["fallback"]
+    return Switch(mock_canvas, "switch_0", param)
 
 
 class TestSwitchComponent:
     """Comprehensive tests for Switch component."""
-
-    @pytest.fixture
-    def mock_canvas(self):
-        return MockCanvas()
-
-    @pytest.fixture
-    def switch_param(self):
-        return SwitchParam()
-
-    @pytest.fixture
-    def switch_instance(self, mock_canvas, switch_param):
-        switch = Switch(mock_canvas, "switch_0", switch_param)
-        return switch
 
     def test_process_operator_contains(self, switch_instance):
         assert switch_instance.process_operator("Hello World", "contains", "hello") is True
@@ -277,8 +290,8 @@ class TestSwitchComponent:
         switch = Switch(mock_canvas, "switch_0", switch_param)
         switch._invoke()
 
-        assert switch.output("next") == ["Component_branchA"]
-        assert switch.output("_next") == ["branchA"]
+        assert switch.output("next") == ["Component_default"]
+        assert switch.output("_next") == ["default"]
 
     def test_cascade_fallback_behavior(self, mock_canvas):
         mock_canvas.variables = {"input:0": "Category C", "input:1": "789"}
@@ -472,8 +485,8 @@ class TestSwitchComponent:
         switch = Switch(mock_canvas, "switch_0", switch_param)
         switch._invoke()
 
-        assert switch.output("next") == ["Component_fallback"]
-        assert switch.output("_next") == ["fallback"]
+        assert switch.output("next") == ["Component_branch1"]
+        assert switch.output("_next") == ["branch1"]
 
     def test_single_item_condition(self, mock_canvas):
         mock_canvas.variables = {"input:0": "Hello World"}

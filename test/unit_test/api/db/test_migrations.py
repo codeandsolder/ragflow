@@ -240,7 +240,7 @@ class TestMigrateDb:
 
     def test_migrate_db_executes_all_migrations(self):
         """Test that migrate_db() executes all migration operations."""
-        from unittest.mock import patch, MagicMock, call
+        from unittest.mock import patch, MagicMock
 
         with patch("api.db.db_models.DatabaseMigrator") as mock_migrator_class:
             mock_migrator = MagicMock()

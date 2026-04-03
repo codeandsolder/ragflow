@@ -330,16 +330,15 @@ class TestDocumentsParseUnit:
         assert "run boom" in res["message"]
 
 
-# @pytest.mark.skip
 class TestDocumentsParseStop:
     @pytest.mark.parametrize(
         "payload, expected_code, expected_message",
         [
-            pytest.param(None, 101, "required argument are missing: doc_ids, run; ", marks=pytest.mark.skip),
+            pytest.param(None, 101, "required argument are missing: doc_ids, run; "),
             pytest.param({"doc_ids": [], "run": "2"}, 0, "", marks=pytest.mark.p1),
             pytest.param({"doc_ids": ["invalid_id"], "run": "2"}, 109, "No authorization.", marks=pytest.mark.p3),
-            pytest.param({"doc_ids": ["\n!?\u3002\uff1b\uff01\uff1f\"'"], "run": "2"}, 109, "No authorization.", marks=pytest.mark.p3),
-            pytest.param("not json", 101, "required argument are missing: doc_ids, run; ", marks=pytest.mark.skip),
+            pytest.param({"doc_ids": ["\n!?。；！？\"'"], "run": "2"}, 109, "No authorization.", marks=pytest.mark.p3),
+            pytest.param("not json", 101, "required argument are missing: doc_ids, run; "),
             pytest.param(lambda r: {"doc_ids": r[:1], "run": "2"}, 0, "", marks=pytest.mark.p1),
             pytest.param(lambda r: {"doc_ids": r, "run": "2"}, 0, "", marks=pytest.mark.p1),
         ],
@@ -370,7 +369,6 @@ class TestDocumentsParseStop:
         else:
             assert res["message"] == expected_message, res
 
-    @pytest.mark.skip
     @pytest.mark.parametrize(
         "payload",
         [

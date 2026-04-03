@@ -33,7 +33,7 @@ class TestChunkingComprehensive:
             (128, "。", 4),
             (256, "。", 2),
         ],
-        ids=lambda p: f"size={p[0]}_delim={repr(p[1])}",
+        ids=lambda p: f"size={p}_delim=_exp",
     )
     def test_chunk_boundaries(self, chunk_size, delimiter, expected_count):
         """Test that chunks are correctly bounded by token size and delimiters."""
@@ -80,7 +80,7 @@ class TestChunkingComprehensive:
             (256, "。；！？"),
             (512, "\n。；"),
         ],
-        ids=lambda p: f"size_{p[0]}_delim_{repr(p[1])}",
+        ids=lambda p: f"size_{p}_delim_",
     )
     def test_chunk_size_constraints(self, chunk_size, delimiter):
         """Test that chunks respect size constraints."""
@@ -139,7 +139,7 @@ class TestChunkingComprehensive:
             (512, 0),
             (512, 30),
         ],
-        ids=lambda p: f"size_{p[0]}_overlap_{p[1]}",
+        ids=lambda p: f"size_{p}_overlap_",
     )
     def test_edge_case_empty_text(self, chunk_size, overlap):
         """Test handling of empty or whitespace-only text."""

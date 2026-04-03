@@ -15,27 +15,28 @@
 
 import pytest
 
+from agent.canvas import Canvas
 from agent.component.loop import Loop, LoopParam
 from agent.component.loopitem import LoopItem, LoopItemParam
 from agent.component.iteration import Iteration, IterationParam
 from agent.component.iterationitem import IterationItem, IterationItemParam
 
 
-class MockCanvas:
+class MockCanvas(Canvas):
     """Mock Canvas for testing loop components."""
 
     def __init__(self):
-        self.components = {}
-        self.globals = {
-            "sys.query": "",
-            "sys.user_id": "test_user",
-            "sys.conversation_turns": 0,
-            "sys.files": [],
-            "sys.history": [],
-        }
-        self.variables = {}
+        super().__init__('{"components":{},"path":[],"retrieval":{"chunks":[],"doc_aggs":[]},"history":[]}')
         self._cancel_flag = False
         self.task_id = "test_task_123"
+
+    @property
+    def variables(self):
+        return self._variables
+
+    @variables.setter
+    def variables(self, value):
+        self._variables = value
 
     def get_component(self, cpn_id):
         return self.components.get(cpn_id)
@@ -277,6 +278,8 @@ class TestLoopItemComponent:
         canvas, loop, loop_item = create_mock_loop_canvas(max_loop_count=2)
         loop_item._invoke()
         assert loop_item._idx == 1
+        loop_item._invoke()
+        assert loop_item._idx == 2
         loop_item._invoke()
         assert loop_item._idx == -1
 
@@ -581,7 +584,7 @@ class TestLoopBasicIteration:
 
     def test_loop_empty_collection(self):
         """Loop handles empty collection gracefully."""
-        canvas, loop, loop_item = create_mock_loop_canvas(items=[])
+        canvas, loop, loop_item = create_mock_loop_canvas(items=[], max_loop_count=0)
         loop_item._invoke()
         assert loop_item._idx == -1
 

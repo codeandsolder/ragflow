@@ -32,13 +32,20 @@ from api.utils.api_utils import get_json_result, get_data_error_result
 from common.constants import RetCode
 
 
+def _get_result_json(result):
+    """Helper to get JSON from result, handling both dict and response objects."""
+    if hasattr(result, "get_json"):
+        return _get_result_json(result)
+    return result
+
+
 class TestFileAppUpload:
     """Test cases for file_app.upload endpoint logic"""
 
     def test_upload_no_file_part(self):
         """Test upload returns error when no file part"""
         result = get_json_result(data=False, message="No file part!", code=RetCode.ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == RetCode.ARGUMENT_ERROR
         assert "No file part" in result_json.get("message", "")
@@ -46,7 +53,7 @@ class TestFileAppUpload:
     def test_upload_no_file_selected(self):
         """Test upload returns error when no file selected"""
         result = get_json_result(data=False, message="No file selected!", code=RetCode.ARGUMENT_ERROR)
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == RetCode.ARGUMENT_ERROR
         assert "No file selected" in result_json.get("message", "")
@@ -58,7 +65,7 @@ class TestFileAppList:
     def test_list_files_success(self):
         """Test successful file listing"""
         result = get_json_result(data=[])
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == 0
         assert result_json.get("data") == []
@@ -70,7 +77,7 @@ class TestFileAppResponseHelpers:
     def test_get_json_result_success(self):
         """Test successful JSON result creation"""
         result = get_json_result(data={"file_id": "test-id"})
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == 0
         assert result_json.get("data") == {"file_id": "test-id"}

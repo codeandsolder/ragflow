@@ -33,3 +33,6 @@ DEFAULT_LIST_LIMIT = 100  # Default limit for list queries
 DEFAULT_MAX_RETRIES = 3  # Default maximum retries for retry operations
 DEFAULT_RETRY_DELAY = 0.1  # Default retry delay in seconds
 OAUTH_HTTP_REQUEST_TIMEOUT = 7  # Timeout for OAuth HTTP requests in seconds
+
+# Maximum text length for TTS or similar operations
+MAX_TEXT_LENGTH = 32 * 1024  # 32KB

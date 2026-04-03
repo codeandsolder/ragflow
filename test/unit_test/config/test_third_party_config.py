@@ -19,7 +19,16 @@ def test_third_party_defaults(monkeypatch):
     assert oauth_cfg.github.client_secret is None
 
 
-def test_third_party_overrides():
+def test_third_party_overrides(monkeypatch):
+    monkeypatch.delenv("GITHUB_CLIENT_ID", raising=False)
+    monkeypatch.delenv("GITHUB_CLIENT_SECRET", raising=False)
+    monkeypatch.delenv("OIDC_CLIENT_ID", raising=False)
+    monkeypatch.delenv("OIDC_CLIENT_SECRET", raising=False)
+    monkeypatch.delenv("OAUTH2_CLIENT_ID", raising=False)
+    monkeypatch.delenv("OAUTH2_CLIENT_SECRET", raising=False)
+    monkeypatch.delenv("TCADP_SECRET_ID", raising=False)
+    monkeypatch.delenv("TCADP_SECRET_KEY", raising=False)
+    monkeypatch.delenv("TCADP_REGION", raising=False)
     cfg = AppConfig()
 
     return_value = {

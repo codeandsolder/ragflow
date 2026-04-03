@@ -29,13 +29,20 @@ from api.utils.api_utils import get_json_result
 from common.constants import RetCode
 
 
+def _get_result_json(result):
+    """Helper to get JSON from result, handling both dict and response objects."""
+    if hasattr(result, "get_json"):
+        return _get_result_json(result)
+    return result
+
+
 class TestSystemAppVersion:
     """Test cases for system_app.version endpoint logic"""
 
     def test_version_success(self):
         """Test successful version retrieval"""
         result = get_json_result(data="v1.0.0")
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == 0
         assert result_json.get("data") == "v1.0.0"
@@ -47,7 +54,7 @@ class TestSystemAppStatus:
     def test_status_success(self):
         """Test successful status retrieval"""
         result = get_json_result(data={"status": "online"})
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == 0
         assert result_json.get("data") == {"status": "online"}
@@ -59,7 +66,7 @@ class TestSystemAppResponseHelpers:
     def test_get_json_result_success(self):
         """Test successful JSON result creation"""
         result = get_json_result(data={"key": "value"})
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == 0
         assert result_json.get("data") == {"key": "value"}

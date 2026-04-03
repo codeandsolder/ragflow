@@ -224,7 +224,6 @@ class TestAddChunk:
         assert res["code"] == 102, res
         assert res["message"] == "Document not found!", res
 
-    @pytest.mark.skip(reason="issues/6411")
     @pytest.mark.p3
     def test_concurrent_add_chunk(self, WebApiAuth, add_document):
         count = 50

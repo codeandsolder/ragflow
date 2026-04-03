@@ -22,8 +22,13 @@ import numpy as np
 from yarl import URL
 
 from common.log_utils import log_exception
+from common import settings
 from common.token_utils import num_tokens_from_string, truncate, total_token_count_from_response
 from rag.llm.remote_model_base import RemoteModelBase
+
+
+def _get_setting(name, default):
+    return getattr(settings, name, default)
 
 
 class Base(RemoteModelBase, ABC):
@@ -55,7 +60,7 @@ class JinaRerank(Base):
     _FACTORY_NAME = "Jina"
 
     def __init__(self, key, model_name="jina-reranker-v2-base-multilingual", base_url="https://api.jina.ai/v1/rerank"):
-        self.base_url = "https://api.jina.ai/v1/rerank"
+        self.base_url = base_url
         self.headers = {"Content-Type": "application/json", "Authorization": f"Bearer {key}"}
         self.model_name = model_name
 
@@ -127,7 +132,7 @@ class LocalAIRerank(Base):
 
     def similarity(self, query: str, texts: list):
         # Configurable truncation length from settings
-        texts = [truncate(t, settings.RERANK_MAX_LENGTH or 500) for t in texts]
+        texts = [truncate(t, _get_setting("RERANK_MAX_LENGTH", 500)) for t in texts]
         data = {
             "model": self.model_name,
             "query": query,
@@ -223,7 +228,7 @@ class OpenAI_APIRerank(Base):
 
     def similarity(self, query: str, texts: list):
         # Configurable truncation length from settings
-        texts = [truncate(t, settings.RERANK_MAX_LENGTH or 500) for t in texts]
+        texts = [truncate(t, _get_setting("RERANK_MAX_LENGTH", 500)) for t in texts]
         data = {
             "model": self.model_name,
             "query": query,
@@ -553,7 +558,7 @@ class RAGconRerank(Base):
 
     def similarity(self, query: str, texts: list):
         # Configurable truncation length from settings
-        texts = [truncate(t, settings.RERANK_MAX_LENGTH or 500) for t in texts]
+        texts = [truncate(t, _get_setting("RERANK_MAX_LENGTH", 500)) for t in texts]
         data = {
             "model": self.model_name,
             "query": query,

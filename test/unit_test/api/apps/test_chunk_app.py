@@ -35,7 +35,10 @@ class TestChunkAppList:
     def test_list_chunk_missing_doc_id(self):
         """Test list_chunk returns error when doc_id is missing"""
         result = get_data_error_result(message='Lack of "doc_id"')
-        result_json = result.get_json()
+        if hasattr(result, "get_json"):
+            result_json = result.get_json()
+        else:
+            result_json = result
 
         assert result_json.get("code") == RetCode.DATA_ERROR
         assert "doc_id" in result_json.get("message", "")
@@ -43,7 +46,10 @@ class TestChunkAppList:
     def test_list_chunk_document_not_found(self):
         """Test list_chunk returns error when document not found"""
         result = get_data_error_result(message="Document not found!")
-        result_json = result.get_json()
+        if hasattr(result, "get_json"):
+            result_json = result.get_json()
+        else:
+            result_json = result
 
         assert result_json.get("code") == RetCode.DATA_ERROR
         assert "Document not found" in result_json.get("message", "")
@@ -51,7 +57,10 @@ class TestChunkAppList:
     def test_list_chunk_tenant_not_found(self):
         """Test list_chunk returns error when tenant not found"""
         result = get_data_error_result(message="Tenant not found!")
-        result_json = result.get_json()
+        if hasattr(result, "get_json"):
+            result_json = result.get_json()
+        else:
+            result_json = result
 
         assert result_json.get("code") == RetCode.DATA_ERROR
         assert "Tenant not found" in result_json.get("message", "")
@@ -63,7 +72,10 @@ class TestChunkAppResponseHelpers:
     def test_get_json_result_success(self):
         """Test successful JSON result creation"""
         result = get_json_result(data={"chunks": []})
-        result_json = result.get_json()
+        if hasattr(result, "get_json"):
+            result_json = result.get_json()
+        else:
+            result_json = result
 
         assert result_json.get("code") == 0
         assert result_json.get("data") == {"chunks": []}
@@ -71,7 +83,10 @@ class TestChunkAppResponseHelpers:
     def test_get_json_result_with_message(self):
         """Test JSON result with custom message"""
         result = get_json_result(data={"chunks": []}, message="Custom message")
-        result_json = result.get_json()
+        if hasattr(result, "get_json"):
+            result_json = result.get_json()
+        else:
+            result_json = result
 
         assert result_json.get("code") == 0
         assert result_json.get("message") == "Custom message"

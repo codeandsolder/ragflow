@@ -227,7 +227,6 @@ class TestChunksRetrieval:
         else:
             assert expected_message in res["message"]
 
-    @pytest.mark.skip
     @pytest.mark.parametrize(
         "payload, expected_code, expected_message",
         [
@@ -245,7 +244,6 @@ class TestChunksRetrieval:
         else:
             assert expected_message in res["message"]
 
-    @pytest.mark.skip
     @pytest.mark.parametrize(
         "payload, expected_code, expected_page_size, expected_message",
         [

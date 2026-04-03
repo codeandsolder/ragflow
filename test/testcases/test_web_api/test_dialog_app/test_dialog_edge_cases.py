@@ -29,7 +29,6 @@ class TestDialogEdgeCases:
         res = create_dialog(WebApiAuth, payload)
         assert res["code"] == 0, res
 
-    @pytest.mark.skip
     @pytest.mark.p2
     def test_create_dialog_with_different_embedding_models(self, WebApiAuth):
         """Test creating dialog with knowledge bases that have different embedding models"""

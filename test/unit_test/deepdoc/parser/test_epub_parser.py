@@ -32,6 +32,7 @@ import zipfile
 from io import BytesIO
 from unittest import mock
 
+
 # Import RAGFlowEpubParser directly by file path to avoid triggering
 # deepdoc/parser/__init__.py which pulls in heavy dependencies
 # (pdfplumber, xgboost, etc.) that may not be available in test environments.

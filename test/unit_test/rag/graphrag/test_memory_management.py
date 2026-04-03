@@ -141,7 +141,7 @@ class MockMemoryProfiler:
         self.allocations = []
 
 
-class TestGraphMemoryManagement:
+class TestGraphMemoryManagement:    
     def test_graph_size_limit_enforcement(self):
         limits = MockGraphSizeLimits(max_nodes=100, max_edges=500)
         graph = create_large_graph(200, avg_edges_per_node=3)
@@ -199,6 +199,8 @@ class TestGraphMemoryManagement:
                     other_chunks_nodes.update(other_chunk.nodes())
             assert chunk_nodes.isdisjoint(other_chunks_nodes)
 
+    @pytest.mark.filterwarnings("ignore::RuntimeWarning")
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_memory_cleanup_after_processing(self):
         gc.collect()
         tracked_types = (nx.Graph, nx.DiGraph)
@@ -387,6 +389,8 @@ class TestGraphMemoryManagement:
         actual_approximate = len(graph.nodes) * 10000 / (1024 * 1024)
         assert estimated >= actual_approximate * 0.01
 
+    @pytest.mark.filterwarnings("ignore::RuntimeWarning")
+    @pytest.mark.filterwarnings("ignore::DeprecationWarning")
     def test_concurrent_graph_operations_memory_safety(self):
         import threading
 

@@ -29,6 +29,7 @@ import sys
 from io import BytesIO
 from unittest import mock
 
+
 _MOCK_MODULES = [
     "xgboost",
     "xgb",
@@ -105,7 +106,7 @@ def _create_docx_with_paragraphs(paragraphs, tables=None, include_page_break=Fal
     for i, para_text in enumerate(paragraphs):
         if i > 0 and include_page_break:
             doc.add_page_break()
-        p = doc.add_paragraph(para_text)
+        doc.add_paragraph(para_text)
 
     if tables:
         for table_data in tables:
@@ -306,6 +307,10 @@ class TestDocxParserPageRange:
         parser = RAGFlowDocxParser()
         secs, tbls = parser(docx_bytes, from_page=1)
 
+        assert len(secs) == 2
+        assert secs[0][0] == "Page 2"
+        assert secs[1][0] == "Page 3"
+
     def test_parse_with_to_page(self):
         """Test parsing up to a specific page."""
         paragraphs = ["Page 1", "Page 2", "Page 3"]
@@ -314,6 +319,10 @@ class TestDocxParserPageRange:
         parser = RAGFlowDocxParser()
         secs, tbls = parser(docx_bytes, to_page=2)
 
+        assert len(secs) == 2
+        assert secs[0][0] == "Page 1"
+        assert secs[1][0] == "Page 2"
+
     def test_parse_with_page_range(self):
         """Test parsing a specific page range."""
         paragraphs = ["Page 1", "Page 2", "Page 3", "Page 4"]
@@ -321,6 +330,10 @@ class TestDocxParserPageRange:
 
         parser = RAGFlowDocxParser()
         secs, tbls = parser(docx_bytes, from_page=1, to_page=3)
+
+        assert len(secs) == 2
+        assert secs[0][0] == "Page 2"
+        assert secs[1][0] == "Page 3"
 
 
 class TestDocxParserStyleExtraction:

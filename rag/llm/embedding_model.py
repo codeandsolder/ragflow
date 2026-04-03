@@ -31,6 +31,8 @@ from common.token_utils import num_tokens_from_string, truncate, total_token_cou
 from common import settings
 import logging
 import base64
+import requests
+import voyageai
 from rag.llm.remote_model_base import RemoteModelBase
 
 
@@ -92,7 +94,8 @@ class BuiltinEmbed(Base):
 class OpenAIEmbed(Base):
     _FACTORY_NAME = "OpenAI"
 
-    def __init__(self, key, model_name="text-embedding-ada-002", base_url="https://api.openai.com/v1"):
+    def __init__(self, key, model_name="text-embedding-ada-002", base_url="https://api.openai.com/v1", **kwargs):
+        Base.__init__(self, key, model_name, **kwargs)
         if not base_url:
             base_url = "https://api.openai.com/v1"
         use_litellm_proxy = os.environ.get("USE_LITELLM_PROXY", "false").lower() == "true"
@@ -100,7 +103,6 @@ class OpenAIEmbed(Base):
             litellm_proxy_url = os.environ.get("LITELLM_PROXY_URL", "http://litellm:4000")
             base_url = f"{litellm_proxy_url}/v1"
         self.client = OpenAI(api_key=key, base_url=base_url)
-        self.model_name = model_name
 
     def encode(self, texts: list):
         # OpenAI requires batch size <=16

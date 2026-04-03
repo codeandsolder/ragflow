@@ -110,16 +110,15 @@ class TestExtractPdfNativeMetadata:
         result = extract_pdf_native_metadata(b"not a pdf")
         assert result == {}
 
-    @patch("rag.app.pdf_metadata.pypdf")
-    def test_valid_pdf_with_metadata(self, mock_pypdf):
-        # Mock the PDF reader
+    @patch("pypdf.PdfReader")
+    def test_valid_pdf_with_metadata(self, mock_pdf_reader):
         mock_reader = Mock()
         mock_reader.metadata = {
             "/Title": "Test Paper Title",
             "/Author": "John Doe",
             "/Subject": "Test Subject",
         }
-        mock_pypdf.PdfReader.return_value = mock_reader
+        mock_pdf_reader.return_value = mock_reader
 
         with patch("rag.app.pdf_metadata.BytesIO"):
             result = extract_pdf_native_metadata(b"fake pdf content")
@@ -127,11 +126,11 @@ class TestExtractPdfNativeMetadata:
         assert result.get("title") == "Test Paper Title"
         assert result.get("author") == "John Doe"
 
-    @patch("rag.app.pdf_metadata.pypdf")
-    def test_pdf_without_metadata(self, mock_pypdf):
+    @patch("pypdf.PdfReader")
+    def test_pdf_without_metadata(self, mock_pdf_reader):
         mock_reader = Mock()
         mock_reader.metadata = None
-        mock_pypdf.PdfReader.return_value = mock_reader
+        mock_pdf_reader.return_value = mock_reader
 
         with patch("rag.app.pdf_metadata.BytesIO"):
             result = extract_pdf_native_metadata(b"fake pdf content")
@@ -151,9 +150,8 @@ class TestExtractMetadataByLayout:
         result = extract_metadata_by_layout(b"not a pdf")
         assert result["title"] is None
 
-    @patch("rag.app.pdf_metadata.pdfplumber")
-    def test_basic_extraction(self, mock_pdfplumber):
-        # Mock the PDF page
+    @patch("pdfplumber.open")
+    def test_basic_extraction(self, mock_pdfplumber_open):
         mock_page = Mock()
         mock_page.width = 600
         mock_page.height = 800
@@ -167,12 +165,13 @@ class TestExtractMetadataByLayout:
 
         mock_pdf = Mock()
         mock_pdf.pages = [mock_page]
-        mock_pdfplumber.open.return_value.__enter__ = Mock(return_value=mock_pdf)
-        mock_pdfplumber.open.return_value.__exit__ = Mock(return_value=False)
+
+        mock_pdfplumber_open.return_value.__enter__ = Mock(return_value=mock_pdf)
+        mock_pdfplumber_open.return_value.__exit__ = Mock(return_value=False)
 
         result = extract_metadata_by_layout(b"fake pdf")
 
-        assert result["title"] is not None or result["confidence"]["title"] == 0.0
+        assert result["title"] is not None
 
 
 class TestExtractMetadataWithVlm:
@@ -183,15 +182,13 @@ class TestExtractMetadataWithVlm:
             result = extract_metadata_with_vlm(b"fake pdf")
             assert result["title"] is None
 
-    @patch("rag.app.pdf_metadata.pdf2image")
-    def test_vlm_extraction(self, mock_pdf2image):
-        # Mock VLM response
+    @patch("pdf2image.convert_from_bytes")
+    def test_vlm_extraction(self, mock_convert_from_bytes):
         mock_vlm = Mock()
         mock_vlm.chat.return_value = '{"title": "VLM Paper Title", "authors": "Jane Smith", "abstract": "This is an abstract."}'
 
-        # Mock pdf2image
         mock_img = Mock()
-        mock_pdf2image.convert_from_bytes.return_value = [mock_img]
+        mock_convert_from_bytes.return_value = [mock_img]
 
         result = extract_metadata_with_vlm(b"fake pdf", vlm_model=mock_vlm)
 

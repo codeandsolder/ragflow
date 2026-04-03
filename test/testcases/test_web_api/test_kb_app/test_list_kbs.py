@@ -80,7 +80,6 @@ class TestDatasetsList:
         assert res["code"] == 0, res
         assert len(res["data"]) == expected_page_size, res
 
-    @pytest.mark.skip
     @pytest.mark.p2
     @pytest.mark.parametrize(
         "params, expected_code, expected_message",
@@ -119,7 +118,6 @@ class TestDatasetsList:
         assert res["code"] == 0, res
         assert len(res["data"]) == expected_page_size, res
 
-    @pytest.mark.skip
     @pytest.mark.p2
     @pytest.mark.parametrize(
         "params, expected_code, expected_message",

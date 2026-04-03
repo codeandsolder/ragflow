@@ -14,6 +14,7 @@
 #  limitations under the License.
 #
 import asyncio
+import logging
 import sys
 import types
 import warnings
@@ -77,6 +78,7 @@ def get_dialog_service():
     global _dialog_service_module
     if _dialog_service_module is None:
         import api.db.services.dialog_service as dialog_service
+
         _dialog_service_module = dialog_service
     return _dialog_service_module
 

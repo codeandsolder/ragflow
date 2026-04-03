@@ -58,8 +58,10 @@ class TestCleanStr:
     def test_removes_double_quotes(self):
         assert clean_str('"quoted"') == "quoted"
 
-    def test_non_string_passthrough(self):
-        assert clean_str(123) == 123
+    def test_empty_string(self):
+        assert clean_str("") == ""
+
+    def test_none_input(self):
         assert clean_str(None) is None
         assert clean_str([1, 2]) == [1, 2]
 

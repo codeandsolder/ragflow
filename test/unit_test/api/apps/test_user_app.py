@@ -34,23 +34,13 @@ import hashlib
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-RETCODE_SUCCESS = 0
-RETCODE_ARGUMENT_ERROR = 1
-RETCODE_DATA_ERROR = 2
-RETCODE_FORBIDDEN = 3
-RETCODE_NOT_FOUND = 4
-RETCODE_AUTHENTICATION_ERROR = 2
-RETCODE_OPERATING_ERROR = 6
-RETCODE_NOT_EFFECTIVE = 7
-RETCODE_SERVER_ERROR = 5
-RETCODE_BAD_REQUEST = 8
-RETCODE_EXCEPTION_ERROR = 9
+from common.constants import RetCode
 
 
 class MockResponse:
     """Mock Flask/Quart response object"""
 
-    def __init__(self, data, code=0, message=""):
+    def __init__(self, data, code=RetCode.SUCCESS, message=""):
         self._data = data
         self._code = code
         self._message = message
@@ -59,17 +49,17 @@ class MockResponse:
         return {"code": self._code, "message": self._message, "data": self._data}
 
 
-def get_json_result(data=None, message="", code=0):
+def get_json_result(data=None, message="", code=RetCode.SUCCESS):
     """Mock get_json_result helper"""
     return MockResponse(data, code, message)
 
 
-def get_data_error_result(message="", code=2):
+def get_data_error_result(message="", code=RetCode.DATA_ERROR):
     """Mock get_data_error_result helper"""
     return MockResponse(None, code, message)
 
 
-def get_error_data_result(message="", code=1):
+def get_error_data_result(message="", code=RetCode.ARGUMENT_ERROR):
     """Mock get_error_data_result helper"""
     return MockResponse(None, code, message)
 
@@ -93,32 +83,32 @@ class TestUserLoginValidation:
 
     def test_login_empty_json(self):
         """Test login returns error for empty request body"""
-        result = get_json_result(data=False, code=RETCODE_AUTHENTICATION_ERROR, message="Unauthorized!")
+        result = get_json_result(data=False, code=RetCode.AUTHENTICATION_ERROR, message="Unauthorized!")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_AUTHENTICATION_ERROR
+        assert result_json.get("code") == RetCode.AUTHENTICATION_ERROR
 
     def test_login_user_not_found(self):
         """Test login returns error when user is not found"""
-        result = get_json_result(data=False, code=RETCODE_AUTHENTICATION_ERROR, message="Email: test@example.com is not registered!")
+        result = get_json_result(data=False, code=RetCode.AUTHENTICATION_ERROR, message="Email: test@example.com is not registered!")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_AUTHENTICATION_ERROR
+        assert result_json.get("code") == RetCode.AUTHENTICATION_ERROR
         assert "not registered" in result_json.get("message", "").lower()
 
     def test_login_wrong_password(self):
         """Test login returns error for wrong password"""
-        result = get_json_result(data=False, code=RETCODE_AUTHENTICATION_ERROR, message="Email and password do not match!")
+        result = get_json_result(data=False, code=RetCode.AUTHENTICATION_ERROR, message="Email and password do not match!")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_AUTHENTICATION_ERROR
+        assert result_json.get("code") == RetCode.AUTHENTICATION_ERROR
 
     def test_login_inactive_user(self):
         """Test login returns error for inactive user"""
-        result = get_json_result(data=False, code=RETCODE_FORBIDDEN, message="This account has been disabled, please contact the administrator!")
+        result = get_json_result(data=False, code=RetCode.FORBIDDEN, message="This account has been disabled, please contact the administrator!")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_FORBIDDEN
+        assert result_json.get("code") == RetCode.FORBIDDEN
         assert "disabled" in result_json.get("message", "").lower()
 
 
@@ -127,26 +117,26 @@ class TestUserRegistrationValidation:
 
     def test_registration_disabled(self):
         """Test registration returns error when registration is disabled"""
-        result = get_json_result(data=False, message="User registration is disabled!", code=RETCODE_OPERATING_ERROR)
+        result = get_json_result(data=False, message="User registration is disabled!", code=RetCode.OPERATING_ERROR)
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_OPERATING_ERROR
+        assert result_json.get("code") == RetCode.OPERATING_ERROR
         assert "disabled" in result_json.get("message", "").lower()
 
     def test_registration_invalid_email(self):
         """Test registration returns error for invalid email"""
-        result = get_json_result(data=False, message="Invalid email address: invalid-email!", code=RETCODE_OPERATING_ERROR)
+        result = get_json_result(data=False, message="Invalid email address: invalid-email!", code=RetCode.OPERATING_ERROR)
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_OPERATING_ERROR
+        assert result_json.get("code") == RetCode.OPERATING_ERROR
         assert "Invalid email" in result_json.get("message", "")
 
     def test_registration_email_exists(self):
         """Test registration returns error when email already exists"""
-        result = get_json_result(data=False, message="Email: existing@example.com has already registered!", code=RETCODE_OPERATING_ERROR)
+        result = get_json_result(data=False, message="Email: existing@example.com has already registered!", code=RetCode.OPERATING_ERROR)
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_OPERATING_ERROR
+        assert result_json.get("code") == RetCode.OPERATING_ERROR
         assert "already registered" in result_json.get("message", "").lower()
 
 
@@ -158,7 +148,7 @@ class TestUserLogout:
         result = get_json_result(data=True)
         result_json = result.get_json()
 
-        assert result_json.get("code") == 0
+        assert result_json.get("code") == RetCode.SUCCESS
         assert result_json.get("data") is True
 
 
@@ -172,7 +162,7 @@ class TestUserProfile:
         result = get_json_result(data=user_data)
         result_json = result.get_json()
 
-        assert result_json.get("code") == 0
+        assert result_json.get("code") == RetCode.SUCCESS
         assert result_json.get("data") == user_data
 
 
@@ -181,10 +171,10 @@ class TestUserSettingValidation:
 
     def test_setting_wrong_password(self):
         """Test setting returns error for wrong current password"""
-        result = get_json_result(data=False, code=RETCODE_AUTHENTICATION_ERROR, message="Password error!")
+        result = get_json_result(data=False, code=RetCode.AUTHENTICATION_ERROR, message="Password error!")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_AUTHENTICATION_ERROR
+        assert result_json.get("code") == RetCode.AUTHENTICATION_ERROR
 
 
 class TestTenantInfo:
@@ -197,7 +187,7 @@ class TestTenantInfo:
         result = get_json_result(data=tenant_data)
         result_json = result.get_json()
 
-        assert result_json.get("code") == 0
+        assert result_json.get("code") == RetCode.SUCCESS
         assert result_json.get("data") == tenant_data
 
     def test_tenant_info_not_found(self):
@@ -205,7 +195,7 @@ class TestTenantInfo:
         result = get_data_error_result(message="Tenant not found!")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_DATA_ERROR
+        assert result_json.get("code") == RetCode.DATA_ERROR
 
 
 class TestLoginChannels:
@@ -218,7 +208,7 @@ class TestLoginChannels:
         result = get_json_result(data=channels)
         result_json = result.get_json()
 
-        assert result_json.get("code") == 0
+        assert result_json.get("code") == RetCode.SUCCESS
         assert len(result_json.get("data", [])) == 2
 
 
@@ -227,52 +217,52 @@ class TestPasswordResetOtp:
 
     def test_forget_captcha_missing_email(self):
         """Test forget_captcha returns error when email is missing"""
-        result = get_json_result(data=False, code=RETCODE_ARGUMENT_ERROR, message="email is required")
+        result = get_json_result(data=False, code=RetCode.ARGUMENT_ERROR, message="email is required")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_forget_captcha_invalid_email(self):
         """Test forget_captcha returns error when email is invalid"""
-        result = get_json_result(data=False, code=RETCODE_DATA_ERROR, message="invalid email")
+        result = get_json_result(data=False, code=RetCode.DATA_ERROR, message="invalid email")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_DATA_ERROR
+        assert result_json.get("code") == RetCode.DATA_ERROR
 
     def test_forget_send_otp_missing_params(self):
         """Test forget_send_otp returns error when params are missing"""
-        result = get_json_result(data=False, code=RETCODE_ARGUMENT_ERROR, message="email and captcha required")
+        result = get_json_result(data=False, code=RetCode.ARGUMENT_ERROR, message="email and captcha required")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_forget_verify_otp_missing_params(self):
         """Test forget_verify_otp returns error when params are missing"""
-        result = get_json_result(data=False, code=RETCODE_ARGUMENT_ERROR, message="email and otp are required")
+        result = get_json_result(data=False, code=RetCode.ARGUMENT_ERROR, message="email and otp are required")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_forget_verify_otp_invalid_email(self):
         """Test forget_verify_otp returns error when email is invalid"""
-        result = get_json_result(data=False, code=RETCODE_DATA_ERROR, message="invalid email")
+        result = get_json_result(data=False, code=RetCode.DATA_ERROR, message="invalid email")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_DATA_ERROR
+        assert result_json.get("code") == RetCode.DATA_ERROR
 
     def test_forget_verify_otp_locked(self):
         """Test forget_verify_otp returns error when account is locked"""
-        result = get_json_result(data=False, code=RETCODE_NOT_EFFECTIVE, message="too many attempts, try later")
+        result = get_json_result(data=False, code=RetCode.NOT_EFFECTIVE, message="too many attempts, try later")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_NOT_EFFECTIVE
+        assert result_json.get("code") == RetCode.NOT_EFFECTIVE
 
     def test_forget_verify_otp_expired(self):
         """Test forget_verify_otp returns error when OTP is expired"""
-        result = get_json_result(data=False, code=RETCODE_NOT_EFFECTIVE, message="expired otp")
+        result = get_json_result(data=False, code=RetCode.NOT_EFFECTIVE, message="expired otp")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_NOT_EFFECTIVE
+        assert result_json.get("code") == RetCode.NOT_EFFECTIVE
 
 
 class TestPasswordResetFinal:
@@ -280,31 +270,31 @@ class TestPasswordResetFinal:
 
     def test_forget_reset_password_missing_params(self):
         """Test reset_password returns error when params are missing"""
-        result = get_json_result(data=False, code=RETCODE_ARGUMENT_ERROR, message="email and passwords are required")
+        result = get_json_result(data=False, code=RetCode.ARGUMENT_ERROR, message="email and passwords are required")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_forget_reset_password_not_verified(self):
         """Test reset_password returns error when email not verified"""
-        result = get_json_result(data=False, code=RETCODE_AUTHENTICATION_ERROR, message="email not verified")
+        result = get_json_result(data=False, code=RetCode.AUTHENTICATION_ERROR, message="email not verified")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_AUTHENTICATION_ERROR
+        assert result_json.get("code") == RetCode.AUTHENTICATION_ERROR
 
     def test_forget_reset_password_mismatch(self):
         """Test reset_password returns error when passwords don't match"""
-        result = get_json_result(data=False, code=RETCODE_ARGUMENT_ERROR, message="passwords do not match")
+        result = get_json_result(data=False, code=RetCode.ARGUMENT_ERROR, message="passwords do not match")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_ARGUMENT_ERROR
+        assert result_json.get("code") == RetCode.ARGUMENT_ERROR
 
     def test_forget_reset_password_invalid_email(self):
         """Test reset_password returns error when email is invalid"""
-        result = get_json_result(data=False, code=RETCODE_DATA_ERROR, message="invalid email")
+        result = get_json_result(data=False, code=RetCode.DATA_ERROR, message="invalid email")
         result_json = result.get_json()
 
-        assert result_json.get("code") == RETCODE_DATA_ERROR
+        assert result_json.get("code") == RetCode.DATA_ERROR
 
 
 class TestUserRegisterFunction:
@@ -417,15 +407,17 @@ class TestRetCodeConstants:
     """Test return code constants are properly defined"""
 
     def test_return_codes_defined(self):
-        """Test all return codes are defined"""
-        assert RETCODE_SUCCESS == 0
-        assert RETCODE_ARGUMENT_ERROR == 1
-        assert RETCODE_DATA_ERROR == 2
-        assert RETCODE_FORBIDDEN == 3
-        assert RETCODE_NOT_FOUND == 4
-        assert RETCODE_AUTHENTICATION_ERROR == 2
-        assert RETCODE_OPERATING_ERROR == 6
-        assert RETCODE_NOT_EFFECTIVE == 7
+        """Test all return codes match the RetCode enum"""
+        assert RetCode.SUCCESS == 0
+        assert RetCode.ARGUMENT_ERROR == 101
+        assert RetCode.DATA_ERROR == 102
+        assert RetCode.FORBIDDEN == 403
+        assert RetCode.NOT_FOUND == 404
+        assert RetCode.AUTHENTICATION_ERROR == 109
+        assert RetCode.OPERATING_ERROR == 103
+        assert RetCode.NOT_EFFECTIVE == 10
+        assert RetCode.BAD_REQUEST == 400
+        assert RetCode.EXCEPTION_ERROR == 100
 
 
 if __name__ == "__main__":

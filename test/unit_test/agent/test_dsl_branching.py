@@ -12,165 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import types
 import json
-import importlib.util
-from pathlib import Path
+from unittest.mock import patch
+
+from agent.canvas import Canvas
 
 
-def create_stub(name, attrs=None):
-    """Create a stub module and add it to sys.modules."""
-    parts = name.split(".")
-    for i in range(1, len(parts) + 1):
-        mod_name = ".".join(parts[:i])
-        if mod_name not in sys.modules:
-            stub = types.ModuleType(mod_name)
-            sys.modules[mod_name] = stub
+def _mock_categorize_init(self, canvas, component_id, param):
+    from agent.component.base import ComponentBase
 
-    if attrs:
-        for k, v in attrs.items():
-            setattr(sys.modules[name], k, v)
-
-
-create_stub("api.db.services.task_service")
-sys.modules["api.db.services.task_service"].has_canceled = lambda *_args, **_kwargs: False
-
-create_stub("api.db.joint_services.tenant_model_service")
-sys.modules["api.db.joint_services.tenant_model_service"].get_model_config_by_type_and_name = lambda *args, **kwargs: None
-sys.modules["api.db.joint_services.tenant_model_service"].get_tenant_default_model_by_type = lambda *args, **kwargs: None
-
-create_stub("rag.llm.chat_model")
-sys.modules["rag.llm.chat_model"].ERROR_PREFIX = "ERROR:"
-
-create_stub("common")
-create_stub("common.constants")
-sys.modules["common.constants"].LLMType = types.SimpleNamespace(CHAT="chat")
-
-create_stub("common.misc_utils")
-sys.modules["common.misc_utils"].hash_str2int = lambda x: hash(x)
-sys.modules["common.misc_utils"].get_uuid = lambda: "test-uuid"
-
-create_stub("rag.nlp")
-sys.modules["rag.nlp"].is_english = lambda x: True
-
-create_stub("rag.utils.redis_conn")
-sys.modules["rag.utils.redis_conn"].REDIS_CONN = types.SimpleNamespace(
-    get=lambda *args, **kwargs: None,
-    set=lambda *args, **kwargs: None,
-    set_obj=lambda *args, **kwargs: None,
-    delete=lambda *args, **kwargs: None,
-)
-
-create_stub("rag.graphrag.entity_resolution_prompt")
-sys.modules["rag.graphrag.entity_resolution_prompt"].ENTITY_RESOLUTION_PROMPT = "Test prompt"
-
-create_stub("rag.graphrag.utils")
-sys.modules["rag.graphrag.utils"].perform_variable_replacements = lambda text, **kwargs: text
-sys.modules["rag.graphrag.utils"].chat_limiter = types.SimpleNamespace(__enter__=lambda s: None, __exit__=lambda s, *args: None)
-sys.modules["rag.graphrag.utils"].GraphChange = type("GraphChange", (), {})
-
-create_stub("rag.graphrag.memory")
-sys.modules["rag.graphrag.memory"].GraphMemoryMonitor = type("GraphMemoryMonitor", (), {})
-sys.modules["rag.graphrag.memory"].stream_pagerank = lambda *args, **kwargs: {}
-
-create_stub("rag.graphrag.llm_protocol")
-sys.modules["rag.graphrag.llm_protocol"].GraphRAGCompletionLLM = type("GraphRAGCompletionLLM", (), {})
-
-create_stub("rag.graphrag.general.extractor")
-sys.modules["rag.graphrag.general.extractor"].Extractor = type("Extractor", (), {})
-
-create_stub("common.exceptions")
-sys.modules["common.exceptions"].TaskCanceledException = type("TaskCanceledException", (Exception,), {})
-
-create_stub("rag")
-create_stub("rag.utils")
-create_stub("rag.utils.es_conn")
-create_stub("rag.prompts")
-create_stub("rag.prompts.generator")
-sys.modules["rag.prompts.generator"].chunks_format = lambda x: []
-
-create_stub("common.exceptions")
-sys.modules["common.exceptions"].TaskCanceledException = Exception
-
-create_stub("agent")
-create_stub("agent.component")
-sys.modules["agent.component"].component_class = lambda name: type(name, (), {})
-
-create_stub("agent.component.base")
-
-
-class StubComponentParamBase:
-    def __init__(self):
-        self.message_history_window_size = 13
-        self.inputs = {}
-        self.outputs = {}
-        self.description = ""
-        self.max_retries = 0
-        self.delay_after_error = 2.0
-        self._is_raw_conf = True
-
-    def update(self, conf, allow_redundant=False):
-        for key, value in conf.items():
-            setattr(self, key, value)
-
-    def check(self):
-        pass
-
-
-sys.modules["agent.component.base"].ComponentBase = type("ComponentBase", (), {})
-sys.modules["agent.component.base"].ComponentParamBase = StubComponentParamBase
-
-_original_component_class = sys.modules["agent.component"].component_class
-
-
-def _wrapped_component_class(class_name):
-    if class_name.endswith("Param"):
-
-        class DynamicParam(StubComponentParamBase):
-            pass
-
-        DynamicParam.__name__ = class_name
-        return DynamicParam
-    else:
-
-        class DynamicComponent:
-            def __init__(self, canvas, id, param):
-                self._canvas = canvas
-                self._id = id
-                self._param = param
-                self.component_name = class_name
-
-            def output(self, key):
-                return None
-
-            def thoughts(self):
-                return ""
-
-        DynamicComponent.__name__ = class_name
-        return DynamicComponent
-
-
-sys.modules["agent.component"].component_class = _wrapped_component_class
-
-create_stub("api")
-create_stub("api.db")
-create_stub("api.db.services")
-create_stub("api.db.services.llm_service")
-sys.modules["api.db.services.llm_service"].LLMBundle = type("LLMBundle", (), {})
-
-create_stub("api.db.services.file_service")
-sys.modules["api.db.services.file_service"].FileService = type("FileService", (), {"get_blob": lambda *args, **kwargs: b"", "parse": lambda *args, **kwargs: None})
-
-_test_dir = Path(__file__).parent
-_project_root = _test_dir.parent.parent.parent
-_canvas_path = _project_root / "agent" / "canvas.py"
-_canvas_spec = importlib.util.spec_from_file_location("agent.canvas", str(_canvas_path))
-_canvas_mod = importlib.util.module_from_spec(_canvas_spec)
-sys.modules["agent.canvas"] = _canvas_mod
-_canvas_spec.loader.exec_module(_canvas_mod)
-Canvas = _canvas_mod.Canvas
-Graph = _canvas_mod.Graph
+    ComponentBase.__init__(self, canvas, component_id, param)
 
 
 class TestDSLBranchingFlow:
@@ -189,23 +40,23 @@ class TestDSLBranchingFlow:
                         "component_name": "Categorize",
                         "params": {
                             "category_description": {
-                                "technical": {"to": ["retrieval_0"], "description": "Tech questions"},
-                                "general": {"to": ["generate_0"], "description": "General questions"},
+                                "technical": {"to": ["exitloop_0"], "description": "Tech questions"},
+                                "general": {"to": ["exitloop_1"], "description": "General questions"},
                             },
                             "query": "sys.query",
                             "llm_id": "llm1",
                         },
                     },
-                    "downstream": ["retrieval_0", "generate_0"],
+                    "downstream": ["exitloop_0", "exitloop_1"],
                     "upstream": ["begin"],
                 },
-                "retrieval_0": {
-                    "obj": {"component_name": "Retrieval", "params": {"kb_ids": ["kb1"]}},
+                "exitloop_0": {
+                    "obj": {"component_name": "ExitLoop", "params": {}},
                     "downstream": [],
                     "upstream": ["categorize_0"],
                 },
-                "generate_0": {
-                    "obj": {"component_name": "Generate", "params": {"llm_id": "llm1"}},
+                "exitloop_1": {
+                    "obj": {"component_name": "ExitLoop", "params": {}},
                     "downstream": [],
                     "upstream": ["categorize_0"],
                 },
@@ -215,6 +66,7 @@ class TestDSLBranchingFlow:
             "retrieval": {"chunks": [], "doc_aggs": []},
         }
 
+    @patch("agent.component.categorize.Categorize.__init__", _mock_categorize_init)
     def test_categorize_parsing(self):
         dsl = self._create_categorize_dsl()
         canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
@@ -224,14 +76,16 @@ class TestDSLBranchingFlow:
         assert "technical" in categorize._param.category_description
         assert "general" in categorize._param.category_description
 
+    @patch("agent.component.categorize.Categorize.__init__", _mock_categorize_init)
     def test_categorize_routing_parsing(self):
         dsl = self._create_categorize_dsl()
         canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
         categorize = canvas.components["categorize_0"]["obj"]
-        assert categorize._param.category_description["technical"]["to"] == ["retrieval_0"]
-        assert categorize._param.category_description["general"]["to"] == ["generate_0"]
+        assert categorize._param.category_description["technical"]["to"] == ["exitloop_0"]
+        assert categorize._param.category_description["general"]["to"] == ["exitloop_1"]
 
+    @patch("agent.component.categorize.Categorize.__init__", _mock_categorize_init)
     def test_categorize_downstream_routes(self):
         dsl = self._create_categorize_dsl()
         canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
-        assert set(canvas.components["categorize_0"]["downstream"]) == {"retrieval_0", "generate_0"}
+        assert set(canvas.components["categorize_0"]["downstream"]) == {"exitloop_0", "exitloop_1"}

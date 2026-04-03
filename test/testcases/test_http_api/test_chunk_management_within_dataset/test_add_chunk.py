@@ -217,7 +217,6 @@ class TestAddChunk:
         assert res["code"] == 102
         assert res["message"] == f"You don't own the document {document_id}."
 
-    @pytest.mark.skip(reason="issues/6411")
     def test_concurrent_add_chunk(self, HttpApiAuth, add_document):
         count = 50
         dataset_id, document_id = add_document

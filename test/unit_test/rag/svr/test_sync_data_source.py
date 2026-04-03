@@ -24,7 +24,7 @@ from pathlib import Path
 
 
 _test_dir = Path(__file__).parent
-_project_root = _test_dir.parent.parent.parent
+_project_root = _test_dir.parent.parent.parent.parent
 
 
 class TestSyncDataSourceFileExists:

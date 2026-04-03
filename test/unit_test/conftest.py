@@ -14,11 +14,42 @@
 #  limitations under the License.
 #
 
+# CRITICAL: Set flag BEFORE any other imports happen
+import os
+
+os.environ["RAGFLOW_TESTING"] = "1"
+
 import sys
+import types
 import importlib
 from pathlib import Path
 
 import pytest
+
+# Mock scholarly package to avoid SyntaxError in broken dependency
+# This must be done early before any agent.tools imports happen
+scholarly_stub = types.ModuleType("scholarly")
+scholarly_stub.search_pubs = lambda *args, **kwargs: []
+sys.modules["scholarly"] = scholarly_stub
+
+# Pre-import rag.graphrag packages BEFORE any test file can create stub modules.
+# This prevents stub modules from breaking subsequent imports.
+_graphrag_packages = [
+    "rag.graphrag",
+    "rag.graphrag.general",
+    "rag.graphrag.general.mind_map_extractor",
+    "rag.graphrag.general.extractor",
+    "rag.graphrag.entity_resolution",
+    "rag.graphrag.utils",
+    "rag.graphrag.memory",
+    "rag.graphrag.llm_protocol",
+    "rag.graphrag.entity_resolution_prompt",
+]
+for _pkg in _graphrag_packages:
+    try:
+        importlib.import_module(_pkg)
+    except Exception:
+        pass
 
 project_root = Path(__file__).parent.parent.parent
 if str(project_root) not in sys.path:
@@ -94,3 +125,29 @@ def optional_modules():
 def pytest_configure(config):
     """pytest hook that runs before test collection."""
     _patch_sqlglot_compatibility()
+
+
+def pytest_collection_modifyitems(session, config, items):
+    """Pre-import packages before test collection to prevent stub modules from breaking imports."""
+    _pre_import_critical_packages()
+
+
+def _pre_import_critical_packages():
+    """Pre-import critical packages to ensure they are real packages, not stub modules."""
+    critical_packages = [
+        "rag.graphrag",
+        "rag.graphrag.general",
+        "rag.graphrag.general.mind_map_extractor",
+        "rag.graphrag.entity_resolution",
+        "rag.graphrag.utils",
+        "rag.graphrag.memory",
+        "rag.graphrag.llm_protocol",
+        "rag.graphrag.entity_resolution_prompt",
+    ]
+
+    for pkg in critical_packages:
+        if pkg not in sys.modules:
+            try:
+                importlib.import_module(pkg)
+            except Exception:
+                pass

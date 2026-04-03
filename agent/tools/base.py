@@ -22,7 +22,8 @@ from functools import partial
 from typing import TypedDict, List, Any
 from agent.component.base import ComponentParamBase, ComponentBase
 from common.misc_utils import hash_str2int
-from rag.prompts.generator import kb_prompt
+
+kb_prompt = None  # lazy import
 from common.mcp_tool_call_conn import MCPToolCallSession, ToolCallSession
 from timeit import default_timer as timer
 
@@ -193,6 +194,9 @@ class ToolBase(ComponentBase):
             chunks.append({"chunk_id": id, "content": content, "doc_id": id, "docnm_kwd": title, "similarity": score, "url": url})
             aggs.append({"doc_name": title, "doc_id": id, "count": 1, "url": url})
         self._canvas.add_reference(chunks, aggs)
+        global kb_prompt
+        if kb_prompt is None:
+            from rag.prompts.generator import kb_prompt
         self.set_output("formalized_content", "\n".join(kb_prompt({"chunks": chunks, "doc_aggs": aggs}, 200000, True)))
 
     def thoughts(self) -> str:

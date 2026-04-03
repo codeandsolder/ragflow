@@ -52,6 +52,9 @@ def get_chat_limiter():
         _chat_limiter = asyncio.Semaphore(int(os.environ.get("MAX_CONCURRENT_CHATS", 10)))
     return _chat_limiter
 
+# Alias for backwards compatibility
+chat_limiter = get_chat_limiter()
+
 
 @dataclasses.dataclass
 class GraphChange:

@@ -14,17 +14,26 @@
 #  limitations under the License.
 #
 
+import json
+
 import pytest
 
+from agent.canvas import Canvas
 from agent.tools.base import ToolParamBase, ToolBase, ToolMeta, ToolParameter
 
 
-class MockCanvas:
+class MockCanvas(Canvas):
     def __init__(self):
-        self._components = {}
-        self._variables = {}
-        self._tenant_id = "test_tenant"
+        dsl = json.dumps({"components": {}, "path": [], "history": []})
+        super().__init__(dsl, tenant_id="test_tenant")
         self._references = []
+        self._canceled = False
+
+    def load(self):
+        pass
+
+    def is_canceled(self):
+        return self._canceled
 
     def get_component_name(self, component_id):
         return "test_tool"
@@ -33,7 +42,7 @@ class MockCanvas:
         self._references.extend(chunks)
 
     def get_variable_value(self, var_name):
-        return self._variables.get(var_name)
+        return self.variables.get(var_name)
 
     def get_tenant_id(self):
         return self._tenant_id
@@ -281,6 +290,13 @@ class TestToolBase:
 
 class TestToolBaseRetrieveChunks:
     """Tests for _retrieve_chunks method."""
+
+    @pytest.fixture(autouse=True)
+    def mock_kb_prompt(self, monkeypatch):
+        """Mock kb_prompt to avoid database connection."""
+        import agent.tools.base as base_mod
+
+        monkeypatch.setattr(base_mod, "kb_prompt", lambda chunks, max_tokens, use_template: f"Prompt with {len(chunks.get('chunks', []))} chunks")
 
     def test_retrieve_chunks_basic(self):
         canvas = MockCanvas()

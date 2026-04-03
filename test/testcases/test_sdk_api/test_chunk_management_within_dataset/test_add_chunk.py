@@ -142,7 +142,6 @@ class TestAddChunk:
             document.add_chunk(content="chunk test")
         assert f"You don't own the document {document.id}" in str(exception_info.value), str(exception_info.value)
 
-    @pytest.mark.skip(reason="issues/6411")
     @pytest.mark.p3
     def test_concurrent_add_chunk(self, add_document):
         count = 50

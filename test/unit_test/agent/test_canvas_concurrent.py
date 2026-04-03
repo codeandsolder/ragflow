@@ -172,6 +172,9 @@ class TestCanvasConcurrentAccess:
         assert isinstance(ref, dict)
         assert "chunks" in ref
         assert "doc_aggs" in ref
+        # Verify that the reference contains data from all threads
+        assert len(ref["chunks"]) > 0, "Reference chunks should not be empty"
+        assert len(ref["doc_aggs"]) > 0, "Reference doc_aggs should not be empty"
 
     def test_memory_concurrent_access(self):
         """Test concurrent access to Canvas.memory data structure."""
@@ -242,3 +245,5 @@ class TestCanvasConcurrentAccess:
             assert results[0] is True, "sys.query should be a valid reference"
             assert results[1] is True, "sys.user_id should be a valid reference"
             assert results[2] is False, "nonexistent_var should not be a valid reference"
+        # Additional verification of thread safety
+        assert len(assertion.get_results()) == num_threads * iterations, "Expected results from all threads"

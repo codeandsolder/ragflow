@@ -29,13 +29,20 @@ from api.utils.api_utils import get_json_result, get_data_error_result
 from common.constants import RetCode
 
 
+def _get_result_json(result):
+    """Helper to get JSON from result, handling both dict and response objects."""
+    if hasattr(result, "get_json"):
+        return _get_result_json(result)
+    return result
+
+
 class TestLlmAppFactories:
     """Test cases for llm_app.factories endpoint logic"""
 
     def test_factories_success(self):
         """Test successful factories listing"""
         result = get_json_result(data=[{"name": "OpenAI", "model_types": ["chat"]}])
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == 0
 
@@ -46,7 +53,7 @@ class TestLlmAppSetApiKey:
     def test_set_api_key_no_models(self):
         """Test set_api_key returns error when no models configured"""
         result = get_data_error_result(message="No models configured for TestLLM (source: TestLLM).")
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == RetCode.DATA_ERROR
         assert "No models configured" in result_json.get("message", "")
@@ -58,7 +65,7 @@ class TestLlmAppMyLlms:
     def test_my_llms_success(self):
         """Test successful my_llms listing"""
         result = get_json_result(data={"OpenAI": {"chat": ["gpt-4"]}})
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == 0
 
@@ -69,7 +76,7 @@ class TestLlmAppResponseHelpers:
     def test_get_json_result_success(self):
         """Test successful JSON result creation"""
         result = get_json_result(data={"llm_id": "test-llm"})
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == 0
         assert result_json.get("data") == {"llm_id": "test-llm"}

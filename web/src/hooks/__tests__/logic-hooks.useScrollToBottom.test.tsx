@@ -80,7 +80,6 @@ describe('useScrollToBottom', () => {
     function useTestScrollToBottom(messages: any, containerRef: any) {
       const hook = useScrollToBottom(messages, containerRef);
       hook.scrollRef.current = { scrollIntoView: mockScroll } as any;
-      console.log('HOOK: isAtBottom:', hook.isAtBottom);
       return hook;
     }
 
@@ -96,13 +95,10 @@ describe('useScrollToBottom', () => {
       await flushAll();
       // Advance fake timers by 10ms instead of real setTimeout
       jest.advanceTimersByTime(10);
-      console.log('AFTER SCROLL: isAtBottom:', result.current.isAtBottom);
     });
 
     rerender({ messages: ['msg1'] });
     await flushAll();
-
-    console.log('AFTER RERENDER: isAtBottom:', result.current.isAtBottom);
 
     expect(mockScroll).not.toHaveBeenCalled();
 
@@ -115,6 +111,76 @@ describe('useScrollToBottom', () => {
     const { result } = renderHook(() => useScrollToBottom([], containerRef));
     // The button should appear in the UI when isAtBottom is false
     expect(result.current.isAtBottom).toBe(false);
+  });
+
+  it('should handle multiple rapid message additions', async () => {
+    const containerRef = createMockContainer({ atBottom: true });
+    const mockScroll = jest.fn();
+
+    function useTestScrollToBottom(messages: any, containerRef: any) {
+      const hook = useScrollToBottom(messages, containerRef);
+      hook.scrollRef.current = { scrollIntoView: mockScroll } as any;
+      return hook;
+    }
+
+    const { rerender } = renderHook(
+      ({ messages }) => useTestScrollToBottom(messages, containerRef),
+      { initialProps: { messages: [] } },
+    );
+
+    // Simulate multiple rapid messages
+    rerender({ messages: ['msg1'] });
+    rerender({ messages: ['msg1', 'msg2'] });
+    rerender({ messages: ['msg1', 'msg2', 'msg3'] });
+    await flushAll();
+
+    // Should have been called for the initial change, not for each subsequent change
+    // when already at bottom and scroll already triggered
+    expect(mockScroll).toHaveBeenCalled();
+    // More specifically, it should be called at least once
+    expect(mockScroll.mock.calls.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('should handle messages becoming empty', async () => {
+    const containerRef = createMockContainer({ atBottom: true });
+    const mockScroll = jest.fn();
+
+    function useTestScrollToBottom(messages: any, containerRef: any) {
+      const hook = useScrollToBottom(messages, containerRef);
+      hook.scrollRef.current = { scrollIntoView: mockScroll } as any;
+      return hook;
+    }
+
+    const { rerender } = renderHook(
+      ({ messages }) => useTestScrollToBottom(messages, containerRef),
+      { initialProps: { messages: ['msg1', 'msg2'] } },
+    );
+
+    rerender({ messages: [] });
+    await flushAll();
+
+    // Should handle empty messages array gracefully
+    expect(mockScroll).toHaveBeenCalled();
+  });
+
+  it('should handle container ref with undefined scroll properties', () => {
+    const containerRef = {
+      current: {
+        scrollTop: undefined,
+        clientHeight: undefined,
+        scrollHeight: undefined,
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+      },
+    } as any;
+
+    // Should not throw an error
+    expect(() => {
+      const { result } = renderHook(() => useScrollToBottom([], containerRef));
+      // Basic check that the hook returned something
+      expect(result.current).toBeDefined();
+      expect(result.current.isAtBottom).toBeDefined();
+    }).not.toThrow();
   });
 });
 

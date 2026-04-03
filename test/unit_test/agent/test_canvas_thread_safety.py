@@ -196,7 +196,7 @@ class TestCanvasGlobalsEdgeCases:
             {
                 "components": {
                     "begin": {"obj": {"component_name": "Begin", "params": {}}, "downstream": [], "upstream": []},
-                    "test_component": {"obj": {"component_name": "Test", "params": {}}, "downstream": [], "upstream": ["begin"]},
+                    "test_component": {"obj": {"component_name": "ExitLoop", "params": {}}, "downstream": [], "upstream": ["begin"]},
                 },
                 "history": [],
                 "path": ["begin"],

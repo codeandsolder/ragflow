@@ -192,10 +192,10 @@ def is_reserved_ip(ip: str) -> bool:
             ipaddress.IPv4Network("192.168.0.0/16"),  # Private
             ipaddress.IPv4Network("169.254.0.0/16"),  # Link-local
             ipaddress.IPv4Network("0.0.0.0/8"),  # Current network
-            ipaddress.IPv4Network("::1/128"),  # IPv6 loopback
-            ipaddress.IPv4Network("fe80::/10"),  # IPv6 link-local
-            ipaddress.IPv4Network("fc00::/7"),  # IPv6 unique local
-            ipaddress.IPv4Network("fd00::/8"),  # IPv6 unique local
+            ipaddress.IPv6Network("::1/128"),  # IPv6 loopback
+            ipaddress.IPv6Network("fe80::/10"),  # IPv6 link-local
+            ipaddress.IPv6Network("fc00::/7"),  # IPv6 unique local
+            ipaddress.IPv6Network("fd00::/8"),  # IPv6 unique local
             ipaddress.IPv4Network("255.255.255.255/32"),  # Broadcast
         ]
 
@@ -220,7 +220,7 @@ def is_valid_url(url: str) -> bool:
     hostname_lower = hostname.lower()
 
     # Block known private/reserved hostnames
-    if hostname_lower in ("localhost", "0.0.0.0", "::1", "::", "[::1]", "[::]"):
+    if hostname_lower in ("localhost", "0.0.0.0", "::1", "::", "[::1]", "[::]", "internal"):
         return False
 
     if hostname_lower.endswith(".local") or hostname_lower.endswith(".localhost") or hostname_lower.endswith(".internal"):
@@ -239,38 +239,34 @@ def is_valid_url(url: str) -> bool:
         r"^240\.",  # 240.0.0.0/4 (reserved)
         r"^255\.",  # 255.255.255.255/32 (broadcast)
     ]
-    
+
     for pattern in private_ip_patterns:
         if re.match(pattern, hostname_lower):
             return False
-    
+
     # Block private IPv6 ranges
     ipv6_private_patterns = [
         r"^fc00:",  # Unique local addresses (ULA)
         r"^fe80:",  # Link-local addresses
         r"^ff00:",  # Multicast addresses
     ]
-    
+
     for pattern in ipv6_private_patterns:
         if re.match(pattern, hostname_lower):
             return False
-    
+
     # Block private TLDs and special domains
-    private_tlds = [
-        "localdomain", "localdomain6", "internal", "corp", "home", "lan", "site", "test"
-    ]
-    
+    private_tlds = ["localdomain", "localdomain6", "internal", "corp", "home", "lan", "site", "test"]
+
     if any(hostname_lower.endswith(f".{tld}") for tld in private_tlds):
         return False
-    
+
     # Block common internal domains
-    internal_domains = [
-        "example.com", "example.org", "example.net", "invalid", "localhost.localdomain"
-    ]
-    
+    internal_domains = ["invalid", "localhost.localdomain"]
+
     if hostname_lower in internal_domains:
         return False
-    
+
     return True
     if hostname_lower.startswith(
         (

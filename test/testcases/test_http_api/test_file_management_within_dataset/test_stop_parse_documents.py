@@ -62,16 +62,15 @@ class TestAuthorization:
         assert res["message"] == expected_message
 
 
-@pytest.mark.skip
 class TestDocumentsParseStop:
     @pytest.mark.parametrize(
         "payload, expected_code, expected_message",
         [
-            pytest.param(None, 102, """AttributeError("\'NoneType\' object has no attribute \'get\'")""", marks=pytest.mark.skip),
+            pytest.param(None, 102, """AttributeError("\'NoneType\' object has no attribute \'get\'")"""),
             pytest.param({"document_ids": []}, 102, "`document_ids` is required", marks=pytest.mark.p1),
             pytest.param({"document_ids": ["invalid_id"]}, 102, "You don't own the document invalid_id.", marks=pytest.mark.p3),
             pytest.param({"document_ids": ["\n!?。；！？\"'"]}, 102, """You don\'t own the document \n!?。；！？"\'.""", marks=pytest.mark.p3),
-            pytest.param("not json", 102, "AttributeError(\"'str' object has no attribute 'get'\")", marks=pytest.mark.skip),
+            pytest.param("not json", 102, "AttributeError(\"'str' object has no attribute 'get'\")"),
             pytest.param(lambda r: {"document_ids": r[:1]}, 0, "", marks=pytest.mark.p1),
             pytest.param(lambda r: {"document_ids": r}, 0, "", marks=pytest.mark.p1),
         ],
@@ -127,7 +126,6 @@ class TestDocumentsParseStop:
         assert res["code"] == expected_code
         assert res["message"] == expected_message
 
-    @pytest.mark.skip
     @pytest.mark.parametrize(
         "payload",
         [
@@ -169,7 +167,6 @@ class TestDocumentsParseStop:
         assert f"Duplicate document ids: {document_ids[0]}" in res["data"]["errors"]
 
 
-@pytest.mark.skip(reason="unstable")
 def test_stop_parse_100_files(HttpApiAuth, add_dataset_func, tmp_path):
     document_num = 100
     dataset_id = add_dataset_func
@@ -181,7 +178,6 @@ def test_stop_parse_100_files(HttpApiAuth, add_dataset_func, tmp_path):
     validate_document_parse_cancel(HttpApiAuth, dataset_id, document_ids)
 
 
-@pytest.mark.skip(reason="unstable")
 def test_concurrent_parse(HttpApiAuth, add_dataset_func, tmp_path):
     document_num = 50
     dataset_id = add_dataset_func

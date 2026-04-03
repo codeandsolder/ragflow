@@ -28,7 +28,7 @@ class TestStringToBytes:
     def test_string_input_returns_bytes(self):
         """Test that string input is converted to bytes"""
         input_string = "hello world"
-        result = common_module.common_module.string_to_bytes(input_string)
+        result = common_module.string_to_bytes(input_string)
 
         assert isinstance(result, bytes)
         assert result == b"hello world"
@@ -105,7 +105,7 @@ class TestRoundtripConversion:
             "",
         ],
     )
-    def test_common_module_string_to_common_module_bytes_to_string(self, test_string):
+    def test_roundtrip_string_bytes(self, test_string):
         """Test converting string to bytes and back for various inputs"""
         as_bytes = common_module.string_to_bytes(test_string)
         back_to_string = common_module.bytes_to_string(as_bytes)

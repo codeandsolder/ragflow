@@ -201,8 +201,8 @@ class TestCanvasRaceConditions:
                 barrier.wait()
                 for i in range(entries_per_thread):
                     entry = (f"user_{thread_id}", f"message_{thread_id}_{i}")
-                    with canvas._lock:
-                        canvas.history.append(entry)
+                    # Use Canvas methods instead of direct lock access
+                    canvas.add_user_input(entry[1])
                     assertion.record_result(f"appender_{thread_id}_{i}", entry)
             except Exception as e:
                 assertion.record_error(f"appender_{thread_id}", e)

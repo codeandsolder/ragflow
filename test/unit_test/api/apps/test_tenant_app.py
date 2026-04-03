@@ -19,7 +19,6 @@ Unit tests for tenant_app endpoint logic.
 """
 
 import pytest
-from unittest.mock import Mock
 import sys
 import os
 
@@ -29,22 +28,29 @@ from api.utils.api_utils import get_json_result, get_data_error_result
 from common.constants import RetCode
 
 
+def _get_result_json(result):
+    """Helper to get JSON from result, handling both dict and response objects."""
+    if hasattr(result, "get_json"):
+        return result.get_json()
+    return result
+
+
 class TestTenantAppUserList:
     """Test cases for tenant_app.user_list endpoint logic"""
 
     def test_user_list_no_authorization(self):
         """Test user_list returns error when not authorized"""
         result = get_json_result(data=False, message="No authorization.", code=RetCode.AUTHENTICATION_ERROR)
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == RetCode.AUTHENTICATION_ERROR
 
     def test_user_list_success(self):
         """Test successful user listing"""
         result = get_json_result(data=[{"user_id": "user-123", "email": "test@example.com"}])
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == 0
+        assert result_json.get("code") == RetCode.SUCCESS
         assert len(result_json.get("data", [])) == 1
 
 
@@ -54,7 +60,7 @@ class TestTenantAppCreate:
     def test_create_user_not_found(self):
         """Test create returns error when user not found"""
         result = get_data_error_result(message="User not found.")
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == RetCode.DATA_ERROR
         assert "User not found" in result_json.get("message", "")
@@ -62,7 +68,7 @@ class TestTenantAppCreate:
     def test_create_user_already_in_team(self):
         """Test create returns error when user already in team"""
         result = get_data_error_result(message="test@example.com is already in the team.")
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == RetCode.DATA_ERROR
         assert "already in the team" in result_json.get("message", "")
@@ -70,7 +76,7 @@ class TestTenantAppCreate:
     def test_create_user_is_owner(self):
         """Test create returns error when user is owner"""
         result = get_data_error_result(message="test@example.com is the owner of the team.")
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
         assert result_json.get("code") == RetCode.DATA_ERROR
         assert "owner of the team" in result_json.get("message", "")
@@ -82,9 +88,9 @@ class TestTenantAppResponseHelpers:
     def test_get_json_result_success(self):
         """Test successful JSON result creation"""
         result = get_json_result(data={"tenant_id": "test-tenant"})
-        result_json = result.get_json()
+        result_json = _get_result_json(result)
 
-        assert result_json.get("code") == 0
+        assert result_json.get("code") == RetCode.SUCCESS
         assert result_json.get("data") == {"tenant_id": "test-tenant"}
 
 

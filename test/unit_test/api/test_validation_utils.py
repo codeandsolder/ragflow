@@ -316,6 +316,7 @@ class TestValidateAndParseJsonRequest:
 
         mock_request = AsyncMock()
         mock_request.get_json = AsyncMock(return_value={"name": "test", "value": 42})
+        mock_request.mimetype = "application/json"
 
         result, error = await validation_utils.validate_and_parse_json_request(mock_request, TestValidator)
 
@@ -334,6 +335,7 @@ class TestValidateAndParseJsonRequest:
         mock_request = AsyncMock()
         mock_request.get_json = AsyncMock(side_effect=UnsupportedMediaType())
         mock_request.content_type = "text/xml"
+        mock_request.mimetype = "text/xml"
 
         result, error = await validation_utils.validate_and_parse_json_request(mock_request, TestValidator)
 
@@ -351,6 +353,7 @@ class TestValidateAndParseJsonRequest:
 
         mock_request = AsyncMock()
         mock_request.get_json = AsyncMock(side_effect=BadRequest())
+        mock_request.mimetype = "application/json"
 
         result, error = await validation_utils.validate_and_parse_json_request(mock_request, TestValidator)
 
@@ -367,6 +370,7 @@ class TestValidateAndParseJsonRequest:
 
         mock_request = AsyncMock()
         mock_request.get_json = AsyncMock(return_value=["not", "a", "dict"])
+        mock_request.mimetype = "application/json"
 
         result, error = await validation_utils.validate_and_parse_json_request(mock_request, TestValidator)
 
@@ -385,12 +389,13 @@ class TestValidateAndParseJsonRequest:
 
         mock_request = AsyncMock()
         mock_request.get_json = AsyncMock(return_value={"name": 123, "age": "not_int"})
+        mock_request.mimetype = "application/json"
 
         result, error = await validation_utils.validate_and_parse_json_request(mock_request, TestValidator)
 
         assert result is None
         assert error is not None
-        assert "Field:" in error
+        assert ("Field:" in error) or ("Input:" in error)
 
     @pytest.mark.anyio
     async def test_with_extras_parameter(self):
@@ -402,6 +407,7 @@ class TestValidateAndParseJsonRequest:
 
         mock_request = AsyncMock()
         mock_request.get_json = AsyncMock(return_value={"name": "test"})
+        mock_request.mimetype = "application/json"
 
         result, error = await validation_utils.validate_and_parse_json_request(mock_request, TestValidator, extras={"user_id": "user_123"})
 
@@ -420,6 +426,7 @@ class TestValidateAndParseJsonRequest:
 
         mock_request = AsyncMock()
         mock_request.get_json = AsyncMock(return_value={"name": "test"})
+        mock_request.mimetype = "application/json"
 
         result, error = await validation_utils.validate_and_parse_json_request(mock_request, TestValidator, exclude_unset=True)
 

@@ -19,21 +19,22 @@ from unittest.mock import patch, MagicMock
 import numpy as np
 import pytest
 
-from rag.llm import embedding_model
+from rag.llm import EmbeddingModel
+import rag.llm.embedding_model as embedding_model
 
 
 class TestEmbeddingModelFactoryRegistration:
     def test_openai_embed_registered(self):
-        assert "OpenAI" in embedding_model.EmbeddingModel
+        assert "OpenAI" in EmbeddingModel
 
     def test_ollama_embed_registered(self):
-        assert "Ollama" in embedding_model.EmbeddingModel
+        assert "Ollama" in EmbeddingModel
 
     def test_xinference_embed_registered(self):
-        assert "Xinference" in embedding_model.EmbeddingModel
+        assert "Xinference" in EmbeddingModel
 
     def test_cohere_embed_registered(self):
-        assert "Cohere" in embedding_model.EmbeddingModel
+        assert "Cohere" in EmbeddingModel
 
 
 class TestBaseEmbeddingModel:

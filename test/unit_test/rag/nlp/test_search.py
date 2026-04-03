@@ -53,12 +53,12 @@ class TestIndexName:
 
 @pytest.mark.filterwarnings("ignore")
 class TestDealerSearchResult:
-    """Test Dealer.SearchResult dataclass"""
+    """Test SearchResult dataclass"""
 
     def test_search_result_creation(self):
-        from rag.nlp.search import Dealer
+        from rag.nlp.search import SearchResult
 
-        result = Dealer.SearchResult(
+        result = SearchResult(
             total=10,
             ids=["id1", "id2"],
             query_vector=[0.1, 0.2],
@@ -72,9 +72,9 @@ class TestDealerSearchResult:
         assert len(result.ids) == 2
 
     def test_search_result_default_values(self):
-        from rag.nlp.search import Dealer
+        from rag.nlp.search import SearchResult
 
-        result = Dealer.SearchResult(total=0, ids=[])
+        result = SearchResult(total=0, ids=[])
         assert result.query_vector is None
         assert result.field is None
         assert result.highlight is None
