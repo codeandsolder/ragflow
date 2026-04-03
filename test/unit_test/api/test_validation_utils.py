@@ -513,7 +513,7 @@ class TestCreateDatasetReq:
     def test_pipeline_id_validation(self):
         """Test pipeline_id validation"""
         # Valid 32-char hex
-        dataset = validation_utils.CreateDatasetReq(name="Test", parse_type=1, pipeline_id="a" * 32)
+        dataset = validation_utils.CreateDatasetReq(name="Test", parse_type=2, pipeline_id="a" * 32)
         assert dataset.pipeline_id == "a" * 32
 
     def test_pipeline_id_wrong_length(self):

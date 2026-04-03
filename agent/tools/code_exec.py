@@ -440,15 +440,21 @@ class CodeExec(ToolBase, ABC):
             return
 
         if isinstance(parsed_stdout, dict):
+            schema_keys = set()
             for key, meta in outputs_items:
                 if key.startswith("_"):
                     continue
+                schema_keys.add(key)
                 val = self._get_by_path(parsed_stdout, key)
                 if val is None and len(outputs_items) == 1:
                     val = parsed_stdout
                 coerced = self._coerce_output_value(val, meta.get("type"))
                 logging.info(f"[CodeExec]: populate dict key='{key}' raw='{val}' coerced='{coerced}'")
                 self.set_output(key, coerced)
+            for key, val in parsed_stdout.items():
+                if key not in schema_keys and not key.startswith("_"):
+                    logging.info(f"[CodeExec]: populate dict extra key='{key}' val='{val}'")
+                    self.set_output(key, val)
             return
 
         if isinstance(parsed_stdout, (list, tuple)):

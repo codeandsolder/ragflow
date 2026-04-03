@@ -4,7 +4,7 @@ Tests for database migration functions.
 
 import pytest
 from unittest.mock import MagicMock, patch
-from peewee import SqliteDatabase, Model, CharField, BooleanField
+from peewee import SqliteDatabase, Model, CharField, BooleanField, BigIntegerField
 from playhouse.migrate import SqliteMigrator
 
 from api.db.db_models import (
@@ -34,7 +34,7 @@ class TestMigrations:
             email = CharField(max_length=255, null=False)
             nickname = CharField(max_length=100, null=False)
             is_superuser = BooleanField(default=False)
-            create_time = MagicMock()
+            create_time = BigIntegerField(default=0)
 
             class Meta:
                 database = in_memory_db
@@ -49,9 +49,9 @@ class TestMigrations:
 
         from peewee import TextField
 
-        alter_db_add_column(migrator, test_model._meta.db_table, "new_field", TextField(null=True))
+        alter_db_add_column(migrator, test_model._meta.table_name, "new_field", TextField(null=True))
 
-        columns = in_memory_db.get_columns(test_model._meta.db_table)
+        columns = in_memory_db.get_columns(test_model._meta.table_name)
         column_names = [col.name for col in columns]
         assert "new_field" in column_names
 
@@ -79,10 +79,10 @@ class TestMigrations:
 
         from peewee import TextField
 
-        alter_db_add_column(migrator, test_model._meta.db_table, "idempotent_field", TextField(null=True))
-        alter_db_add_column(migrator, test_model._meta.db_table, "idempotent_field", TextField(null=True))
+        alter_db_add_column(migrator, test_model._meta.table_name, "idempotent_field", TextField(null=True))
+        alter_db_add_column(migrator, test_model._meta.table_name, "idempotent_field", TextField(null=True))
 
-        columns = in_memory_db.get_columns(test_model._meta.db_table)
+        columns = in_memory_db.get_columns(test_model._meta.table_name)
         column_names = [col.name for col in columns]
         assert "idempotent_field" in column_names
 
@@ -94,7 +94,7 @@ class TestMigrations:
 
         from peewee import TextField
 
-        alter_db_add_column(migrator, test_model._meta.db_table, "preserved_field", TextField(null=True, default="default_value"))
+        alter_db_add_column(migrator, test_model._meta.table_name, "preserved_field", TextField(null=True, default="default_value"))
 
         user = test_model.get(test_model.id == "preserve_test")
         assert user.email == "preserve@example.com"
@@ -107,9 +107,9 @@ class TestMigrations:
 
         from peewee import IntegerField
 
-        alter_db_add_column(migrator, test_model._meta.db_table, "score", IntegerField(default=0))
+        alter_db_add_column(migrator, test_model._meta.table_name, "score", IntegerField(default=0))
 
-        columns = in_memory_db.get_columns(test_model._meta.db_table)
+        columns = in_memory_db.get_columns(test_model._meta.table_name)
         column_names = [col.name for col in columns]
         assert "score" in column_names
 
@@ -119,8 +119,8 @@ class TestMigrations:
 
         from peewee import CharField
 
-        alter_db_add_column(migrator, test_model._meta.db_table, "old_name", CharField(max_length=100, null=True))
-        alter_db_rename_column(migrator, test_model._meta.db_table, "old_name", "new_name")
+        alter_db_add_column(migrator, test_model._meta.table_name, "old_name", CharField(max_length=100, null=True))
+        alter_db_rename_column(migrator, test_model._meta.table_name, "old_name", "new_name")
 
     def test_migrate_add_unique_email_no_duplicates(self, in_memory_db, test_model):
         """Test migrate_add_unique_email when no duplicates exist."""
@@ -169,17 +169,15 @@ class TestMigrations:
                 self.rowcount = rowcount
 
         with patch("api.db.db_models.DB") as mock_db:
-            mock_db.execute_sql = MagicMock(
-                side_effect=[
-                    MockCursor(0),
-                    MockCursor(1),
-                    MockCursor(1),
-                    MockCursor(1),
-                    MockCursor(1),
-                    MockCursor(1),
-                    MockCursor(1),
-                ]
-            )
+            calls = {"count": 0}
+
+            def _execute_sql(*_args, **_kwargs):
+                calls["count"] += 1
+                if calls["count"] == 1:
+                    return MockCursor(0)
+                return MockCursor(1)
+
+            mock_db.execute_sql = MagicMock(side_effect=_execute_sql)
             mock_db.atomic = MagicMock()
 
             with patch("api.db.db_models.settings") as mock_settings:

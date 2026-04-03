@@ -34,22 +34,30 @@ def remove_redundant_spaces(txt: str):
     txt = re.sub(r"([(\[<]) +", r"\1", txt, flags=re.IGNORECASE)
 
     txt = re.sub(r"(\d) +\. +(\d)", r"\1.\2", txt, flags=re.IGNORECASE)
-
     txt = re.sub(r"(\d) +: +(\d)", r"\1:\2", txt, flags=re.IGNORECASE)
 
-    txt = re.sub(r" +([!?])", r"\1", txt, flags=re.IGNORECASE)
+    # Normalize common email and URL patterns.
+    txt = re.sub(r"([A-Za-z0-9._%+-]+)\s*@\s*([A-Za-z0-9.-]+)\s*\.\s*([A-Za-z]{2,})", r"\1@\2.\3", txt)
+    txt = re.sub(r"\bhttps?\s*:\s*//", lambda m: m.group(0).replace(" ", ""), txt, flags=re.IGNORECASE)
+    txt = re.sub(r"(https?://[^\s/]+)\s*/\s*", r"\1/", txt, flags=re.IGNORECASE)
 
+    # Trim spaces only inside quotes, keeping outside spacing intact.
+    txt = re.sub(r'(["\'])\s+(\S)', r"\1\2", txt)
+    txt = re.sub(r'(\S)\s+(["\'])(?=[\s\.,!?;:\)]|$)', r"\1\2", txt)
+
+    txt = re.sub(r" +([!?])", r"\1", txt, flags=re.IGNORECASE)
     txt = re.sub(r"([!?]) +([!?])", r"\1\2", txt, flags=re.IGNORECASE)
 
-    txt = re.sub(r"([a-zA-Z0-9]) +\.", r"\1.", txt, flags=re.IGNORECASE)
-
+    txt = re.sub(r"([a-zA-Z0-9\]\"']) +\.", r"\1.", txt, flags=re.IGNORECASE)
+    # Keep behavior for nested / non-ASCII parentheses, but tighten simple "(word) ." => "(word)."
+    txt = re.sub(r"([A-Za-z0-9]\)) +\.", r"\1.", txt, flags=re.IGNORECASE)
+    txt = re.sub(r"\(([A-Za-z0-9 _-]+)\) +\.", r"(\1).", txt)
     txt = re.sub(r" +([,;:\)])", r"\1", txt, flags=re.IGNORECASE)
-
     txt = re.sub(r" +([>])", r"\1", txt, flags=re.IGNORECASE)
 
     txt = re.sub(r"([a-zA-Z]) +, +([a-zA-Z])", r"\1, \2", txt, flags=re.IGNORECASE)
-
-    txt = re.sub(r",(\s+)", r", ", txt)
+    # Keep tabs/newlines untouched; only normalize regular spaces after comma.
+    txt = re.sub(r", +", ", ", txt)
 
     return txt
 

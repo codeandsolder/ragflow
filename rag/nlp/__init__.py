@@ -1230,8 +1230,29 @@ def naive_merge(sections: str | list, chunk_token_num=128, delimiter="\n。；�
                 tk_nums.append(tnum)
         return cks
 
+    def split_by_delimiters(sec: str) -> list[str]:
+        if not sec:
+            return []
+        if not delimiter:
+            return [sec]
+        # Split on any configured delimiter char, fallback to full section if split is empty.
+        parts = [p for p in re.split(f"[{re.escape(delimiter)}]+", sec) if p]
+        return parts or [sec]
+
+    def split_by_token_budget(sec: str) -> list[str]:
+        if not sec:
+            return []
+        sec_tokens = num_tokens_from_string(sec)
+        if sec_tokens <= chunk_token_num:
+            return [sec]
+        token_ids = encoder.encode(sec)
+        step = max(int(chunk_token_num), 1)
+        return [encoder.decode(token_ids[i : i + step]) for i in range(0, len(token_ids), step)]
+
     for sec, pos in sections:
-        add_chunk("\n" + sec, pos)
+        for split_sec in split_by_delimiters(sec):
+            for token_sec in split_by_token_budget(split_sec):
+                add_chunk("\n" + token_sec, pos)
 
     return cks
 

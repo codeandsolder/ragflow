@@ -383,7 +383,7 @@ class TestToolBaseRetrieveChunks:
 class TestToolBaseAsync:
     """Tests for async invocation methods."""
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_tool_base_invoke_async_sync_function(self):
         canvas = MockCanvas()
         param = MockToolParam()
@@ -393,7 +393,7 @@ class TestToolBaseAsync:
 
         assert "processed: async test" == result
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_tool_base_invoke_async_coroutine(self):
         canvas = MockCanvas()
         param = MockToolParam()
@@ -412,7 +412,7 @@ class TestToolBaseAsync:
 
         assert "async processed: async test" == result
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_tool_base_invoke_async_catches_exception(self):
         canvas = MockCanvas()
         param = MockToolParam()

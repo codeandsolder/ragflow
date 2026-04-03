@@ -500,7 +500,7 @@ class TestCodeExecPopulateOutputs:
 
         code_exec._populate_outputs(["item1", "item2"], '["item1", "item2"]')
 
-        assert code_exec.output("content") == "item1"
+        assert code_exec.output("result") == "item1"
 
     def test_populate_outputs_scalar(self):
         canvas = MockCanvas()
@@ -510,7 +510,7 @@ class TestCodeExecPopulateOutputs:
 
         code_exec._populate_outputs("just a string", "just a string")
 
-        assert code_exec.output("content") == "just a string"
+        assert code_exec.output("result") == "just a string"
 
 
 class TestCodeExecEdgeCases:

@@ -14,7 +14,6 @@
 #  limitations under the License.
 #
 import asyncio
-import logging
 import sys
 import types
 import warnings
@@ -94,7 +93,7 @@ class _StubChatModel:
         self._outputs = outputs
         self.calls = []
 
-    async def async_chat(self, system_prompt, messages, llm_setting):
+    async def async_chat(self, system_prompt, messages, llm_setting, **_kwargs):
         idx = len(self.calls)
         if idx >= len(self._outputs):
             raise AssertionError("async_chat called more times than expected")
@@ -146,6 +145,7 @@ def force_es_engine(monkeypatch, dialog_service):
 
 @pytest.mark.p2
 def test_use_sql_repairs_missing_source_columns_for_non_aggregate(monkeypatch, force_es_engine, dialog_service):
+    expected_table = dialog_service.index_name("tenantid")
     retriever = _StubRetriever(
         [
             {
@@ -160,8 +160,8 @@ def test_use_sql_repairs_missing_source_columns_for_non_aggregate(monkeypatch, f
     )
     chat_model = _StubChatModel(
         [
-            "SELECT product FROM ragflow_tenant",
-            "SELECT doc_id, docnm_kwd, product FROM ragflow_tenant",
+            f"SELECT product FROM {expected_table}",
+            f"SELECT doc_id, docnm_kwd, product FROM {expected_table}",
         ]
     )
     monkeypatch.setattr(dialog_service.settings, "retriever", retriever, raising=False)
@@ -170,7 +170,7 @@ def test_use_sql_repairs_missing_source_columns_for_non_aggregate(monkeypatch, f
         dialog_service.use_sql(
             question="show me column of product",
             field_map={"product": "product"},
-            tenant_id="tenant-id",
+            tenant_id="tenantid",
             chat_mdl=chat_model,
             quota=True,
             kb_ids=None,
@@ -185,6 +185,7 @@ def test_use_sql_repairs_missing_source_columns_for_non_aggregate(monkeypatch, f
 
 @pytest.mark.p2
 def test_use_sql_keeps_aggregate_flow_without_source_repair(monkeypatch, force_es_engine, dialog_service):
+    expected_table = dialog_service.index_name("tenantid")
     retriever = _StubRetriever(
         [
             {
@@ -195,7 +196,7 @@ def test_use_sql_keeps_aggregate_flow_without_source_repair(monkeypatch, force_e
     )
     chat_model = _StubChatModel(
         [
-            "SELECT COUNT(*) FROM ragflow_tenant",
+            f"SELECT COUNT(*) FROM {expected_table}",
         ]
     )
     monkeypatch.setattr(dialog_service.settings, "retriever", retriever, raising=False)
@@ -204,7 +205,7 @@ def test_use_sql_keeps_aggregate_flow_without_source_repair(monkeypatch, force_e
         dialog_service.use_sql(
             question="how many rows are there",
             field_map={"product": "product"},
-            tenant_id="tenant-id",
+            tenant_id="tenantid",
             chat_mdl=chat_model,
             quota=True,
             kb_ids=None,
@@ -220,6 +221,7 @@ def test_use_sql_keeps_aggregate_flow_without_source_repair(monkeypatch, force_e
 
 @pytest.mark.p2
 def test_use_sql_source_repair_is_bounded_to_single_retry(monkeypatch, force_es_engine, dialog_service):
+    expected_table = dialog_service.index_name("tenantid")
     retriever = _StubRetriever(
         [
             {
@@ -234,8 +236,8 @@ def test_use_sql_source_repair_is_bounded_to_single_retry(monkeypatch, force_es_
     )
     chat_model = _StubChatModel(
         [
-            "SELECT product FROM ragflow_tenant",
-            "SELECT product FROM ragflow_tenant WHERE product IS NOT NULL",
+            f"SELECT product FROM {expected_table}",
+            f"SELECT product FROM {expected_table} WHERE product IS NOT NULL",
         ]
     )
     monkeypatch.setattr(dialog_service.settings, "retriever", retriever, raising=False)
@@ -244,7 +246,7 @@ def test_use_sql_source_repair_is_bounded_to_single_retry(monkeypatch, force_es_
         dialog_service.use_sql(
             question="show me column of product",
             field_map={"product": "product"},
-            tenant_id="tenant-id",
+            tenant_id="tenantid",
             chat_mdl=chat_model,
             quota=True,
             kb_ids=None,
@@ -287,6 +289,7 @@ def test_async_chat_uses_all_docs_when_no_doc_ids_selected(monkeypatch, dialog_s
         llm_setting={},
         similarity_threshold=0.1,
         vector_similarity_weight=0.2,
+        hybrid_weight=0.3,
         top_n=8,
         top_k=32,
         meta_data_filter=None,

@@ -72,14 +72,10 @@ class TestCanvasThreadPoolSafety:
         results_lock = threading.Lock()
 
         def task(task_id: int, should_fail: bool = False):
-            try:
-                if should_fail:
-                    raise ValueError(f"Intentional failure in task {task_id}")
-                with results_lock:
-                    results.append(task_id)
-            except Exception as e:
-                with results_lock:
-                    errors.append((task_id, str(e)))
+            if should_fail:
+                raise ValueError(f"Intentional failure in task {task_id}")
+            with results_lock:
+                results.append(task_id)
 
         futures = []
         for i in range(10):

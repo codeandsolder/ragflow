@@ -290,11 +290,11 @@ class TestSwitchComponent:
         switch = Switch(mock_canvas, "switch_0", switch_param)
         switch._invoke()
 
-        assert switch.output("next") == ["Component_default"]
-        assert switch.output("_next") == ["default"]
+        assert switch.output("next") == ["Component_branchA"]
+        assert switch.output("_next") == ["branchA"]
 
     def test_cascade_fallback_behavior(self, mock_canvas):
-        mock_canvas.variables = {"input:0": "Category C", "input:1": "789"}
+        mock_canvas.variables = {"input:0": "XYZ", "input:1": "789"}
 
         switch_param = SwitchParam()
         switch_param.conditions = [

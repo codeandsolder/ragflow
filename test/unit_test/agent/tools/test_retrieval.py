@@ -120,6 +120,29 @@ class TestRetrieval:
         assert "test query" in thoughts
         assert "Keywords" in thoughts
 
+    def test_retrieval_thoughts_input_value_precedence(self):
+        canvas = MockCanvas()
+        param = RetrievalParam()
+        param.query = "param query"
+        retrieval = Retrieval(canvas, "test_id", param)
+        retrieval.set_input_value("query", "input value query")
+
+        thoughts = retrieval.thoughts()
+
+        assert "input value query" in thoughts
+        assert "param query" not in thoughts
+
+    def test_retrieval_thoughts_fallback_to_param_input(self):
+        canvas = MockCanvas()
+        param = RetrievalParam()
+        param.query = "param-only query"
+        retrieval = Retrieval(canvas, "test_id", param)
+
+        thoughts = retrieval.thoughts()
+
+        assert "param-only query" in thoughts
+
+    @pytest.mark.anyio
     async def test_retrieval_invoke_empty_query(self):
         canvas = MockCanvas()
         param = RetrievalParam()
@@ -133,7 +156,7 @@ class TestRetrieval:
 
         assert result == "No results found"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_retrieval_set_output_formalized_content(self):
         canvas = MockCanvas()
         param = RetrievalParam()
@@ -144,7 +167,7 @@ class TestRetrieval:
         output = retrieval.output("formalized_content")
         assert output == "Test content"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_retrieval_set_output_json(self):
         canvas = MockCanvas()
         param = RetrievalParam()
@@ -169,7 +192,7 @@ class TestRetrieval:
 class TestRetrievalKBRetrieval:
     """Tests for KB retrieval functionality."""
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_retrieval_kb_no_kb_selected(self):
         canvas = MockCanvas()
         param = RetrievalParam()
@@ -184,7 +207,7 @@ class TestRetrievalKBRetrieval:
                 await retrieval._retrieve_kb("test query")
 
     @patch("agent.tools.retrieval.settings")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_retrieval_kb_with_mock_kb(self, mock_settings):
         canvas = MockCanvas()
         param = RetrievalParam()
@@ -196,13 +219,14 @@ class TestRetrievalKBRetrieval:
         mock_kb.embd_id = "embd1"
 
         with patch("agent.tools.retrieval.KnowledgebaseService") as mock_kb_service:
-            with patch("agent.tools.retrieval.get_model_config_by_type_and_name") as mock_get_model:
-                with patch("agent.tools.retrieval.LLMBundle"):
-                    mock_kb_service.get_by_ids.return_value = [mock_kb]
-                    mock_get_model.return_value = MagicMock()
+                with patch("agent.tools.retrieval.get_model_config_by_type_and_name") as mock_get_model:
+                    with patch("agent.tools.retrieval.LLMBundle"):
+                        with patch("agent.tools.retrieval.kb_prompt", return_value=["Test chunk"]):
+                            mock_kb_service.get_by_ids.return_value = [mock_kb]
+                            mock_get_model.return_value = MagicMock()
 
-                    mock_settings.retriever = MagicMock()
-                    mock_settings.retriever.retrieval = AsyncMock(
+                            mock_settings.retriever = MagicMock()
+                            mock_settings.retriever.retrieval = AsyncMock(
                         return_value={
                             "chunks": [
                                 {
@@ -218,18 +242,18 @@ class TestRetrievalKBRetrieval:
                         }
                     )
 
-                    retrieval = Retrieval(canvas, "test_id", param)
-                    await retrieval._retrieve_kb("test query")
+                            retrieval = Retrieval(canvas, "test_id", param)
+                            await retrieval._retrieve_kb("test query")
 
-                    output = retrieval.output("formalized_content")
-                    assert output is not None
-                    assert "Test chunk" in output
+                            output = retrieval.output("formalized_content")
+                            assert output is not None
+                            assert "Test chunk" in output
 
 
 class TestRetrievalMemoryRetrieval:
     """Tests for memory retrieval functionality."""
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_retrieval_memory_no_memory_selected(self):
         canvas = MockCanvas()
         param = RetrievalParam()
@@ -237,12 +261,13 @@ class TestRetrievalMemoryRetrieval:
         param.retrieval_from = "memory"
 
         retrieval = Retrieval(canvas, "test_id", param)
-        result = await retrieval._retrieve_memory("test query")
-
-        assert result == ""
+        with patch("agent.tools.retrieval.MemoryService") as mock_mem_service:
+            mock_mem_service.get_by_ids.return_value = []
+            with pytest.raises(Exception, match="No memory is selected"):
+                await retrieval._retrieve_memory("test query")
 
     @patch("agent.tools.retrieval.settings")
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_retrieval_memory_with_mock(self, mock_settings):
         canvas = MockCanvas()
         param = RetrievalParam()
@@ -270,7 +295,7 @@ class TestRetrievalMemoryRetrieval:
 class TestRetrievalInvokeAsync:
     """Tests for invoke_async method."""
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invoke_async_empty_query(self):
         canvas = MockCanvas()
         param = RetrievalParam()
@@ -279,16 +304,16 @@ class TestRetrievalInvokeAsync:
         retrieval = Retrieval(canvas, "test_id", param)
         result = await retrieval.invoke_async(query="")
 
-        assert result == "No results"
+        assert result is None
         output = retrieval.output("formalized_content")
         assert output == "No results"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_invoke_async_with_query(self):
         canvas = MockCanvas()
         param = RetrievalParam()
         param.empty_response = "No results"
-        param.kb_ids = []
+        param.kb_ids = ["kb1"]
 
         retrieval = Retrieval(canvas, "test_id", param)
 
@@ -298,7 +323,91 @@ class TestRetrievalInvokeAsync:
 
             assert result == "Retrieved content"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
+    async def test_invoke_async_prefers_dataset_when_both_configured(self):
+        canvas = MockCanvas()
+        param = RetrievalParam()
+        param.kb_ids = ["kb1"]
+        param.memory_ids = ["mem1"]
+        retrieval = Retrieval(canvas, "test_id", param)
+
+        with patch.object(retrieval, "_retrieve_kb", new_callable=AsyncMock) as mock_retrieve_kb:
+            with patch.object(retrieval, "_retrieve_memory", new_callable=AsyncMock) as mock_retrieve_memory:
+                mock_retrieve_kb.return_value = "kb result"
+                result = await retrieval.invoke_async(query="test")
+
+                assert result == "kb result"
+                mock_retrieve_kb.assert_awaited_once_with("test")
+                mock_retrieve_memory.assert_not_awaited()
+
+    @pytest.mark.anyio
+    async def test_invoke_async_kb_prompt_failure_sets_error_output(self):
+        canvas = MockCanvas()
+        param = RetrievalParam()
+        param.kb_ids = ["kb1"]
+        retrieval = Retrieval(canvas, "test_id", param)
+
+        mock_kb = MagicMock()
+        mock_kb.id = "kb1"
+        mock_kb.tenant_id = "tenant1"
+        mock_kb.embd_id = "embd1"
+
+        with patch("agent.tools.retrieval.KnowledgebaseService") as mock_kb_service:
+            with patch("agent.tools.retrieval.get_model_config_by_type_and_name") as mock_get_model:
+                with patch("agent.tools.retrieval.LLMBundle"):
+                    with patch("agent.tools.retrieval.settings") as mock_settings:
+                        with patch("agent.tools.retrieval.kb_prompt", side_effect=RuntimeError("kb_prompt failed")):
+                            mock_kb_service.get_by_ids.return_value = [mock_kb]
+                            mock_get_model.return_value = MagicMock()
+                            mock_settings.retriever = MagicMock()
+                            mock_settings.retriever.retrieval = AsyncMock(
+                                return_value={
+                                    "chunks": [
+                                        {
+                                            "chunk_id": "1",
+                                            "content": "Test chunk",
+                                            "doc_id": "doc1",
+                                            "docnm_kwd": "Test Doc",
+                                            "similarity": 0.9,
+                                            "url": "http://example.com",
+                                        }
+                                    ],
+                                    "doc_aggs": [{"doc_name": "Test Doc", "doc_id": "doc1", "count": 1}],
+                                }
+                            )
+                            mock_settings.retriever.retrieval_by_children.return_value = [
+                                {
+                                    "chunk_id": "1",
+                                    "content": "Test chunk",
+                                    "doc_id": "doc1",
+                                    "docnm_kwd": "Test Doc",
+                                    "similarity": 0.9,
+                                    "url": "http://example.com",
+                                }
+                            ]
+
+                            result = await retrieval.invoke_async(query="test")
+
+                            assert result == "kb_prompt failed"
+                            assert retrieval.output("_ERROR") == "kb_prompt failed"
+
+    @pytest.mark.anyio
+    async def test_invoke_async_timeout_error_sets_error_output(self):
+        canvas = MockCanvas()
+        param = RetrievalParam()
+        param.kb_ids = ["kb1"]
+        retrieval = Retrieval(canvas, "test_id", param)
+
+        with patch.object(retrieval, "_retrieve_kb", new_callable=AsyncMock) as mock_retrieve_kb:
+            mock_retrieve_kb.side_effect = TimeoutError("timed out")
+
+            result = await retrieval.invoke_async(query="test")
+
+            assert isinstance(result, str)
+            assert "Operation timed out after" in result
+            assert retrieval.output("_ERROR") == result
+
+    @pytest.mark.anyio
     async def test_invoke_async_cancelled(self):
         canvas = MockCanvas()
         canvas._canceled = True
@@ -353,11 +462,25 @@ class TestRetrievalEdgeCases:
 
     def test_retrieval_get_input_elements_from_text(self):
         canvas = MockCanvas()
-        canvas.set_variable_value("query_var", "test value")
+        canvas.set_variable_value("sys.query_var", "test value")
 
         param = RetrievalParam()
         retrieval = Retrieval(canvas, "test_id", param)
 
-        elements = retrieval.get_input_elements_from_text("{{query_var}}")
+        elements = retrieval.get_input_elements_from_text("{{sys.query_var}}")
 
-        assert "query_var" in elements
+        assert "sys.query_var" in elements
+
+    def test_retrieval_get_input_elements_from_text_malformed_and_whitespace(self):
+        canvas = MockCanvas()
+        canvas.set_variable_value("sys.query_var", "test value")
+        param = RetrievalParam()
+        retrieval = Retrieval(canvas, "test_id", param)
+
+        malformed = retrieval.get_input_elements_from_text("{{sys.query_var}")
+        unsupported_whitespace = retrieval.get_input_elements_from_text("{{ sys.query_var }}")
+        supported_spaced_braces = retrieval.get_input_elements_from_text("{ {sys.query_var} }")
+
+        assert "sys.query_var" in malformed
+        assert unsupported_whitespace == {}
+        assert "sys.query_var" in supported_spaced_braces

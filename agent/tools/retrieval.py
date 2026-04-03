@@ -304,7 +304,10 @@ class Retrieval(ToolBase, ABC):
         return asyncio.run(self._invoke_async(**kwargs))
 
     def thoughts(self) -> str:
+        query = self.get_input_value("query")
+        if query is None:
+            query = self.get_input().get("query", "-_-!")
         return """
 Keywords: {}
 Looking for the most relevant articles.
-        """.format(self.get_input().get("query", "-_-!"))
+        """.format(query)

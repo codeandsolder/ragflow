@@ -59,13 +59,14 @@ class Base(RemoteModelBase, ABC):
 class JinaRerank(Base):
     _FACTORY_NAME = "Jina"
 
-    def __init__(self, key, model_name="jina-reranker-v2-base-multilingual", base_url="https://api.jina.ai/v1/rerank"):
+    def __init__(self, key, model_name="jina-reranker-v2-base-multilingual", base_url="https://api.jina.ai/v1/rerank", **kwargs):
+        super().__init__(key, model_name, **kwargs)
         self.base_url = base_url
         self.headers = {"Content-Type": "application/json", "Authorization": f"Bearer {key}"}
         self.model_name = model_name
 
     def similarity(self, query: str, texts: list):
-        texts = [truncate(t, 8196) for t in texts]
+        texts = [truncate(t, 8196)[:8196] for t in texts]
         data = {"model": self.model_name, "query": query, "documents": texts, "top_n": len(texts)}
 
         def call_jina():
@@ -86,7 +87,8 @@ class JinaRerank(Base):
 class XInferenceRerank(Base):
     _FACTORY_NAME = "Xinference"
 
-    def __init__(self, key="x", model_name="", base_url=""):
+    def __init__(self, key="x", model_name="", base_url="", **kwargs):
+        super().__init__(key, model_name, **kwargs)
         if base_url.find("/v1") == -1:
             base_url = urljoin(base_url, "/v1/rerank")
         if base_url.find("/rerank") == -1:
@@ -122,7 +124,8 @@ class XInferenceRerank(Base):
 class LocalAIRerank(Base):
     _FACTORY_NAME = "LocalAI"
 
-    def __init__(self, key, model_name, base_url):
+    def __init__(self, key, model_name, base_url, **kwargs):
+        super().__init__(key, model_name, **kwargs)
         if base_url.find("/rerank") == -1:
             self.base_url = urljoin(base_url, "/rerank")
         else:
@@ -162,7 +165,8 @@ class LocalAIRerank(Base):
 class NvidiaRerank(Base):
     _FACTORY_NAME = "NVIDIA"
 
-    def __init__(self, key, model_name, base_url="https://ai.api.nvidia.com/v1/retrieval/nvidia/"):
+    def __init__(self, key, model_name, base_url="https://ai.api.nvidia.com/v1/retrieval/nvidia/", **kwargs):
+        super().__init__(key, model_name, **kwargs)
         if not base_url:
             base_url = "https://ai.api.nvidia.com/v1/retrieval/nvidia/"
         self.model_name = model_name
@@ -217,7 +221,8 @@ class LmStudioRerank(Base):
 class OpenAI_APIRerank(Base):
     _FACTORY_NAME = "OpenAI-API-Compatible"
 
-    def __init__(self, key, model_name, base_url):
+    def __init__(self, key, model_name, base_url, **kwargs):
+        super().__init__(key, model_name, **kwargs)
         normalized_base_url = (base_url or "").strip()
         if "/rerank" in normalized_base_url:
             self.base_url = normalized_base_url.rstrip("/")
@@ -261,6 +266,7 @@ class CoHereRerank(Base):
     def __init__(self, key, model_name, base_url=None):
         from cohere import Client
 
+        super().__init__(key, model_name)
         # Only pass base_url if it's a non-empty string, otherwise use default Cohere API endpoint
         client_kwargs = {"api_key": key}
         if base_url and base_url.strip():
@@ -299,7 +305,8 @@ class TogetherAIRerank(Base):
 class SILICONFLOWRerank(Base):
     _FACTORY_NAME = "SILICONFLOW"
 
-    def __init__(self, key, model_name, base_url="https://api.siliconflow.cn/v1/rerank"):
+    def __init__(self, key, model_name, base_url="https://api.siliconflow.cn/v1/rerank", **kwargs):
+        super().__init__(key, model_name, **kwargs)
         normalized_base_url = (base_url or "").strip()
         if not normalized_base_url:
             normalized_base_url = "https://api.siliconflow.cn/v1/rerank"
@@ -346,6 +353,7 @@ class BaiduYiyanRerank(Base):
     def __init__(self, key, model_name, base_url=None):
         from qianfan.resources import Reranker
 
+        super().__init__(key, model_name)
         key = json.loads(key)
         ak = key.get("yiyan_ak", "")
         sk = key.get("yiyan_sk", "")
@@ -374,6 +382,7 @@ class VoyageRerank(Base):
     def __init__(self, key, model_name, base_url=None):
         import voyageai
 
+        super().__init__(key, model_name)
         self.client = voyageai.Client(api_key=key)
         self.model_name = model_name
 
@@ -397,6 +406,7 @@ class QWenRerank(Base):
     def __init__(self, key, model_name="gte-rerank", base_url=None, **kwargs):
         import dashscope
 
+        super().__init__(key, model_name, **kwargs)
         self.api_key = key
         self.model_name = dashscope.TextReRank.Models.gte_rerank if model_name is None else model_name
 
@@ -440,6 +450,7 @@ class HuggingfaceRerank(Base):
         return np.array(scores)
 
     def __init__(self, key, model_name="BAAI/bge-reranker-v2-m3", base_url="http://127.0.0.1"):
+        super().__init__(key, model_name)
         self.model_name = model_name.split("___")[0]
         self.base_url = base_url
 
@@ -455,7 +466,8 @@ class HuggingfaceRerank(Base):
 class GPUStackRerank(Base):
     _FACTORY_NAME = "GPUStack"
 
-    def __init__(self, key, model_name, base_url):
+    def __init__(self, key, model_name, base_url, **kwargs):
+        super().__init__(key, model_name, **kwargs)
         if not base_url:
             raise ValueError("url cannot be None")
 
@@ -524,7 +536,8 @@ class Ai302Rerank(Base):
     def __init__(self, key, model_name, base_url="https://api.302.ai/v1/rerank"):
         if not base_url:
             base_url = "https://api.302.ai/v1/rerank"
-        super().__init__(key, model_name, base_url)
+        super().__init__(key, model_name)
+        self.base_url = base_url
 
 
 class JiekouAIRerank(JinaRerank):
@@ -547,6 +560,7 @@ class RAGconRerank(Base):
     _FACTORY_NAME = "RAGcon"
 
     def __init__(self, key, model_name, base_url=None, **kwargs):
+        super().__init__(key, model_name, **kwargs)
         if not base_url:
             base_url = "https://connect.ragcon.com/v1"
 

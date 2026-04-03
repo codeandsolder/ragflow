@@ -182,7 +182,7 @@ class TestEntityResolution:
         assert resolver._has_digit_in_2gram_diff("ABC", "ABD") is False
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 class TestEntityResolutionIntegration:
     """Integration tests for entity resolution with mocked LLM."""
 
@@ -200,7 +200,7 @@ class TestEntityResolutionIntegration:
 
         return MockLLM()
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_entity_resolution_with_llm(self, mock_llm, monkeypatch):
         monkeypatch.setattr("rag.graphrag.entity_resolution.chat_limiter", asyncio.Semaphore(10))
         monkeypatch.setattr("rag.graphrag.entity_resolution.thread_pool_exec", AsyncMock(return_value=""))
@@ -223,7 +223,7 @@ class TestEntityResolutionIntegration:
         assert result.graph is not None
         assert result.change is not None
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_large_scale_entity_resolution(self, monkeypatch):
         class MockLLM:
             llm_name = "mock-llm"

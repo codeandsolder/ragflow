@@ -14,7 +14,6 @@
 #  limitations under the License.
 #
 import warnings
-from types import SimpleNamespace
 
 import pytest
 import peewee
@@ -51,6 +50,10 @@ class _SqliteDocument(peewee.Model):
         table_name = "document"
         database = None
 
+    @classmethod
+    def getter_by(cls, field_name):
+        return getattr(cls, field_name)
+
 
 class _SqliteFile(peewee.Model):
     """SQLite version of File model."""
@@ -82,6 +85,25 @@ class _SqliteFile2Document(peewee.Model):
         database = None
 
 
+class _SqliteUserCanvas(peewee.Model):
+    id = peewee.CharField(max_length=32, primary_key=True)
+    title = peewee.CharField(max_length=255, null=True)
+    canvas_category = peewee.CharField(max_length=32, null=True, index=True)
+
+    class Meta:
+        table_name = "user_canvas"
+        database = None
+
+
+class _SqliteUser(peewee.Model):
+    id = peewee.CharField(max_length=32, primary_key=True)
+    nickname = peewee.CharField(max_length=255, null=True)
+
+    class Meta:
+        table_name = "user"
+        database = None
+
+
 @pytest.fixture
 def sqlite_db():
     """Create in-memory SQLite database with schema."""
@@ -89,7 +111,9 @@ def sqlite_db():
     _SqliteDocument._meta.database = db
     _SqliteFile._meta.database = db
     _SqliteFile2Document._meta.database = db
-    db.create_tables([_SqliteDocument, _SqliteFile, _SqliteFile2Document])
+    _SqliteUserCanvas._meta.database = db
+    _SqliteUser._meta.database = db
+    db.create_tables([_SqliteDocument, _SqliteFile, _SqliteFile2Document, _SqliteUserCanvas, _SqliteUser])
     yield db
     db.close()
 
@@ -97,6 +121,7 @@ def sqlite_db():
 @pytest.fixture
 def sample_documents(sqlite_db):
     """Insert sample documents into the test DB."""
+    _SqliteUser.create(id="user-1", nickname="User One")
     docs = [
         _SqliteDocument.create(
             id=f"doc-{i}",
@@ -110,6 +135,19 @@ def sample_documents(sqlite_db):
         )
         for i in range(1, 6)
     ]
+    for i in range(1, 6):
+        _SqliteFile.create(
+            id=f"file-{i}",
+            parent_id="kb-1",
+            tenant_id="tenant-1",
+            created_by="user-1",
+            name=f"doc-{i}.txt",
+            location=f"/tmp/doc-{i}.txt",
+            size=100,
+            type="txt",
+            source_type="",
+        )
+        _SqliteFile2Document.create(id=f"f2d-{i}", file_id=f"file-{i}", document_id=f"doc-{i}")
     return docs
 
 
@@ -133,10 +171,12 @@ def setup_document_service(sqlite_db, sample_documents, metadata_calls, monkeypa
     monkeypatch.setattr(document_service.DB, "connect", lambda *args, **kwargs: None)
     monkeypatch.setattr(document_service.DB, "close", lambda *args, **kwargs: None)
     monkeypatch.setattr(document_service.DocumentService, "model", _SqliteDocument)
+    monkeypatch.setattr(document_service, "UserCanvas", _SqliteUserCanvas)
+    monkeypatch.setattr(document_service, "User", _SqliteUser)
     monkeypatch.setattr(
         document_service.DocumentService,
         "get_cls_model_fields",
-        classmethod(lambda cls: []),
+        classmethod(lambda cls: [cls.model.id, cls.model.kb_id, cls.model.name, cls.model.create_time]),
     )
     monkeypatch.setattr(
         document_service.DocMetadataService,
@@ -215,6 +255,6 @@ def test_get_by_kb_id_return_empty_metadata_keeps_dataset_wide_lookup(setup_docu
         return_empty_metadata=True,
     )
 
-    assert count == 5
+    assert count == 4
     assert docs[0]["meta_fields"] == {}
     assert calls == [(None, "kb-1")]

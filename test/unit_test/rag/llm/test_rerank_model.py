@@ -392,3 +392,54 @@ class TestRerankModelCircuitBreaker:
         breaker2 = model2.circuit_breaker
 
         assert id(breaker1) != id(breaker2)
+
+
+class TestRerankModelUrlNormalization:
+    @pytest.mark.parametrize(
+        "base_url,expected_suffix",
+        [
+            ("http://localhost:9999", "/v1/rerank"),
+            ("http://localhost:9999/v1", "/v1/rerank"),
+            ("http://localhost:9999/v1/rerank", "/v1/rerank"),
+        ],
+    )
+    def test_xinference_url_normalization(self, base_url, expected_suffix):
+        model = XInferenceRerank("k", "m", base_url=base_url)
+        assert model.base_url.endswith(expected_suffix)
+
+    @pytest.mark.parametrize(
+        "base_url,expected",
+        [
+            ("http://localhost:8080", "http://localhost:8080/rerank"),
+            ("http://localhost:8080/", "http://localhost:8080/rerank"),
+            ("http://localhost:8080/rerank", "http://localhost:8080/rerank"),
+        ],
+    )
+    def test_openai_api_url_normalization(self, base_url, expected):
+        model = OpenAI_APIRerank("k", "m", base_url=base_url)
+        assert model.base_url == expected
+
+
+class TestRerankModelCircuitBreakerAcrossProviders:
+    def test_retry_configuration_applies_to_multiple_providers(self):
+        jina = JinaRerank("k", "m", failure_threshold=9, recovery_timeout=45)
+        openai_api = OpenAI_APIRerank("k", "m", base_url="http://localhost:8080", failure_threshold=8, recovery_timeout=40)
+        assert jina.failure_threshold == 9
+        assert jina.recovery_timeout == 45
+        assert openai_api.failure_threshold == 8
+        assert openai_api.recovery_timeout == 40
+
+
+class TestRerankModelFactorySmoke:
+    def test_rerank_factory_aliases(self):
+        assert RerankModel["Jina"] is JinaRerank
+        assert RerankModel["Xinference"] is XInferenceRerank
+        assert RerankModel["OpenAI-API-Compatible"] is OpenAI_APIRerank
+
+    def test_factory_instantiation_smoke(self):
+        jina = RerankModel["Jina"]("k", "m")
+        xinference = RerankModel["Xinference"]("k", "m", base_url="http://localhost:9999")
+        openai_api = RerankModel["OpenAI-API-Compatible"]("k", "m", base_url="http://localhost:8080")
+        assert jina.model_name == "m"
+        assert xinference.base_url.endswith("/v1/rerank")
+        assert openai_api.base_url.endswith("/rerank")

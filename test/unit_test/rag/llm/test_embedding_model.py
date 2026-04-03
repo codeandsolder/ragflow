@@ -162,7 +162,7 @@ class TestAzureEmbed:
 
 
 @patch("rag.llm.embedding_model.AzureOpenAI")
-def test_azure_embed_parses_json_key(self, mock_azure):
+def test_azure_embed_parses_json_key(mock_azure):
     key = '{"api_key": "test-key", "api_version": "2024-02-01"}'
     embedding_model.AzureEmbed(key, "model", base_url="https://example.azure.com")
 
@@ -201,8 +201,7 @@ class TestCoHereEmbed:
     def test_cohere_embed_factory_name(self):
         assert embedding_model.CoHereEmbed._FACTORY_NAME == "Cohere"
 
-    @patch("rag.llm.embedding_model.cohere.Client")
-    def test_cohere_embed_init(self, mock_cohere):
+    def test_cohere_embed_init(self):
         model = embedding_model.CoHereEmbed("key", "embed-english-v3.0")
         assert model.model_name == "embed-english-v3.0"
 
@@ -470,3 +469,55 @@ class TestEmbeddingModelCircuitBreaker:
         breaker2 = model2.circuit_breaker
 
         assert id(breaker1) != id(breaker2)
+
+
+class TestEmbeddingModelUrlNormalization:
+    @pytest.mark.parametrize(
+        "base_url,expected",
+        [
+            ("http://localhost:8080", "http://localhost:8080/v1"),
+            ("http://localhost:8080/", "http://localhost:8080/v1"),
+            ("http://localhost:8080/v1", "http://localhost:8080/v1"),
+        ],
+    )
+    @patch("rag.llm.embedding_model.OpenAI")
+    def test_localai_url_normalization(self, mock_openai, base_url, expected):
+        model = embedding_model.LocalAIEmbed("k", "model", base_url=base_url)
+        assert model.base_url == expected
+
+    @pytest.mark.parametrize(
+        "base_url,expected",
+        [
+            ("http://localhost:8080", "http://localhost:8080/v1"),
+            ("http://localhost:8080/", "http://localhost:8080/v1"),
+            ("http://localhost:8080/v1", "http://localhost:8080/v1"),
+        ],
+    )
+    @patch("rag.llm.embedding_model.OpenAI")
+    def test_openai_api_url_normalization(self, mock_openai, base_url, expected):
+        model = embedding_model.OpenAI_APIEmbed("k", "model", base_url=base_url)
+        assert model.base_url == expected
+
+
+class TestEmbeddingModelPatchability:
+    def test_module_level_clients_are_patchable(self):
+        assert hasattr(embedding_model, "AzureOpenAI")
+        assert hasattr(embedding_model, "MistralClient")
+        assert hasattr(embedding_model, "boto3")
+        assert hasattr(embedding_model, "replicate")
+
+
+class TestEmbeddingModelFactorySmoke:
+    def test_embedding_factory_aliases(self):
+        assert EmbeddingModel["OpenAI"] is embedding_model.OpenAIEmbed
+        assert EmbeddingModel["Xinference"] is embedding_model.XinferenceEmbed
+        assert EmbeddingModel["Cohere"] is embedding_model.CoHereEmbed
+
+    @patch("rag.llm.embedding_model.OpenAI")
+    def test_factory_instantiation_smoke(self, mock_openai):
+        openai_embed = EmbeddingModel["OpenAI"]("k", "text-embedding-ada-002")
+        xinference_embed = EmbeddingModel["Xinference"]("k", "model", base_url="http://localhost:9999")
+        localai_embed = EmbeddingModel["LocalAI"]("k", "model", base_url="http://localhost:8080")
+        assert openai_embed.model_name == "text-embedding-ada-002"
+        assert xinference_embed.base_url.endswith("/v1")
+        assert localai_embed.base_url.endswith("/v1")

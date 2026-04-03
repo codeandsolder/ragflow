@@ -32,6 +32,16 @@ import openai
 from openai import AsyncOpenAI, OpenAI
 from strenum import StrEnum
 
+try:
+    from mistralai.client import MistralClient
+except Exception:
+    MistralClient = None
+
+try:
+    from replicate.client import Client as ReplicateClient
+except Exception:
+    ReplicateClient = None
+
 from common.token_utils import num_tokens_from_string, total_token_count_from_response
 from rag.llm import FACTORY_DEFAULT_BASE_URL, LITELLM_PROVIDER_PREFIX, SupportedLiteLLMProvider
 from rag.nlp import is_chinese, is_english
@@ -142,6 +152,7 @@ class Base(RemoteModelBase, ABC):
     def __init__(self, key, model_name, base_url, **kwargs):
         super().__init__(**kwargs)
         timeout = int(os.environ.get("LLM_TIMEOUT_SECONDS", 600))
+        self.base_url = base_url
         self.client = OpenAI(api_key=key, base_url=base_url, timeout=timeout)
         self.async_client = AsyncOpenAI(api_key=key, base_url=base_url, timeout=timeout)
         self.model_name = model_name
@@ -629,6 +640,15 @@ class XinferenceChat(Base):
         super().__init__(key, model_name, base_url, **kwargs)
 
 
+class OpenAIChat(Base):
+    _FACTORY_NAME = "OpenAI"
+
+    def __init__(self, key, model_name, base_url="https://api.openai.com/v1", **kwargs):
+        if not base_url:
+            base_url = "https://api.openai.com/v1"
+        super().__init__(key, model_name, base_url, **kwargs)
+
+
 class HuggingFaceChat(Base):
     _FACTORY_NAME = "HuggingFace"
 
@@ -737,6 +757,7 @@ class LocalAIChat(Base):
         if not base_url:
             raise ValueError("Local llm url cannot be None")
         base_url = urljoin(base_url, "v1")
+        self.base_url = base_url
         self.client = OpenAI(api_key="empty", base_url=base_url)
         self.model_name = model_name.split("___")[0]
 
@@ -812,9 +833,8 @@ class MistralChat(Base):
 
     def __init__(self, key, model_name, base_url=None, **kwargs):
         super().__init__(key, model_name, base_url=base_url, **kwargs)
-
-        from mistralai.client import MistralClient
-
+        if MistralClient is None:
+            raise ImportError("mistralai is not installed")
         self.client = MistralClient(api_key=key)
         self.model_name = model_name
 
@@ -901,11 +921,10 @@ class ReplicateChat(Base):
 
     def __init__(self, key, model_name, base_url=None, **kwargs):
         super().__init__(key, model_name, base_url=base_url, **kwargs)
-
-        from replicate.client import Client
-
+        if ReplicateClient is None:
+            raise ImportError("replicate is not installed")
         self.model_name = model_name
-        self.client = Client(api_token=key)
+        self.client = ReplicateClient(api_token=key)
 
     def _chat(self, history, gen_conf=None, **kwargs):
         if gen_conf is None:
@@ -1262,7 +1281,8 @@ class AvianChat(Base):
 
 
 class LiteLLMBase(ABC):
-    _FACTORY_NAME = [
+    _FACTORY_NAME = "LiteLLM"
+    _PROVIDER_FACTORY_NAMES = [
         "Tongyi-Qianwen",
         "Bedrock",
         "Moonshot",
@@ -1301,10 +1321,17 @@ class LiteLLMBase(ABC):
     def __init__(self, key, model_name, base_url=None, **kwargs):
         self.timeout = int(os.environ.get("LLM_TIMEOUT_SECONDS", 600))
         self.provider = kwargs.get("provider", "")
-        self.prefix = LITELLM_PROVIDER_PREFIX.get(self.provider, "")
-        self.model_name = f"{self.prefix}{model_name}"
+        provider_enum = self.provider
+        if isinstance(provider_enum, str):
+            try:
+                provider_enum = SupportedLiteLLMProvider(provider_enum)
+            except ValueError:
+                provider_enum = self.provider
+        self.prefix = LITELLM_PROVIDER_PREFIX.get(provider_enum, "")
+        self.model_name = model_name
+        self._litellm_model_name = f"{self.prefix}{model_name}"
         self.api_key = key
-        self.base_url = (base_url or FACTORY_DEFAULT_BASE_URL.get(self.provider, "")).rstrip("/")
+        self.base_url = (base_url or FACTORY_DEFAULT_BASE_URL.get(provider_enum, "")).rstrip("/")
         self.max_retries = kwargs.get("max_retries", int(os.environ.get("LLM_MAX_RETRIES", 5)))
         self.base_delay = kwargs.get("retry_interval", float(os.environ.get("LLM_BASE_DELAY", 2.0)))
         self.max_rounds = kwargs.get("max_rounds", 5)
@@ -1749,7 +1776,7 @@ class LiteLLMBase(ABC):
 
     def _construct_completion_args(self, history, stream: bool, tools: bool, **kwargs):
         completion_args = {
-            "model": self.model_name,
+            "model": self._litellm_model_name,
             "messages": history,
             "api_key": self.api_key,
             "num_retries": self.max_retries,
@@ -1871,3 +1898,25 @@ class RAGconChat(Base):
             base_url = "https://connect.ragcon.com/v1"
 
         super().__init__(key, model_name, base_url, **kwargs)
+
+
+ChatModel = {
+    "OpenAI": OpenAIChat,
+    "Xinference": XinferenceChat,
+    "HuggingFace": HuggingFaceChat,
+    "BaiChuan": BaiChuanChat,
+    "Mistral": MistralChat,
+    "LiteLLM": LiteLLMBase,
+    "LocalAI": LocalAIChat,
+    "LM-Studio": LmStudioChat,
+    "VLLM": OpenAI_APIChat,
+    "OpenAI-API-Compatible": OpenAI_APIChat,
+    "LeptonAI": LeptonAIChat,
+    "Replicate": ReplicateChat,
+    "XunFei Spark": SparkChat,
+    "VolcEngine": VolcEngineChat,
+    "TokenPony": TokenPonyChat,
+    "RAGcon": RAGconChat,
+}
+for _factory_name in LiteLLMBase._PROVIDER_FACTORY_NAMES:
+    ChatModel[_factory_name] = LiteLLMBase

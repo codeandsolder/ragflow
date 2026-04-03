@@ -130,6 +130,11 @@ def pytest_configure(config):
 def pytest_collection_modifyitems(session, config, items):
     """Pre-import packages before test collection to prevent stub modules from breaking imports."""
     _pre_import_critical_packages()
+    # Compat: this suite historically used pytest-asyncio marks.
+    # In environments running only anyio plugin, treat asyncio-marked tests as anyio tests.
+    for item in items:
+        if item.get_closest_marker("asyncio") and not item.get_closest_marker("anyio"):
+            item.add_marker(pytest.mark.anyio)
 
 
 def _pre_import_critical_packages():

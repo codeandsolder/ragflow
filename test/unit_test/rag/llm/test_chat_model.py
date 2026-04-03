@@ -285,3 +285,54 @@ class TestChatModelRetryProperties:
     def test_should_not_retry_auth_error(self, mock_async, mock_sync):
         model = chat_model.Base("key", "model", "url")
         assert model._should_retry(chat_model.LLMErrorCode.ERROR_AUTHENTICATION) is False
+
+
+class TestChatModelUrlNormalization:
+    @pytest.mark.parametrize(
+        "base_url,expected",
+        [
+            ("http://localhost:8080", "http://localhost:8080/v1"),
+            ("http://localhost:8080/", "http://localhost:8080/v1"),
+            ("http://localhost:8080/v1", "http://localhost:8080/v1"),
+        ],
+    )
+    @patch("rag.llm.chat_model.OpenAI")
+    def test_localai_url_normalization(self, mock_openai, base_url, expected):
+        model = chat_model.LocalAIChat("key", "model", base_url=base_url)
+        assert model.base_url == expected
+
+    @pytest.mark.parametrize(
+        "base_url,expected",
+        [
+            ("http://localhost:1234", "http://localhost:1234/v1"),
+            ("http://localhost:1234/", "http://localhost:1234/v1"),
+            ("http://localhost:1234/v1", "http://localhost:1234/v1"),
+        ],
+    )
+    @patch("rag.llm.chat_model.OpenAI")
+    def test_lmstudio_url_normalization(self, mock_openai, base_url, expected):
+        model = chat_model.LmStudioChat("key", "model", base_url=base_url)
+        assert model.base_url == expected
+
+
+class TestChatModelPatchability:
+    def test_module_level_clients_are_patchable(self):
+        assert hasattr(chat_model, "MistralClient")
+        assert hasattr(chat_model, "ReplicateClient")
+
+
+class TestChatModelFactorySmoke:
+    def test_chat_factory_aliases_point_to_expected_classes(self):
+        assert chat_model.ChatModel["OpenAI"] in {chat_model.OpenAIChat, chat_model.LiteLLMBase}
+        assert chat_model.ChatModel["LiteLLM"] is chat_model.LiteLLMBase
+        assert chat_model.ChatModel["OpenAI-API-Compatible"] is chat_model.OpenAI_APIChat
+
+    @patch("rag.llm.chat_model.OpenAI")
+    @patch("rag.llm.chat_model.AsyncOpenAI")
+    def test_factory_instantiation_smoke(self, mock_async_openai, mock_openai):
+        openai_chat = chat_model.ChatModel["OpenAI"]("k", "gpt-4")
+        xinference_chat = chat_model.ChatModel["Xinference"]("k", "m", base_url="http://localhost:9999")
+        token_pony_chat = chat_model.ChatModel["TokenPony"]("k", "m")
+        assert openai_chat.model_name == "gpt-4"
+        assert xinference_chat.base_url.endswith("/v1")
+        assert "tokenpony" in token_pony_chat.base_url

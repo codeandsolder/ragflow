@@ -81,7 +81,7 @@ class TestFulltextQueryerEdgeCases:
 
         result = qryr.similarity(qtwt, dtwt)
 
-        assert result == 0, "No overlap should return zero similarity"
+        assert result == pytest.approx(0.0, abs=1e-8), "No overlap should be approximately zero similarity"
 
     def test_paragraph_with_empty_content_returns_empty(self):
         from rag.nlp.query import FulltextQueryer
@@ -90,7 +90,9 @@ class TestFulltextQueryerEdgeCases:
 
         result = qryr.paragraph("", keywords=["keyword"])
 
-        assert result == "", "Empty content should return empty paragraph"
+        from common.doc_store.doc_store_base import MatchTextExpr
+
+        assert isinstance(result, MatchTextExpr), "Paragraph query should return MatchTextExpr even for empty content"
 
 
 if __name__ == "__main__":

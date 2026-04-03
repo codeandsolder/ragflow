@@ -70,6 +70,20 @@ class TestDSLVariableResolution:
 class TestDSLSerialization:
     """Tests for DSL serialization back to JSON."""
 
+    def _create_minimal_dsl(self) -> dict:
+        return {
+            "components": {
+                "begin": {
+                    "obj": {"component_name": "Begin", "params": {}},
+                    "downstream": [],
+                    "upstream": [],
+                }
+            },
+            "history": [],
+            "path": ["begin"],
+            "retrieval": {"chunks": [], "doc_aggs": []},
+        }
+
     def test_serialize_to_json(self):
         dsl = self._create_minimal_dsl()
         canvas = Canvas(json.dumps(dsl), tenant_id="test_tenant")
@@ -84,7 +98,7 @@ class TestDSLSerialization:
         canvas.history.append(("user", "test message"))
         serialized = str(canvas)
         parsed = json.loads(serialized)
-        assert parsed["history"] == [("user", "test message")]
+        assert parsed["history"] == [["user", "test message"]]
 
     def test_serialize_preserves_path(self):
         dsl = self._create_minimal_dsl()
